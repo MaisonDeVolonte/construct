@@ -2,6 +2,7 @@
   "permissions": {
     "allow": [
       "Skill(claude-api)",
+      "Read",
       "Bash(AGENTS/**)",
       "Edit(AGENTS/logs/**)", "Write(AGENTS/logs/**)",
       "Edit(AGENTS/prompts/**)", "Write(AGENTS/prompts/**)",
@@ -28,7 +29,8 @@
     "deny": [
       "Bash(git push --force*)",
       "Bash(git push -f*)",
-      "Bash(git branch -D*)"
+      "Bash(git branch -D*)",
+      "Read(.env)", "Read(.env.*)"
     ]
   },
   "hooks": {
