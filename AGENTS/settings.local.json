@@ -3,6 +3,7 @@
     "allow": [
       "Skill(claude-api)",
       "Read",
+      "Bash(cat *)",
       "Bash(AGENTS/**)",
       "Edit(AGENTS/logs/**)", "Write(AGENTS/logs/**)",
       "Edit(AGENTS/prompts/**)", "Write(AGENTS/prompts/**)",
