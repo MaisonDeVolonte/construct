@@ -4,7 +4,8 @@
 # ===============================================
 # @description
 # - sidecar for `@gitinsights` — deterministic checks for broken refs and code markers
-# @see AGENTS.md, AGENTS/git.md, AGENTS/git/gitinsights.md
+# - seeds today's insights file and reports its path, so the agent appends to a known target
+# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitinsights.md, AGENTS/templates/insights.md, docs/insights/
 
 set -euo pipefail
 
@@ -18,6 +19,14 @@ if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
 # scan from the repo root so every reference resolves regardless of the invocation dir
 cd "$(git rev-parse --show-toplevel)"
 
+# one file per day, many reports per file — seeded here so the agent has a known target;
+# the cd above already anchored us to the repo root, so these paths stay relative
+TODAYS_INSIGHTS="docs/insights/$(date +%Y-%m-%d).md"
+if [ ! -f "$TODAYS_INSIGHTS" ];
+then mkdir -p docs/insights; echo "# $TODAYS_INSIGHTS" > "$TODAYS_INSIGHTS"; fi
+INSIGHTS_TIME=$(date '+%Y-%m-%d %H:%M')
+INSIGHTS_COUNT=$(grep -c '^## Insight #' "$TODAYS_INSIGHTS" 2>/dev/null || true)
+
 # findings collect here as "category: detail" lines; this is report-only, so the run never fails
 FINDINGS=$(mktemp)
 trap 'rm -f "$FINDINGS"' EXIT
@@ -30,7 +39,6 @@ is_generated() {
   case "$1" in
     *tests/report*|*tests/results*|*.next*|*node_modules*) return 0;;
     # runtime artifact dirs: gitignored and written on demand, so absent from a fresh clone
-    AGENTS/logs*|AGENTS/prompts*|AGENTS/plans*|AGENTS/study*) return 0;;
     docs/logs*|docs/prompts*|docs/plans*|docs/study*|docs/audits*|docs/brutal*|docs/insights*) return 0;;
     *) return 1;;
   esac
@@ -157,6 +165,9 @@ total=$(grep -c . "$FINDINGS" || true)
 cat <<EOF
 
 === @gitinsights sidecar ===
+insights_file: $TODAYS_INSIGHTS
+insights_time: $INSIGHTS_TIME
+insights_count: $INSIGHTS_COUNT
 SCANNED: mirror pointers, markdown links, see-tag paths, code markers
 broken_mirror: $broken_mirror
 broken_link: $broken_link

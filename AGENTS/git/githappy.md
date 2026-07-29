@@ -10,7 +10,7 @@
  *   on `main`
  * - fast-forwards `production` to `main` and pushes, triggering `deploy.yml`'s live deployment
  * - syncs `main` back to `origin` and generates a github release page with release notes
- * @see AGENTS.md, AGENTS/git.md, AGENTS/git/githappy.sh, .github/workflows/deploy.yml
+ * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/githappy.sh, .github/workflows/deploy.yml
  */
 ```
 

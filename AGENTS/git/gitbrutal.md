@@ -4,13 +4,14 @@
  * @file gitbrutal.md - adversarial doc-vs-reality audit trigger
  * =============================================================
  * @description
- * - ran only on explicit `@gitbrutal` command; read-only, never mutates the repo
+ * - ran only on explicit `@gitbrutal` command; read-only, never mutates tracked files
  * - runs `AGENTS/git/gitbrutal.sh`, then reads `README.md`/`AGENTS.md` to learn the
  *   project's documented claims
  * - scores effort-vs-output, claim-vs-reality, test coverage, and risk hygiene against
  *   the shell telemetry
  * - outputs a harsh A-F scorecard with a one-sentence verdict; never flatters the user
- * @see AGENTS.md, AGENTS/git.md, AGENTS/git/gitbrutal.sh, README.md
+ * - appends that scorecard to `docs/brutal/YYYY-MM-DD.md`, one file per day, many per file
+ * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitbrutal.sh, README.md, AGENTS/templates/brutal.md, docs/brutal/
  */
 ```
 
@@ -56,4 +57,14 @@
   - **tests/reality:** A-F (grade harshly: strong infra grades CANNOT mask weak app/test ones)
   
   **verdict:** [one unapologetic, brutally honest sentence summarizing the actual state of the codebase]
+  ```
+
+5. THEN append the same scorecard to the brutal file (see `AGENTS/templates/brutal.md`)
+  ```text
+  - the sidecar already seeded the file; take the target from the `--- BRUTAL ARCHIVE ---` telemetry:
+    - `brutal_file` is the path, `brutal_time` is the heading timestamp
+    - `brutal_count` is how many scorecards the file already holds, so this one is #(brutal_count + 1)
+  - append a new `## Brutal #N: YYYY-MM-DD HH:MM` section, never overwrite an earlier scorecard
+  - write the scorecard as delivered to the user, minus the raw telemetry dump
+  - never soften the written record; a scorecard the user disputes stays as written
   ```

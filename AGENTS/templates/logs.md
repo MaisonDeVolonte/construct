@@ -5,23 +5,21 @@
  * ============================
  * @description
  * - gitignored, local-only, never committed, one log file per day
- * - formatting rules:
- *   - `logs` are written in MAXIMALLY clear, concise, casual language, skipping trivial details
- *   - `threads` group work by task/topic, limited to 50 lines
- *   - `threads` name their project first, since one log is shared across every project
- *   - `sections` lead with the main idea, followed by supporting ideas
- *   - `lines` should contain a single clause/fact/action, limited to 100 characters
- *   - `notes` are appended after taskcomplete or every 15 minutes, limited to 5 bullets
- *   - `synthesize` means to `incorporate & delete` notes into corresponding threads
- *   - minimize comma chains, em dashes, **bold**, `ticks`, and other superfluous formatting
- *   - focus on outcomes, not the conversation (no play-by-plays)
- *   - err on the side of brevity, not completeness
- *   - ultimately, logs should only capture the most meaningful signals, ignoring noise
- * @see AGENTS.md, /AGENTS/logs/
+ * - `logs` are written in MAXIMALLY clear, concise, casual language, skipping trivial details
+ * - `threads` group work by task/topic, limited to 50 lines
+ * - `sections` lead with the main idea, followed by supporting ideas
+ * - `lines` should contain a single clause/fact/action, limited to 100 characters
+ * - `notes` are appended after taskcomplete or every 15 minutes, limited to 5 bullets
+ * - `synthesize` means to `incorporate & delete` notes into corresponding threads
+ * - minimize comma chains, em dashes, **bold**, `ticks`, and superfluous formatting
+ * - focus on outcomes, not the conversation (no play-by-plays)
+ * - err on the side of brevity, not completeness
+ * - ultimately, logs should only capture the most meaningful signals, ignoring noise
+ * @see AGENTS.md, docs/logs/
  */
 ```
 
-# AGENTS/logs/YYYY-MM-DD.md
+# docs/logs/YYYY-MM-DD.md
 
 ## Thread #1: project - short description
 

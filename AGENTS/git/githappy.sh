@@ -4,7 +4,7 @@
 # ====================================================
 # @description
 # - sidecar for `@githappy` — bumps version, tags, promotes main to production
-# @see AGENTS.md, AGENTS/git.md, AGENTS/git/githappy.md
+# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/githappy.md
 
 set -euo pipefail
 

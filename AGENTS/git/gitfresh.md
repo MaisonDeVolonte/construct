@@ -10,7 +10,7 @@
  * - backs up all changes to an emergency stash, then hard-resets trunk and deletes local
  *   branches to match origin
  * - runs `AGENTS/git/gitfresh.sh --confirmed` only after explicit user confirmation
- * @see AGENTS.md, AGENTS/git.md, AGENTS/git/gitfresh.sh, AGENTS/git/gitaudit.sh
+ * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitfresh.sh, AGENTS/git/gitaudit.sh
  */
 ```
 

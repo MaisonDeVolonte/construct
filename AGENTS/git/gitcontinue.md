@@ -8,7 +8,7 @@
  * - stashes, fetches, fast-forwards, and pops to safely pause/resume work
  * - strictly enforces trunk-based dev: always ends back on `main`, never a feature branch
  * - runs `AGENTS/git/gitcontinue.sh`; a conflict (exit 1) hands resolution to the user
- * @see AGENTS.md, AGENTS/git.md, AGENTS/git/gitcontinue.sh
+ * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitcontinue.sh
  */
 ```
 

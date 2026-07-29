@@ -9,7 +9,7 @@
  *   bucket at a time: branch → commit → push → pr → auto-merge on green → back to trunk
  * - `--first` flag stops after the first pr; re-runnable, `git status` drives the loop
  * - gated: drafts each pr command and waits for user confirmation before executing
- * @see AGENTS.md, AGENTS/git.md, AGENTS/git/gitdeliver.sh
+ * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitdeliver.sh
  */
 ```
 
