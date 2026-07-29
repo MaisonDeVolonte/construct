@@ -11,7 +11,7 @@
  * - `threads` group work by task/topic, limited to 50 lines of prose, prompts excluded
  * - `sections` lead with the main idea, followed by supporting ideas
  * - `lines` should contain a single clause/fact/action, limited to 100 characters
- * - `notes` are appended after taskcomplete or every 15 minutes, limited to 5 bullets
+ * - `notes` are appended after taskcomplete or every 30 minutes, limited to 5 bullets
  * - `prompts` are appended to the thread they drove, rewritten short, always timestamped
  * - a prompt that starts a new thread belongs to the thread it created, not the one before
  * - `synthesize` means two different things, never conflate them:

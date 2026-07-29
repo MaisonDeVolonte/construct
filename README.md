@@ -54,7 +54,7 @@ loads rules, workflows, and hooks into your ai coding agent
 - `AGENTS/hooks/posttooluse.sh` runs lint on agent code at time of generation
 - `AGENTS/hooks/taskcreated.sh` nudges a new thread when a new task is unrelated to the most recent one
 - `AGENTS/hooks/taskcompleted.sh` appends a note to the bottom of the day's log
-- `AGENTS/hooks/stop.sh` synthesizes notes and flushes uncaptured prompts into the day's log every hour
+- `AGENTS/hooks/stop.sh` notes every 30 minutes, synthesizes every 2 hours, into the day's log
 
 ### Audits (see `AGENTS/templates/audits.md`)
 - `@gitaudit` appends every run to `docs/audits/`, one file per day, many audits per file
