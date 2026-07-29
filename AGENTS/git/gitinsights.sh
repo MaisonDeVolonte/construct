@@ -29,6 +29,22 @@ EXCLUDES=(--exclude-dir=node_modules --exclude-dir=.git --exclude-dir=.next --ex
 is_generated() {
   case "$1" in
     *tests/report*|*tests/results*|*.next*|*node_modules*) return 0;;
+    # runtime artifact dirs: gitignored and written on demand, so absent from a fresh clone
+    AGENTS/logs*|AGENTS/prompts*|AGENTS/plans*|AGENTS/study*) return 0;;
+    docs/logs*|docs/prompts*|docs/plans*|docs/study*|docs/audits*|docs/brutal*|docs/insights*) return 0;;
+    *) return 1;;
+  esac
+}
+
+# reference targets that live in the host project, not this repo — AGENTS.md is a per-project
+# symlink and the harness/build configs belong to whatever project the agent is running in
+is_host_only() {
+  case "$1" in
+    AGENTS.md) return 0;;
+    .claude|.claude/*|.grok|.grok/*) return 0;;
+    eslint.config.mjs) return 0;;
+    # a host project's deploy pipeline; named exactly so a broken ci.yml ref still gets caught
+    .github/workflows/deploy.yml) return 0;;
     *) return 1;;
   esac
 }
@@ -84,9 +100,13 @@ check_markdown_links() {
 
 # see-tag header paths must resolve — comma-separated, repo-root-relative, sometimes dir-style
 # with a trailing slash; skip {@link ...} url forms
+# anchored to a real header line (leading #, *, or //) so the pattern can't match its own
+# definition, nor the grep flags on any line that merely mentions the tag
 check_see_paths() {
   local hits file paths token ref
-  hits=$(grep -rIn "@see " --include='*.ts' --include='*.tsx' --include='*.mjs' --include='*.js' --include='*.css' "${EXCLUDES[@]}" . 2>/dev/null || true)
+  hits=$(grep -rInE '^[[:space:]]*(#|\*|//)[[:space:]]*@see[[:space:]]' \
+    --include='*.ts' --include='*.tsx' --include='*.mjs' --include='*.js' --include='*.css' \
+    --include='*.sh' --include='*.md' "${EXCLUDES[@]}" . 2>/dev/null || true)
   while IFS= read -r hit; do
     [ -z "$hit" ] && continue
     file=${hit%%:*}
@@ -99,6 +119,7 @@ check_see_paths() {
       [ -z "$ref" ] && continue
       case "$ref" in */*|*.*) ;; *) continue;; esac   # skip bare prose words, keep path-shaped refs
       is_generated "$ref" && continue
+      is_host_only "$ref" && continue
       [ -e "$ref" ] && continue
       echo "broken_see: $file -> $token" >> "$FINDINGS"
     done
@@ -110,7 +131,8 @@ check_see_paths() {
 check_code_markers() {
   local hits
   hits=$(grep -rInE '(#|//|/\*)[[:space:]]*(TODO|FIXME|HACK)' \
-    --include='*.ts' --include='*.tsx' --include='*.css' --include='*.mjs' "${EXCLUDES[@]}" . 2>/dev/null || true)
+    --include='*.ts' --include='*.tsx' --include='*.css' --include='*.mjs' \
+    --include='*.sh' --include='*.md' "${EXCLUDES[@]}" . 2>/dev/null || true)
   while IFS= read -r hit; do
     [ -z "$hit" ] && continue
     echo "marker: $hit" >> "$FINDINGS"
