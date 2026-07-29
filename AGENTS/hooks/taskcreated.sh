@@ -9,7 +9,7 @@
 #   created — so this uses additionalContext instead, non-blocking
 # - creates today's log file if missing
 # - nudges the agent to check thread-relatedness, not enforced
-# @see AGENTS.md, AGENTS/logs.md, AGENTS/tasks.md, AGENTS/hooks.md
+# @see AGENTS.md, AGENTS/logs.md, AGENTS/hooks.md, AGENTS/hooks/taskcompleted.sh
 
 TODAYS_LOG="AGENTS/logs/$(date +%Y-%m-%d).md"
 
