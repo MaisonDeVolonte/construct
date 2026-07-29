@@ -1,9 +1,4 @@
 # macos
 .DS_Store
 
-# stop hook state, not an artifact
-docs/.ticker
-
-# logs carry the prompts that drove the work, so they stay individual
-# every other artifact type is tracked; see README Structure
 docs/logs/

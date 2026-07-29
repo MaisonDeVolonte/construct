@@ -14,8 +14,9 @@
 TODAYS_LOG="docs/logs/$(date +%Y-%m-%d).md"
 UPDATE_INTERVAL=900
 SYNTHESIZE_INTERVAL=4
-# hook state, not an artifact — lives above the archives so it never lands in a dated file
-TICKER_FILE="docs/.ticker"
+# hook state, not an artifact — sits beside the logs it paces, the only workflow that reads it;
+# leading dot keeps it out of any bare docs/logs/* listing an agent is told to read
+TICKER_FILE="docs/logs/.ticker"
 NOW=$(date +%s)
 LAST_MODIFIED=$(stat -f %m "$TODAYS_LOG" 2>/dev/null || stat -c %Y "$TODAYS_LOG" 2>/dev/null || echo 0)
 
