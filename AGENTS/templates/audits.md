@@ -4,7 +4,8 @@
  * @file audits.md - audit archive template
  * =========================================
  * @description
- * - gitignored, local-only, never committed, one audit file per day
+ * - tracked in git, one audit file per day, appended across runs
+ * - scrub client names, tokens, and other sensitive detail before it lands in a commit
  * - written by `@gitaudit` only, appended each run, many audits per file
  * - `audits` capture repo state at a moment in time, so they are never edited after the fact
  * - `findings` lead with the label the trigger assigned (Ghost Branch, Local Clutter, etc)

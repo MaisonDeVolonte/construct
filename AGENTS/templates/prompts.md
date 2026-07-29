@@ -4,7 +4,8 @@
  * @file prompts.md - prompt archive template
  * ==========================================
  * @description
- * - gitignored, local-only, never committed, one log file per day
+ * - tracked in git, one prompts file per day
+ * - scrub client names, tokens, and other sensitive detail before it lands in a commit
  * - `prompts` are re-written in maximally clear, concise and casual language
  * - skip trivial prompts, acknowledgments, one-word replies, wdyt, etc 
  * - `synthesize` means to `rewrite or delete` prompts that have no relavance or educational value

@@ -9,20 +9,22 @@ loads rules, workflows, and hooks into your ai coding agent
 - `AGENTS/git/` — one `@git*` trigger doc per workflow, each paired with its shell sidecar
 - `AGENTS/hooks/` — harness hooks, wired up in `.claude/settings.local.json`
 - `AGENTS/templates/` — the shape every artifact type must follow; templates only, never artifacts
-- `docs/` — the artifacts themselves, one directory per type, all gitignored:
+- `docs/` — the artifacts themselves, one directory per type:
   - `docs/logs/`, `docs/prompts/`, `docs/audits/`, `docs/brutal/`, `docs/insights/` — dated `YYYY-MM-DD.md`, appended to across the day
   - `docs/plans/` — one file per plan; `docs/study/` — one file per feature
+  - this repo tracks its own `docs/`, seeded with one worked example each in `plans/` and `study/`
 - `.github/workflows/ci.yml` — the `verify` check required to merge
 
 ## Updates
 - `AGENTS.md` and `AGENTS/` are symlinks into a standalone operator repo, not host project files
 - host projects gitignore both, so rule and workflow changes never surface in their `git status`
 - `docs/` is NOT symlinked; it is a real directory in whatever project the agent is running in
-- so artifacts land beside the work that produced them, and each host project must gitignore its own `docs/` artifact dirs
+- so artifacts land beside the work that produced them, not in the operator repo
+- host projects should gitignore their own `docs/` artifact dirs; real logs/audits capture client-specific detail
 - RESOLVE the operator repo with `readlink AGENTS.md`; its root is the parent of the resolved path
 - SHIP agent changes by committing and pushing from the resolved repo, never the host project
 - RUN any `AGENTS/git/` workflow from the resolved repo, since each only sees the repo it runs in
-- SKIP everything under `docs/` when shipping; it is runtime artifacts, not changes
+- SCRUB dated artifacts to their header line before they ship; nothing sensitive belongs in a commit
 
 ## Workflows
 

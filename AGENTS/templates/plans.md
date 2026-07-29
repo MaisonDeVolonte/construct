@@ -5,7 +5,8 @@
  * ==============================
  * @description
  * - one file per plan, `docs/plans/`
- * - gitignored, local-only, never committed
+ * - tracked in git
+ * - scrub client names, tokens, and other sensitive detail before it lands in a commit
  * - written before complex or architectural work
  * - covers overview, context, fixes, risks, and checklist
  * - plans are written in maximally clear, concise, action-oriented language
