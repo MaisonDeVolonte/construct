@@ -5,7 +5,8 @@
  * ================================
  * @description
  * - one file per feature/workflow, `docs/study/`
- * - gitignored, local-only, never committed
+ * - tracked in git
+ * - scrub client names, tokens, and other sensitive detail before it lands in a commit
  * - written on request, after a feature ships, to build a mental model of how it works
  * - lists files in ideal-build order, not alphabetical or touched-order
  * - studies are written in maximally concise, roadmap-style language — a map, not a textbook

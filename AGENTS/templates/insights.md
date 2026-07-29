@@ -4,7 +4,8 @@
  * @file insights.md - opportunity report template
  * ==================================================
  * @description
- * - gitignored, local-only, never committed, one insights file per day
+ * - tracked in git, one insights file per day, appended across runs
+ * - scrub client names, tokens, and other sensitive detail before it lands in a commit
  * - written by `@gitinsights` only, appended each run, many reports per file
  * - `reports` capture the opportunity surface at a moment in time, never edited after the fact
  * - `observations` are what the three streams found; `opportunities` are what to do about it

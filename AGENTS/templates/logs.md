@@ -4,7 +4,8 @@
  * @file logs.md - log template
  * ============================
  * @description
- * - gitignored, local-only, never committed, one log file per day
+ * - tracked in git, one log file per day
+ * - scrub client names, tokens, and other sensitive detail before it lands in a commit
  * - `logs` are written in MAXIMALLY clear, concise, casual language, skipping trivial details
  * - `threads` group work by task/topic, limited to 50 lines
  * - `sections` lead with the main idea, followed by supporting ideas

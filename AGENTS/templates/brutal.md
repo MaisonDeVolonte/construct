@@ -4,7 +4,8 @@
  * @file brutal.md - brutal scorecard template
  * ==============================================
  * @description
- * - gitignored, local-only, never committed, one brutal file per day
+ * - tracked in git, one brutal file per day, appended across runs
+ * - scrub client names, tokens, and other sensitive detail before it lands in a commit
  * - written by `@gitbrutal` only, appended each run, many scorecards per file
  * - `scorecards` capture the doc-vs-reality gap at a moment in time, never edited after the fact
  * - `grades` are A-F per lane; strong infra grades CANNOT mask weak app/test ones
