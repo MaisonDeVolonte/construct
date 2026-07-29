@@ -10,9 +10,10 @@ loads rules, workflows, and hooks into your ai coding agent
 - `AGENTS/hooks/` — harness hooks, wired up in `.claude/settings.local.json`
 - `AGENTS/templates/` — the shape every artifact type must follow; templates only, never artifacts
 - `docs/` — the artifacts themselves, one directory per type:
-  - `docs/logs/`, `docs/prompts/`, `docs/audits/`, `docs/brutal/`, `docs/insights/` — dated `YYYY-MM-DD.md`, appended to across the day
+  - `docs/logs/`, `docs/audits/`, `docs/brutal/`, `docs/insights/` — dated `YYYY-MM-DD.md`, appended to across the day
   - `docs/plans/` — one file per plan; `docs/study/` — one file per feature
   - this repo tracks its own `docs/`, seeded with one worked example each in `plans/` and `study/`
+  - except `docs/logs/`, which is gitignored; logs are individually useful, the rest are worth sharing
 - `.github/workflows/ci.yml` — the `verify` check required to merge
 
 ## Updates
@@ -20,7 +21,8 @@ loads rules, workflows, and hooks into your ai coding agent
 - host projects gitignore both, so rule and workflow changes never surface in their `git status`
 - `docs/` is NOT symlinked; it is a real directory in whatever project the agent is running in
 - so artifacts land beside the work that produced them, not in the operator repo
-- host projects should gitignore their own `docs/` artifact dirs; real logs/audits capture client-specific detail
+- host projects track their own `docs/`; the repo boundary is what keeps client detail private
+- a PUBLIC host project is the exception, so scrub client names out of anything committed there
 - RESOLVE the operator repo with `readlink AGENTS.md`; its root is the parent of the resolved path
 - SHIP agent changes by committing and pushing from the resolved repo, never the host project
 - RUN any `AGENTS/git/` workflow from the resolved repo, since each only sees the repo it runs in
@@ -52,7 +54,7 @@ loads rules, workflows, and hooks into your ai coding agent
 - `AGENTS/hooks/posttooluse.sh` runs lint on agent code at time of generation
 - `AGENTS/hooks/taskcreated.sh` nudges a new thread when a new task is unrelated to the most recent one
 - `AGENTS/hooks/taskcompleted.sh` appends a note to the bottom of the day's log
-- `AGENTS/hooks/stop.sh` synthesizes notes and flushes uncaptured prompts to `docs/prompts/` every hour
+- `AGENTS/hooks/stop.sh` synthesizes notes and flushes uncaptured prompts into the day's log every hour
 
 ### Audits (see `AGENTS/templates/audits.md`)
 - `@gitaudit` appends every run to `docs/audits/`, one file per day, many audits per file
@@ -67,6 +69,9 @@ loads rules, workflows, and hooks into your ai coding agent
 - reports are never edited; an opportunity that recurs across dated files is a finding in itself
 
 ### Logs (see `AGENTS/templates/logs.md`)
+- one file per day, gitignored here, holding both the work and the prompts that drove it
+- `prompts` append to the thread they drove, so the ask sits next to what came of it
+- `notes` get absorbed into thread prose on synthesis; `prompts` get pruned but stay a list
 - manual triggers (yes, i manually save games that have autosave, i'm that guy)
   - `@logthread` instructs the agent to `add a thread` to the bottom of the day's log
   - `@lognote` instructs the agent to `append a note` to the bottom of the day's log
@@ -75,9 +80,6 @@ loads rules, workflows, and hooks into your ai coding agent
 ### Plans (see `AGENTS/templates/plans.md`)
 - BEGIN complex tasks by writing a detailed plan in `docs/plans/` (see `AGENTS/templates/plans.md`)
 - COMPLETE plans with a summary at the bottom of the corresponding plan file
-
-### Prompts (see `AGENTS/templates/prompts.md`)
-- the stop hook flushes any uncaptured prompts to `docs/prompts/` (see Hooks)
 
 ### Study (see `AGENTS/templates/study.md`)
 - on request, write a study to `docs/study/`

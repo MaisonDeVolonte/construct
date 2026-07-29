@@ -4,14 +4,21 @@
  * @file logs.md - log template
  * ============================
  * @description
- * - tracked in git, one log file per day
+ * - one log file per day, holding both the work and the prompts that drove it
+ * - gitignored in this repo; host projects decide for themselves whether to track it
  * - scrub client names, tokens, and other sensitive detail before it lands in a commit
  * - `logs` are written in MAXIMALLY clear, concise, casual language, skipping trivial details
- * - `threads` group work by task/topic, limited to 50 lines
+ * - `threads` group work by task/topic, limited to 50 lines of prose, prompts excluded
  * - `sections` lead with the main idea, followed by supporting ideas
  * - `lines` should contain a single clause/fact/action, limited to 100 characters
  * - `notes` are appended after taskcomplete or every 15 minutes, limited to 5 bullets
- * - `synthesize` means to `incorporate & delete` notes into corresponding threads
+ * - `prompts` are appended to the thread they drove, rewritten short, always timestamped
+ * - a prompt that starts a new thread belongs to the thread it created, not the one before
+ * - `synthesize` means two different things, never conflate them:
+ *   - for notes, `incorporate & delete` them into the thread's prose
+ *   - for prompts, `prune & rewrite` them in place; they stay a list, never becoming prose
+ * - prune a prompt once it is trivial, redundant, or superseded by the one after it
+ * - keep the prompt that changed direction, dropped a constraint, or corrected a wrong assumption
  * - minimize comma chains, em dashes, **bold**, `ticks`, and superfluous formatting
  * - focus on outcomes, not the conversation (no play-by-plays)
  * - err on the side of brevity, not completeness
@@ -81,5 +88,18 @@ output a subject: followed by a description
 > - hardened logic
 > - updated docs
 
+#### PROMPTS
+what the user actually asked, in the thread it drove
+- HH:MM one rewritten prompt per line, never the original wording
+- keep the ask, drop the throat-clearing, hedging, and acknowledgments
+- skip one-word replies, confirmations, and "wdyt" entirely
+- this block stays a list; notes get absorbed into prose above, prompts never do
+
+*example:*
+> #### PROMPTS
+> - 11:40 logs and prompts are only individually useful, the rest have value to others
+> - 11:45 merge prompts into the log file, at the bottom of the thread they belong to
+> - 11:52 add a synthesis rule so they stay pruned
+
 ## Thread #2: Repeat the above format for each meaningful unit of work
-synthesize pending notes when creating a new thread
+synthesize pending notes when creating a new thread, and prune that thread's prompts
