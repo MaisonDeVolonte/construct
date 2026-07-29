@@ -14,7 +14,8 @@ TODAYS_LOG="docs/logs/$(date +%Y-%m-%d).md"
 TODAYS_PROMPTS="docs/prompts/$(date +%Y-%m-%d).md"
 UPDATE_INTERVAL=900
 SYNTHESIZE_INTERVAL=4
-TICKER_FILE="docs/logs/.ticker"
+# hook state, not an artifact — lives above the archives so it never lands in a dated file
+TICKER_FILE="docs/.ticker"
 NOW=$(date +%s)
 LAST_MODIFIED=$(stat -f %m "$TODAYS_LOG" 2>/dev/null || stat -c %Y "$TODAYS_LOG" 2>/dev/null || echo 0)
 
