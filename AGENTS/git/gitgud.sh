@@ -4,7 +4,7 @@
 # =============================================
 # @description
 # - sidecar for `@gitgud` — re-runs ci on a stale pr against the default branch
-# @see AGENTS.md, AGENTS/git.md, AGENTS/git/gitgud.md
+# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitgud.md
 
 set -euo pipefail
 

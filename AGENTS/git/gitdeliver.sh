@@ -4,7 +4,7 @@
 # =========================================================
 # @description
 # - sidecar for `@gitdeliver` — preflight before the atomic-bucket delivery loop
-# @see AGENTS.md, AGENTS/git.md, AGENTS/git/gitdeliver.md
+# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitdeliver.md
 
 set -euo pipefail
 

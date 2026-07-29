@@ -4,7 +4,8 @@
 # =====================================================
 # @description
 # - sidecar for `@gitaudit` — probes repo/branch state for telemetry
-# @see AGENTS.md, AGENTS/git.md, AGENTS/git/gitaudit.md
+# - seeds today's audit file and reports its path, so the agent appends to a known target
+# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitaudit.md, AGENTS/templates/audits.md, docs/audits/
 
 # probes: echo "key: $(git some command 2>/dev/null || echo n/a)"
 
@@ -19,6 +20,17 @@ DEFAULT_BRANCH=${DEFAULT_BRANCH:-main}
 CURRENT_BRANCH=$(git branch --show-current)
 PROTECTED="$DEFAULT_BRANCH|production"
 git fetch --prune origin >/dev/null 2>&1 || true
+
+# audit: one file per day, many audits per file — seeded here so the agent has a known target;
+# paths anchor to the repo root, since the sidecar can be invoked from any subdirectory
+echo "--- audit ---"
+ROOT=$(git rev-parse --show-toplevel)
+TODAYS_AUDIT="docs/audits/$(date +%Y-%m-%d).md"
+if [ ! -f "$ROOT/$TODAYS_AUDIT" ];
+then mkdir -p "$ROOT/docs/audits"; echo "# $TODAYS_AUDIT" > "$ROOT/$TODAYS_AUDIT"; fi
+echo "audit_file: $TODAYS_AUDIT"
+echo "audit_time: $(date '+%Y-%m-%d %H:%M')"
+echo "audit_count: $(grep -c '^## Audit #' "$ROOT/$TODAYS_AUDIT" 2>/dev/null || true)"
 
 # local: current branch, last activity, staged/unstaged/untracked files, hidden stashes
 echo "--- local ---"

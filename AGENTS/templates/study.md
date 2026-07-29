@@ -4,12 +4,12 @@
  * @file study.md - study template
  * ================================
  * @description
- * - one file per feature/workflow, `AGENTS/study/`
+ * - one file per feature/workflow, `docs/study/`
  * - gitignored, local-only, never committed
  * - written on request, after a feature ships, to build a mental model of how it works
  * - lists files in ideal-build order, not alphabetical or touched-order
  * - studies are written in maximally concise, roadmap-style language — a map, not a textbook
- * @see AGENTS.md, /AGENTS/study/
+ * @see AGENTS.md, docs/study/
  */
 ```
 

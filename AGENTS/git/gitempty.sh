@@ -4,7 +4,7 @@
 # ==============================================
 # @description
 # - sidecar for `@gitempty` — stash, prune dead remotes, fast-forward trunk
-# @see AGENTS.md, AGENTS/git.md, AGENTS/git/gitempty.md
+# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitempty.md
 
 # exit if any command fails, including unset variables and pipeline errors
 set -euo pipefail

@@ -1,0 +1,52 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(**/.env*)", "Edit(**/.env*)", "Write(**/.env*)",
+      "Read(//**/*.pem)", "Read(//**/*.key)", "Read(//**/*.p12)", "Read(//**/*.crt)",
+      "Read(~/.ssh/**)", "Read(~/.aws/**)", "Read(~/.config/gcloud/**)",
+      "Read(~/.kube/**)", "Read(~/.netrc)", "Read(~/.npmrc)", "Read(~/.gnupg/**)",
+      "Read(~/.bash_history)", "Read(~/.zsh_history)",
+
+      "Edit(**/.git/**)", "Write(**/.git/**)",
+      "Edit(**/.husky/**)", "Write(**/.husky/**)",
+      "Edit(**/.claude/**)", "Write(**/.claude/**)",
+      "Edit(**/.devin/**)", "Write(**/.devin/**)",
+      "Edit(**/.cursor/**)", "Write(**/.cursor/**)",
+      "Edit(webflow/**)", "Write(webflow/**)",
+
+      "Edit(terraform/**/*.tfstate*)", "Write(terraform/**/*.tfstate*)",
+      "Edit(**/*docker-compose.prod*)", "Write(**/*docker-compose.prod*)",
+
+      "Bash(sudo *)",
+      "Bash(rm -rf *)", "Bash(rm -fr *)", "Bash(rm -R *)", "Bash(rm -r *)",
+      "Bash(mkfs*)", "Bash(dd *)",
+      "Bash(chmod -R *)", "Bash(chown -R *)",
+
+      "Bash(node -e *)", "Bash(node --eval *)",
+      "Bash(python -c *)", "Bash(python3 -c *)",
+      "Bash(perl -e *)", "Bash(ruby -e *)",
+      "Bash(eval *)",
+
+      "Bash(*fs.rm*)", "Bash(*fs.unlink*)", "Bash(*fs.rmdir*)", "Bash(*rimraf*)",
+
+      "Bash(dropdb *)", "Bash(prisma migrate reset*)", "Bash(db:drop*)",
+
+      "Bash(git push --force*)", "Bash(git push * -f*)",
+      "Bash(git push origin main)", "Bash(git push origin master)",
+      "Bash(git reset --hard*)", "Bash(git clean -fd*)",
+
+      "Bash(curl * | bash)", "Bash(curl * | sh)",
+      "Bash(wget * | bash)", "Bash(wget * | sh)",
+      "Bash(curl * | python*)", "Bash(wget * | python*)",
+
+      "Bash(gh auth *)",
+      "Bash(gh ssh-key *)",
+      "Bash(gh gpg-key *)",
+      "Bash(gh repo delete*)",
+      "Bash(gh repo archive*)",
+      "Bash(gh secret *)",
+      "Bash(gh variable *)",
+      "Bash(gh release delete*)"
+    ]
+  }
+}

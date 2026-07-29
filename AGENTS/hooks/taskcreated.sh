@@ -9,15 +9,15 @@
 #   created — so this uses additionalContext instead, non-blocking
 # - creates today's log file if missing
 # - nudges the agent to check thread-relatedness, not enforced
-# @see AGENTS.md, AGENTS/logs.md, AGENTS/hooks.md, AGENTS/hooks/taskcompleted.sh
+# @see AGENTS.md, AGENTS/templates/logs.md, AGENTS/hooks/taskcompleted.sh, docs/logs/
 
-TODAYS_LOG="AGENTS/logs/$(date +%Y-%m-%d).md"
+TODAYS_LOG="docs/logs/$(date +%Y-%m-%d).md"
 
 # make today's log file if one doesn't exist
 if [ ! -f "$TODAYS_LOG" ];
-then mkdir -p AGENTS/logs; echo "# $TODAYS_LOG" > "$TODAYS_LOG"; fi
+then mkdir -p docs/logs; echo "# $TODAYS_LOG" > "$TODAYS_LOG"; fi
 
-jq -n --arg ctx "check the most recent thread in $TODAYS_LOG; if this new task is unrelated to it, start a new thread before continuing (see AGENTS/logs.md)" \
+jq -n --arg ctx "check the most recent thread in $TODAYS_LOG; if this new task is unrelated to it, start a new thread before continuing (see AGENTS/templates/logs.md)" \
   '{hookSpecificOutput: {hookEventName: "TaskCreated", additionalContext: $ctx}}'
 
 exit 0

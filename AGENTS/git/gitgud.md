@@ -8,7 +8,7 @@
  * - re-runs CI on a stale branch pr against the current default branch
  * - typically used after `@gitdeliver` fails to atomicize prs correctly
  * - `--watch` flag waits for the fresh CI run to complete before exiting
- * @see AGENTS.md, AGENTS/git.md, AGENTS/git/gitgud.sh
+ * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitgud.sh
  */
 ```
 

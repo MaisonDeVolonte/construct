@@ -7,13 +7,13 @@
 # - creates today's log file if none exists yet
 # - injects today's log + most recent prior log + README.md into session context
 # - works with `claude`; does not work with `grok`
-# @see AGENTS.md, AGENTS/logs.md, /AGENTS/logs/
+# @see AGENTS.md, AGENTS/templates/logs.md, docs/logs/
 
-TODAY_LOG="AGENTS/logs/$(date +%Y-%m-%d).md"
+TODAY_LOG="docs/logs/$(date +%Y-%m-%d).md"
 
 # most recent prior log: dated filenames sort chronologically, so the last non-today match wins
 PREV_LOG=""
-for log in AGENTS/logs/*.md; do
+for log in docs/logs/*.md; do
   [ -e "$log" ] || continue
   [ "$log" = "$TODAY_LOG" ] && continue
   PREV_LOG="$log"
@@ -23,7 +23,7 @@ CHAR_LIMIT=6000
 
 # make today's log file if one doesn't exist
 if [ ! -f "$TODAY_LOG" ];
-then mkdir -p AGENTS/logs; echo "# $TODAY_LOG" > "$TODAY_LOG"; fi
+then mkdir -p docs/logs; echo "# $TODAY_LOG" > "$TODAY_LOG"; fi
 
 # truncates files to preserve context window
 truncFile() {

@@ -1,16 +1,2 @@
-# runtime artifacts — local-only, never committed (see AGENTS/logs.md, prompts.md, plans.md, study.md)
-# folders themselves ship via .gitkeep so the scaffold stays intact on a fresh clone
-AGENTS/logs/*
-AGENTS/prompts/*
-AGENTS/plans/*
-AGENTS/study/*
-!AGENTS/logs/.gitkeep
-!AGENTS/prompts/.gitkeep
-!AGENTS/plans/.gitkeep
-!AGENTS/study/.gitkeep
-
 # macos
 .DS_Store
-
-# local convenience link: agents read AGENTS.md, the rulebook is README.md
-/AGENTS.md

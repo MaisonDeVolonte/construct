@@ -4,7 +4,7 @@
 # ================================================
 # @description
 # - sidecar for `@gitcontinue` — stash, fetch, fast-forward, pop
-# @see AGENTS.md, AGENTS/git.md, AGENTS/git/gitcontinue.md
+# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitcontinue.md
 
 set -euo pipefail
 

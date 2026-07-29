@@ -8,23 +8,23 @@
 # - synthesizes notes into corresponding threads every hour
 # - every tick also asks for any uncaptured prompts to be flushed
 # - works with `claude`; does not work with `grok`
-# @see AGENTS.md, AGENTS/logs.md, AGENTS/prompts.md, AGENTS/logs/, AGENTS/prompts/
+# @see AGENTS.md, AGENTS/templates/logs.md, AGENTS/templates/prompts.md, docs/logs/, docs/prompts/
 
-TODAYS_LOG="AGENTS/logs/$(date +%Y-%m-%d).md"
-TODAYS_PROMPTS="AGENTS/prompts/$(date +%Y-%m-%d).md"
+TODAYS_LOG="docs/logs/$(date +%Y-%m-%d).md"
+TODAYS_PROMPTS="docs/prompts/$(date +%Y-%m-%d).md"
 UPDATE_INTERVAL=900
 SYNTHESIZE_INTERVAL=4
-TICKER_FILE="AGENTS/logs/.ticker"
+TICKER_FILE="docs/logs/.ticker"
 NOW=$(date +%s)
 LAST_MODIFIED=$(stat -f %m "$TODAYS_LOG" 2>/dev/null || stat -c %Y "$TODAYS_LOG" 2>/dev/null || echo 0)
 
 # make today's log file if one doesn't exist
 if [ ! -f "$TODAYS_LOG" ];
-then mkdir -p AGENTS/logs; echo "# $TODAYS_LOG" > "$TODAYS_LOG"; fi
+then mkdir -p docs/logs; echo "# $TODAYS_LOG" > "$TODAYS_LOG"; fi
 
 # make today's prompts file if one doesn't exist
 if [ ! -f "$TODAYS_PROMPTS" ];
-then mkdir -p AGENTS/prompts; echo "# $TODAYS_PROMPTS" > "$TODAYS_PROMPTS"; fi
+then mkdir -p docs/prompts; echo "# $TODAYS_PROMPTS" > "$TODAYS_PROMPTS"; fi
 
 # check if today's log was updated recently
 ELAPSED_TIME=$((NOW - LAST_MODIFIED))
@@ -35,12 +35,12 @@ if [ "$ELAPSED_TIME" -gt "$UPDATE_INTERVAL" ]; then
   case "$TICKER_COUNT" in ''|*[!0-9]*) TICKER_COUNT=0 ;; esac
   TICKER_COUNT=$((TICKER_COUNT + 1))
 
-  NOTES_TASK="append a note to the end of $TODAYS_LOG (see AGENTS/logs.md)"
+  NOTES_TASK="append a note to the end of $TODAYS_LOG (see AGENTS/templates/logs.md)"
 
-  PROMPTS_TASK="rewrite missing prompts to $TODAYS_PROMPTS (see AGENTS/prompts.md)"
+  PROMPTS_TASK="rewrite missing prompts to $TODAYS_PROMPTS (see AGENTS/templates/prompts.md)"
 
-  SYNTHESIZE_TASK="synthesize notes from $TODAYS_LOG (see AGENTS/logs.md) \
-  and synthesize prompts from $TODAYS_PROMPTS (see AGENTS/prompts.md)"
+  SYNTHESIZE_TASK="synthesize notes from $TODAYS_LOG (see AGENTS/templates/logs.md) \
+  and synthesize prompts from $TODAYS_PROMPTS (see AGENTS/templates/prompts.md)"
 
   # checks if ticker is on a synthesize interval
   if [ "$((TICKER_COUNT % SYNTHESIZE_INTERVAL))" -eq 0 ];

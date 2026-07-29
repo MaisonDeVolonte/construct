@@ -8,7 +8,7 @@
  * - runs `AGENTS/git/gitempty.sh` to stash work, prune dead remotes, and fast-forward trunk
  * - runs `AGENTS/git/gitaudit.sh` to classify branches (local/remote/ghost/zombie) for deletion
  * - destructive: asks the user to confirm every branch-cleanup action before deleting
- * @see AGENTS.md, AGENTS/git.md, AGENTS/git/gitempty.sh, AGENTS/git/gitaudit.sh
+ * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitempty.sh, AGENTS/git/gitaudit.sh
  */
 ```
 
