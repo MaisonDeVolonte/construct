@@ -4,15 +4,17 @@
 # ================================
 # @description
 # - creates today's log file if none exists yet
-# - appends a note to a thread every 15 minutes
-# - synthesizes notes into corresponding threads every hour
+# - appends a note to a thread every 30 minutes
+# - synthesizes notes into corresponding threads every 2 hours
 # - every tick also asks for any uncaptured prompts to be flushed into their thread
 # - one file means one mtime, so the interval timer measures every kind of write
 # - works with `claude`; does not work with `grok`
 # @see AGENTS.md, AGENTS/templates/logs.md, docs/logs/
 
 TODAYS_LOG="docs/logs/$(date +%Y-%m-%d).md"
-UPDATE_INTERVAL=900
+# seconds between notes, and how many notes before a synthesis pass
+# the synthesis cadence is the product of the two: 1800 * 4 = every 2 hours
+UPDATE_INTERVAL=1800
 SYNTHESIZE_INTERVAL=4
 # hook state, not an artifact — sits beside the logs it paces, the only workflow that reads it;
 # leading dot keeps it out of any bare docs/logs/* listing an agent is told to read
