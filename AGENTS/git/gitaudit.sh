@@ -75,12 +75,16 @@ if gh auth status >/dev/null 2>&1; then
   echo "assigned_issues: $(gh issue list --assignee '@me' 2>/dev/null | wc -l | tr -d ' ')"
 else echo "github: gh unavailable (team probes skipped)"; fi
 
-# absorbed: does the branch tip add any content the default branch lacks?
+# absorbed: would merging this branch into the trunk change anything?
 # `merged` asks git cherry, which compares patch-ids, so a rebased or squashed branch reads as
-# unmerged forever. an empty three-dot diff compares trees instead, and answers the real question:
-# is anything lost by deleting this. absorbed=yes with merged=no means rebase-merged, safe to drop
+# unmerged forever. this merges in memory instead and compares the result to the trunk's tree:
+# identical means the branch adds nothing, which is what a deletion gate actually needs to know
+# a conflict, or a git too old for --write-tree, reports no — the fail-safe answer is "keep it"
 is_absorbed() {
-  if git diff --quiet "$1...$2" 2>/dev/null; then echo yes; else echo no; fi
+  local merged_tree trunk_tree
+  merged_tree=$(git merge-tree --write-tree "$1" "$2" 2>/dev/null) || { echo no; return; }
+  trunk_tree=$(git rev-parse "$1^{tree}" 2>/dev/null) || { echo no; return; }
+  if [ "$merged_tree" = "$trunk_tree" ]; then echo yes; else echo no; fi
 }
 
 # branches: last commit, ahead/behind, upstream tracking, reachable, remote, merged, absorbed
