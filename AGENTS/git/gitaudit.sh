@@ -73,7 +73,7 @@ for branch in $(git for-each-ref --sort=-committerdate --format='%(refname:short
   if git merge-base --is-ancestor "$branch" "$DEFAULT_BRANCH" 2>/dev/null; then B_REACHABLE=yes; else B_REACHABLE=no; fi
   if git rev-parse --verify --quiet "refs/remotes/origin/$branch" >/dev/null; then B_REMOTE=yes; else B_REMOTE=no; fi
   if git cherry "$DEFAULT_BRANCH" "$branch" 2>/dev/null | grep -q '^+'; then B_MERGED=no; else B_MERGED=yes; fi
-  echo "branch: $branch | last: $B_LAST | ahead: $B_AHEAD | upstream: ${B_TRACK:-none} | reachable: $B_REACHABLE | remote: $B_REMOTE | merged: $B_MERGED | last_commit: $(git log -1 --format='%s' "$branch" 2>/dev/null)"
+  echo "branch: $branch | last: $B_LAST | ahead: $B_AHEAD | behind: $B_BEHIND | upstream: ${B_TRACK:-none} | reachable: $B_REACHABLE | remote: $B_REMOTE | merged: $B_MERGED | last_commit: $(git log -1 --format='%s' "$branch" 2>/dev/null)"
 done
 
 # remote-only: branches on origin with no local counterpart, never reported by the loop above
