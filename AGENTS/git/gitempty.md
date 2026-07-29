@@ -31,24 +31,32 @@
   - fail (exit code > 0) → abort and report: "<raw terminal error>"
   - success (exit code = 0): ask the user to confirm any branch cleanup actions:
 
+    read `merged = yes OR absorbed = yes` as "safe", since a rebased branch reads merged = no
+    forever; only `merged = no AND absorbed = no` is real unmerged work
+
     ```text
     - ignored: `main` and `production` are never deleted
   
-    - skipped: unmerged branches that are not eligible for deletion
+    - skipped: merged = no AND absorbed = no, the only branches holding unshipped work
       - `branch_name`
   
-    - local only deletions: merged = yes, reachable = yes, and remote = no
+    - local only deletions: safe, reachable = yes, and remote = no
       - `branch_name` → `git branch -d branch_name`
 
-    - local & remote deletions: merged = yes, reachable = yes, and remote = yes
+    - local & remote deletions: safe, reachable = yes, and remote = yes
       - `branch_name` → `git push origin --delete branch_name && git branch -d branch_name`
   
-    - ghost deletions: merged = yes (squash/rebase), reachable = no, and remote = no
+    - ghost deletions: safe (squash/rebase), reachable = no, and remote = no
       - `branch_name` → `git branch -D branch_name`
 
-    - zombie deletions: merged = yes (squash/rebase), reachable = no, and remote = yes (still on GitHub)
+    - zombie deletions: safe (squash/rebase), reachable = no, and remote = yes (still on GitHub)
       - `branch_name` → `git push origin --delete branch_name && git branch -D branch_name`
 
-    - remote only deletions: listed under `--- remote-only ---` with merged = yes, no local branch
+    - remote only deletions: listed under `--- remote-only ---` with safe, no local branch
       - `branch_name` → `git push origin --delete branch_name`
     ```
+
+    - state `absorbed: yes / merged: no` explicitly when it applies, so the user can see the
+      branch is rebase-absorbed rather than take a deletion on trust
+    - `-D` is required for any absorbed branch, since `-d` consults the same patch-id check
+      that got it wrong; note that `pretooluse.sh` blocks `-D`, so hand those commands over

@@ -28,8 +28,16 @@
   - evaluate the telemetry against these potential scenarios:
     - IF a branch has `upstream: gone`: Explicitly label it a "Ghost Branch"
     - IF a branch has `merged: yes` and `upstream: none`: Explicitly label it "Local Clutter"
+    - IF a branch has `absorbed: yes` and `merged: no`: Explicitly label it "Rebase Absorbed"
     - IF `conflict_risk_files` > 0: Immediately issue a high-alert warning naming the branch
     - IF there are `unstaged_files` or `untracked_files` on the default branch: help the user clear the working directory
+
+  - `merged` vs `absorbed`, and why only one of them answers "is anything lost by deleting this":
+    - `merged` comes from `git cherry`, which compares patch-ids, so a branch whose work reached
+      the trunk by rebase or squash reads `merged: no` forever, however long ago it landed
+    - `absorbed` compares trees: `yes` means the branch tip adds NOTHING the trunk lacks
+    - treat `absorbed: yes` as safe to delete regardless of what `merged` says
+    - only `absorbed: no` AND `merged: no` is real unmerged work; never propose deleting it
 
   ```text
   - output the raw telemetry

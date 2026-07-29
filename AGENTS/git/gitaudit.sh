@@ -75,7 +75,15 @@ if gh auth status >/dev/null 2>&1; then
   echo "assigned_issues: $(gh issue list --assignee '@me' 2>/dev/null | wc -l | tr -d ' ')"
 else echo "github: gh unavailable (team probes skipped)"; fi
 
-# branches: last commit, ahead/behind, upstream tracking, reachable, remote, merged status
+# absorbed: does the branch tip add any content the default branch lacks?
+# `merged` asks git cherry, which compares patch-ids, so a rebased or squashed branch reads as
+# unmerged forever. an empty three-dot diff compares trees instead, and answers the real question:
+# is anything lost by deleting this. absorbed=yes with merged=no means rebase-merged, safe to drop
+is_absorbed() {
+  if git diff --quiet "$1...$2" 2>/dev/null; then echo yes; else echo no; fi
+}
+
+# branches: last commit, ahead/behind, upstream tracking, reachable, remote, merged, absorbed
 echo "--- branches ---"
 for branch in $(git for-each-ref --sort=-committerdate --format='%(refname:short)' refs/heads/ | grep -vx "$DEFAULT_BRANCH"); do
   B_LAST=$(git log -1 --format='%cr' "$branch" 2>/dev/null || echo n/a)
@@ -85,7 +93,8 @@ for branch in $(git for-each-ref --sort=-committerdate --format='%(refname:short
   if git merge-base --is-ancestor "$branch" "$DEFAULT_BRANCH" 2>/dev/null; then B_REACHABLE=yes; else B_REACHABLE=no; fi
   if git rev-parse --verify --quiet "refs/remotes/origin/$branch" >/dev/null; then B_REMOTE=yes; else B_REMOTE=no; fi
   if git cherry "$DEFAULT_BRANCH" "$branch" 2>/dev/null | grep -q '^+'; then B_MERGED=no; else B_MERGED=yes; fi
-  echo "branch: $branch | last: $B_LAST | ahead: $B_AHEAD | behind: $B_BEHIND | upstream: ${B_TRACK:-none} | reachable: $B_REACHABLE | remote: $B_REMOTE | merged: $B_MERGED | last_commit: $(git log -1 --format='%s' "$branch" 2>/dev/null)"
+  B_ABSORBED=$(is_absorbed "$DEFAULT_BRANCH" "$branch")
+  echo "branch: $branch | last: $B_LAST | ahead: $B_AHEAD | behind: $B_BEHIND | upstream: ${B_TRACK:-none} | reachable: $B_REACHABLE | remote: $B_REMOTE | merged: $B_MERGED | absorbed: $B_ABSORBED | last_commit: $(git log -1 --format='%s' "$branch" 2>/dev/null)"
 done
 
 # remote-only: branches on origin with no local counterpart, never reported by the loop above
@@ -96,7 +105,8 @@ for branch in $(git for-each-ref --sort=-committerdate --format='%(refname)' ref
   R_AHEAD=$(git rev-list --count "origin/$DEFAULT_BRANCH..origin/$branch" 2>/dev/null || echo '?')
   if git merge-base --is-ancestor "origin/$branch" "origin/$DEFAULT_BRANCH" 2>/dev/null; then R_REACHABLE=yes; else R_REACHABLE=no; fi
   if git cherry "origin/$DEFAULT_BRANCH" "origin/$branch" 2>/dev/null | grep -q '^+'; then R_MERGED=no; else R_MERGED=yes; fi
-  echo "remote_branch: $branch | last: $R_LAST | ahead: $R_AHEAD | reachable: $R_REACHABLE | merged: $R_MERGED | last_commit: $(git log -1 --format='%s' "origin/$branch" 2>/dev/null)"
+  R_ABSORBED=$(is_absorbed "origin/$DEFAULT_BRANCH" "origin/$branch")
+  echo "remote_branch: $branch | last: $R_LAST | ahead: $R_AHEAD | reachable: $R_REACHABLE | merged: $R_MERGED | absorbed: $R_ABSORBED | last_commit: $(git log -1 --format='%s' "origin/$branch" 2>/dev/null)"
 done
 
 echo "--- end ---"
