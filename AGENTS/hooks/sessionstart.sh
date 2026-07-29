@@ -10,7 +10,14 @@
 # @see AGENTS.md, AGENTS/logs.md, /AGENTS/logs/
 
 TODAY_LOG="AGENTS/logs/$(date +%Y-%m-%d).md"
-PREV_LOG=$(ls -1 AGENTS/logs/*.md 2>/dev/null | grep -vF "$TODAY_LOG" | sort -r | head -1)
+
+# most recent prior log: dated filenames sort chronologically, so the last non-today match wins
+PREV_LOG=""
+for log in AGENTS/logs/*.md; do
+  [ -e "$log" ] || continue
+  [ "$log" = "$TODAY_LOG" ] && continue
+  PREV_LOG="$log"
+done
 READ_ME="README.md"
 CHAR_LIMIT=6000
 

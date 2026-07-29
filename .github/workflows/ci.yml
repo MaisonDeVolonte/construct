@@ -1,0 +1,53 @@
+# ==================================================
+# @file ci.yml - shell lint + reference-integrity gate
+# ==================================================
+# @description
+# - the repo ships shell scripts and docs that point at each other, so ci gates exactly that
+# - `shellcheck` lints every trigger sidecar and hook at warning severity
+# - `gitinsights.sh` re-runs its own broken-reference scan; any broken ref fails the build
+# - code markers (TODO/FIXME) are reported, never gated — they are opportunities, not errors
+# - this is the required check that lets `gh pr merge --auto` engage (see AGENTS/git/gitdeliver.md)
+# @see AGENTS.md, AGENTS/git/gitinsights.sh, AGENTS/git/gitdeliver.md
+
+name: ci
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # shellcheck ships preinstalled on ubuntu-latest runners
+      - name: shellcheck
+        run: |
+          shellcheck --version
+          shellcheck --severity=warning AGENTS/git/*.sh AGENTS/hooks/*.sh
+
+      # every script must at least parse, including any the lint globs above miss
+      - name: syntax
+        run: |
+          find AGENTS -name '*.sh' -print0 | xargs -0 -n1 bash -n
+
+      # the sidecar is report-only by contract, so the gate reads its telemetry instead of its exit code
+      - name: reference integrity
+        run: |
+          set -euo pipefail
+          out=$(bash AGENTS/git/gitinsights.sh)
+          echo "$out"
+          broken=$(printf '%s\n' "$out" \
+            | awk -F': ' '/^broken_(mirror|link|see): / {sum += $2} END {print sum + 0}')
+          if [ "$broken" -gt 0 ]; then
+            echo "::error::$broken broken reference(s) — see the findings above"
+            exit 1
+          fi
+          echo "reference integrity: clean"
