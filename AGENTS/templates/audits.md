@@ -13,7 +13,8 @@
  * - skip the raw telemetry dump; keep the read of it, not the printout
  * - carry unresolved findings forward by restating them, never by editing the older audit
  * - err on the side of brevity, not completeness
- * @see AGENTS.md, AGENTS/git/gitaudit.md, docs/audits/
+ * - `AGENTS/templates/audits.sh` validates an audit file against every rule above a script can judge
+ * @see AGENTS.md, AGENTS/templates/audits.sh, AGENTS/git/gitaudit.md, docs/audits/
  */
 ```
 
@@ -52,3 +53,12 @@ what the user actually did, appended after the fact; `pending` until then
 
 ## Audit #2: repeat the above format for each `@gitaudit` run on the same day
 never edit an earlier audit; a stale finding is signal about how long it went unresolved
+
+```text
+VERIFY - not part of the artifact
+- RUN `AGENTS/templates/audits.sh` once the audit is appended; pass a path to scope the run
+- FIX every ERROR, since each one breaks a rule stated in the header above
+- STOP on a `secret` finding and ask the user before truncating it; the key needs rotating first
+- JUSTIFY or fix every WARN; the sidecar tolerates them, the next reader may not
+- ANSWER the checklist it prints, since those rules are the ones no script can judge
+```

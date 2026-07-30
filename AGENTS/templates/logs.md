@@ -23,7 +23,8 @@
  * - focus on outcomes, not the conversation (no play-by-plays)
  * - err on the side of brevity, not completeness
  * - ultimately, logs should only capture the most meaningful signals, ignoring noise
- * @see AGENTS.md, docs/logs/
+ * - `AGENTS/templates/logs.sh` validates a log against every rule above a script can judge
+ * @see AGENTS.md, AGENTS/templates/logs.sh, docs/logs/
  */
 ```
 
@@ -103,3 +104,12 @@ what the user actually asked, in the thread it drove
 
 ## Thread #2: Repeat the above format for each meaningful unit of work
 synthesize pending notes when creating a new thread, and prune that thread's prompts
+
+```text
+VERIFY - not part of the artifact
+- RUN `AGENTS/templates/logs.sh` after closing a thread, adding a note, or synthesizing
+- FIX every ERROR, since each one breaks a rule stated in the header above
+- STOP on a `secret` finding and ask the user before truncating it; the key needs rotating first
+- JUSTIFY or fix every WARN; the sidecar tolerates them, the next reader may not
+- ANSWER the checklist it prints, since those rules are the ones no script can judge
+```

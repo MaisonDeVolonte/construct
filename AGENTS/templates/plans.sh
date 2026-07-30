@@ -1,0 +1,338 @@
+#!/bin/bash
+# =================================================
+# @file plans.sh - plan template validator sidecar
+# =================================================
+# @description
+# - sidecar for `plans.md` — asserts a plan matches the template that documents it
+# - one check per machine-checkable rule; every rule needing judgement prints as a human checklist
+# - ERROR breaks a rule the template states outright; WARN names a smell the template tolerates
+# - defaults to every file in `docs/plans/`; pass files or a directory to scope it
+# - `--strict` promotes warnings to errors; exits 1 on any error, 0 otherwise
+# @see AGENTS.md, AGENTS/shared/secrets.sh, AGENTS/templates/plans.md, AGENTS/git/gitinsights.sh, docs/plans/
+
+set -euo pipefail
+
+# ==============
+# PREFLIGHT
+# ==============
+# the shared checks sit beside this file, not beside the repo being scanned: resolve them before
+# anything cds to a repo root, since BASH_SOURCE arrives relative and would follow that cd
+SHARED=$(cd "$(dirname "${BASH_SOURCE[0]}")/../shared" 2>/dev/null && pwd || true)
+if [ ! -f "$SHARED/secrets.sh" ]; then
+  echo "fatal: no AGENTS/shared/secrets.sh beside this sidecar" >&2; exit 1; fi
+# shellcheck source=../shared/secrets.sh
+. "$SHARED/secrets.sh"
+
+# character counts, not byte counts: bash's ${#var} is multibyte-aware under a utf-8 locale, and
+# every em dash in a plan is 3 bytes — a byte count would flag lines that are legally under the cap
+UTF8_LOCALE=$(locale -a 2>/dev/null | grep -iE '^(C|en_US)\.(utf-?8)$' | head -n 1 || true)
+if [ -n "$UTF8_LOCALE" ]; then export LC_ALL="$UTF8_LOCALE"; fi
+
+MAX_WIDTH=100
+STRICT=0
+TEMPLATE="AGENTS/templates/plans.md"
+
+# the template's own section order, which is the one thing every plan must agree on
+EXPECTED_SECTIONS=$'Context\nGoal\nSolution\nRisks\nChecklist\nFuture Work\nNotes'
+
+PLANS=()
+for arg in "$@"; do
+  case "$arg" in
+    --strict) STRICT=1;;
+    -h|--help) sed -n '2,12p' "$0"; exit 0;;
+    -*) echo "fatal: unknown flag $arg" >&2; exit 1;;
+    *) PLANS+=("$arg");;
+  esac
+done
+
+# no paths given: scan the whole artifact directory, anchored to the repo root so the default
+# works from any subdirectory — same posture as the @git* sidecars
+if [ ${#PLANS[@]} -eq 0 ]; then
+  if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    echo "fatal: not a git repository, and no paths given" >&2; exit 1; fi
+  cd "$(git rev-parse --show-toplevel)"
+  if [ ! -d docs/plans ]; then echo "fatal: no docs/plans/ to scan" >&2; exit 1; fi
+  PLANS=(docs/plans/*.md)
+fi
+
+# a directory argument expands to the plans inside it
+EXPANDED=()
+for path in "${PLANS[@]}"; do
+  if [ -d "$path" ]; then
+    for nested in "$path"/*.md; do [ -f "$nested" ] && EXPANDED+=("$nested"); done
+  elif [ -f "$path" ]; then EXPANDED+=("$path")
+  else echo "fatal: no such plan: $path" >&2; exit 1; fi
+done
+PLANS=("${EXPANDED[@]}")
+
+# findings collect as "SEV|file|line|category|detail" — line is its own field so the report can
+# sort numerically; joining it to the path first sorts 121 above 31. the run fails on ERROR only
+FINDINGS=$(mktemp)
+SCRATCH=$(mktemp -d)
+trap 'rm -rf "$FINDINGS" "$SCRATCH"' EXIT
+
+err()  { printf 'ERROR|%s|%s|%s|%s\n' "$1" "$2" "$3" "$4" >> "$FINDINGS"; }
+warn() { printf 'WARN|%s|%s|%s|%s\n' "$1" "$2" "$3" "$4" >> "$FINDINGS"; }
+
+# emit "LINENO<TAB>TEXT" for every line inside a "## <name>" section, stopping at the next "## "
+section() {
+  awk -v want="## $2" '
+    $0 == want { inside = 1; next }
+    /^## / { inside = 0 }
+    inside { print NR "\t" $0 }
+  ' "$1"
+}
+
+# ==============
+# CHECKS
+#   each takes a plan path and appends findings; to add one, write a function and list it below
+# ==============
+
+# "one file per plan, `docs/plans/`, named `YYYY-MM-DD-operation-<title>.md`"
+# caps are allowed in the title because `-DONE` is the closed-plan suffix
+check_filename() {
+  local file=$1 base dir
+  base=$(basename "$file")
+  dir=$(dirname "$file")
+  if ! printf '%s' "$base" | grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2}-operation-[A-Za-z0-9-]+\.md$'; then
+    err "$file" 1 filename "expected YYYY-MM-DD-operation-<title>.md"
+  fi
+  case "$dir" in
+    docs/plans|./docs/plans|*/docs/plans) ;;
+    *) warn "$file" 1 location "one plan per file, all of them in docs/plans/";;
+  esac
+}
+
+# "tracked in git"
+check_tracked() {
+  local file=$1
+  if ! git ls-files --error-unmatch "$file" >/dev/null 2>&1; then
+    warn "$file" 1 untracked "plans are tracked in git; this one is not committed yet"
+  fi
+}
+
+# "# AGENT PLAN: Operation [title]" then "one plain-english line: what this plan does"
+check_header() {
+  local file=$1 title summary blank
+  title=$(sed -n '1p' "$file")
+  summary=$(sed -n '2p' "$file")
+  blank=$(sed -n '3p' "$file")
+  case "$title" in
+    "# AGENT PLAN: Operation"*) ;;
+    "# AGENT PLAN:"*) warn "$file" 1 title "the template names every plan an Operation";;
+    *) err "$file" 1 title "line 1 must read '# AGENT PLAN: Operation <title>'";;
+  esac
+  if [ -z "$summary" ] || [ "${summary:0:1}" = "#" ]; then
+    err "$file" 2 summary "line 2 must be the one plain-english line: what this plan does"
+  fi
+  if [ -n "$blank" ]; then
+    err "$file" 3 summary "line 3 must be blank; the summary is one line and never wraps"
+  fi
+}
+
+# "sections run in this order: context, goal, solution, risks, checklist, future work, notes"
+check_sections() {
+  local file=$1 actual
+  actual=$(grep -E '^## ' "$file" | sed 's/^## //' || true)
+  if [ "$actual" != "$EXPECTED_SECTIONS" ]; then
+    err "$file" 1 section_order "got $(printf '%s' "$actual" | tr '\n' '>' | sed 's/>$//')"
+  fi
+}
+
+# "`lines` carry a single clause, capped at 100 characters, and never wrap"
+check_width() {
+  local file=$1 lineno=0 line
+  while IFS= read -r line; do
+    lineno=$((lineno + 1))
+    if [ ${#line} -gt "$MAX_WIDTH" ]; then
+      err "$file" "$lineno" width "${#line} chars; the cap is $MAX_WIDTH"
+    fi
+  done < "$file"
+}
+
+# a stray fence swallows the rest of the plan when rendered, so it is never cosmetic
+check_fences() {
+  local file=$1 count
+  count=$(grep -cE '^[[:space:]]*```' "$file" || true)
+  if [ $((count % 2)) -ne 0 ]; then
+    err "$file" 1 fences "$count fence markers; one is unclosed"
+  fi
+}
+
+# the body carries one clause per line, so a bare continuation line means a bullet wrapped.
+# the template allows a single description line under the heading, before the bullets start
+check_clauses() {
+  local file=$1 name lineno text started
+  for name in Context Solution Risks; do
+    started=0
+    while IFS=$'\t' read -r lineno text; do
+      if [ -z "$text" ]; then continue; fi
+      case "$text" in
+        "- "*) started=1; continue;;
+      esac
+      if [ "$started" -eq 0 ]; then started=1; continue; fi
+      err "$file" "$lineno" wrapped_clause "$name lines carry a single clause and never wrap"
+    done < <(section "$file" "$name")
+  done
+}
+
+# "a tree or diagram that makes the destination concrete" — and no change markers inside it,
+# because a checkbox in the goal describes what changes rather than what things ARE
+check_goal() {
+  local file=$1 body lineno text
+  body=$(section "$file" Goal | cut -f2-)
+  case "$body" in
+    *'```'*|*'|'*) ;;
+    *) warn "$file" 1 goal_diagram "the goal needs a tree, diagram or table beneath its one line";;
+  esac
+  while IFS=$'\t' read -r lineno text; do
+    case "$text" in
+      *"- [ ]"*|*"- [x]"*) warn "$file" "$lineno" goal_markers "no change markers or stage numbers in the goal";;
+    esac
+  done < <(section "$file" Goal)
+}
+
+# "label each with a noun naming the actual risk" — the label is the leading backticked span
+check_risks() {
+  local file=$1 lineno text
+  while IFS=$'\t' read -r lineno text; do
+    case "$text" in "- "*) ;; *) continue;; esac
+    printf '%s' "$text" | grep -qE '^- `[^`]+`' \
+      || err "$file" "$lineno" risk_label 'risk needs a leading `noun` label, never a category'
+  done < <(section "$file" Risks)
+}
+
+# stages are "### <n>. <name>" and hold "short directives, verb first, one line each".
+# one orienting line under a stage header is fine; rationale between items belongs in a note
+check_checklist() {
+  local file=$1 lineno text stage previous=0 items=0
+  while IFS=$'\t' read -r lineno text; do
+    if [ -z "$text" ]; then continue; fi
+    case "$text" in
+      "### "*)
+        items=0
+        stage=$(printf '%s' "$text" | sed -n 's/^### \([0-9]\{1,\}\)\..*/\1/p')
+        if [ -z "$stage" ]; then
+          err "$file" "$lineno" stage_header "stages are '### <n>. <name>'"
+        else
+          if [ "$stage" -ne $((previous + 1)) ]; then
+            warn "$file" "$lineno" stage_order "stage $stage follows $previous; the numbering skips"
+          fi
+          previous=$stage
+        fi
+        continue;;
+      "- [ ] "*|"- [x] "*) items=1; continue;;
+      " "*) continue;;
+      "**"*) continue;;
+    esac
+    if [ "$items" -eq 1 ]; then
+      warn "$file" "$lineno" checklist_prose "no prose between items; point at a note instead"
+    fi
+  done < <(section "$file" Checklist)
+}
+
+# "`notes` are numbered so every `(see #x)` resolves" and "a note nothing points at is either
+# dead weight or a missing `(see #x)` somewhere"
+check_notes() {
+  local file=$1 lineno text number expected=1 missing orphan hit
+  : > "$SCRATCH/defined"
+  while IFS=$'\t' read -r lineno text; do
+    number=$(printf '%s' "$text" | sed -n 's/^\([0-9]\{1,\}\)\. .*/\1/p')
+    if [ -z "$number" ]; then continue; fi
+    printf '%s\n' "$number" >> "$SCRATCH/defined"
+    if [ "$number" -ne "$expected" ]; then
+      err "$file" "$lineno" note_numbering "note $number where $expected was expected; renumbering breaks every reference"
+    fi
+    expected=$((number + 1))
+  done < <(section "$file" Notes)
+  sort -un "$SCRATCH/defined" -o "$SCRATCH/defined"
+
+  # matches "(see #4)" and comma-chained forms like "(see #2, #11, #12)", while a leading
+  # "(PR #79, see #22)" contributes only the 22 — pr numbers are not note numbers
+  grep -oE 'see #[0-9]+([[:space:]]*,[[:space:]]*#[0-9]+)*' "$file" 2>/dev/null \
+    | grep -oE '[0-9]+' | sort -un > "$SCRATCH/refs" || true
+  if [ ! -s "$SCRATCH/refs" ]; then : > "$SCRATCH/refs"; fi
+
+  while IFS= read -r missing; do
+    if [ -z "$missing" ]; then continue; fi
+    hit=$(grep -nE "see #$missing\\b" "$file" | head -n 1 | cut -d: -f1 || true)
+    err "$file" "${hit:-1}" dangling_note "(see #$missing) resolves to nothing"
+  done < <(comm -23 "$SCRATCH/refs" "$SCRATCH/defined")
+
+  while IFS= read -r orphan; do
+    if [ -z "$orphan" ]; then continue; fi
+    hit=$(grep -nE "^$orphan\\. " "$file" | head -n 1 | cut -d: -f1 || true)
+    warn "$file" "${hit:-1}" orphan_note "note $orphan: dead weight, or a missing (see #$orphan)"
+  done < <(comm -13 "$SCRATCH/refs" "$SCRATCH/defined")
+}
+
+
+# --- run list (add new checks here) ---
+for plan in "${PLANS[@]}"; do
+  check_filename "$plan"
+  check_tracked  "$plan"
+  check_header   "$plan"
+  check_sections "$plan"
+  check_width    "$plan"
+  check_fences   "$plan"
+  check_clauses  "$plan"
+  check_goal     "$plan"
+  check_risks    "$plan"
+  check_checklist "$plan"
+  check_notes    "$plan"
+  scan_secrets   "$plan"
+done
+
+# ==============
+# TELEMETRY
+# ==============
+ERRORS=$(grep -c '^ERROR|' "$FINDINGS" || true)
+WARNINGS=$(grep -c '^WARN|' "$FINDINGS" || true)
+SECRETS=$(grep -c '|secret|' "$FINDINGS" || true)
+
+cat <<EOF
+
+=== plans.sh sidecar ===
+template: $TEMPLATE
+scanned: ${#PLANS[@]} plan(s)
+width_cap: $MAX_WIDTH chars
+errors: $ERRORS
+warnings: $WARNINGS
+secrets: $SECRETS
+--- findings ---
+EOF
+
+if [ "$ERRORS" -eq 0 ] && [ "$WARNINGS" -eq 0 ]; then
+  echo "none — every machine-checkable rule holds"
+else
+  sort -t'|' -k1,1 -k2,2 -k3,3n "$FINDINGS" \
+    | awk -F'|' '{ printf "%-5s %-50s %-17s %s\n", $1, $2 ":" $3, $4, $5 }'
+fi
+
+if [ "$SECRETS" -gt 0 ]; then
+  cat <<EOF
+--- secrets ---
+STOP: $SECRETS unambiguous credential match(es) above
+- do NOT truncate or edit anything yet; ask the user which match is real and what to do about it
+- a key that already reached a commit is leaked, and truncating the file does not un-leak it
+- rotate the credential first, then agree what the file should say in its place
+EOF
+fi
+cat <<'EOF'
+--- needs a human (template rules no script can judge) ---
+- written before complex or architectural work, not after it
+- maximally clear, concise, action-oriented; plain english over jargon, facts over metaphor
+- body sections state conclusions only; the reasoning lives in the numbered notes
+- solution lines are decisions; a line that could be pasted into the checklist belongs there
+- risks sort by blast radius and irreversibility, never by likelihood
+- stages run in sequence and each ships as its own pr
+- every list is ordered deliberately; if the order is not obvious, a note says why
+- a claim with a number in it is verified before it lands, or it does not land
+- notes are self-contained, since readers jump in from one line and jump straight back
+- a key that reached a commit is already leaked; rotate it before rewriting anything
+========================
+EOF
+
+if [ "$ERRORS" -gt 0 ]; then exit 1; fi
+if [ "$STRICT" -eq 1 ] && [ "$WARNINGS" -gt 0 ]; then exit 1; fi
+exit 0

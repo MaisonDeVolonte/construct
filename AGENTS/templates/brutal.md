@@ -14,7 +14,8 @@
  * - skip the raw telemetry dump; keep the read of it, not the printout
  * - never soften a written scorecard, and never re-grade an older one to match a newer mood
  * - grade drift across dated files is the point; a lane stuck at D is the signal
- * @see AGENTS.md, AGENTS/git/gitbrutal.md, docs/brutal/
+ * - `AGENTS/templates/brutal.sh` validates a scorecard against every rule above a script can judge
+ * @see AGENTS.md, AGENTS/templates/brutal.sh, AGENTS/git/gitbrutal.md, docs/brutal/
  */
 ```
 
@@ -55,3 +56,12 @@ specific files, ignored rules, or architectural landmines
 
 ## Brutal #2: repeat the above format for each `@gitbrutal` run on the same day
 never edit an earlier scorecard; a grade that has not moved in a week is the finding
+
+```text
+VERIFY - not part of the artifact
+- RUN `AGENTS/templates/brutal.sh` once the scorecard is appended; pass a path to scope the run
+- FIX every ERROR, since each one breaks a rule stated in the header above
+- STOP on a `secret` finding and ask the user before truncating it; the key needs rotating first
+- JUSTIFY or fix every WARN; the sidecar tolerates them, the next reader may not
+- ANSWER the checklist it prints, since those rules are the ones no script can judge
+```
