@@ -4,13 +4,15 @@
  * @file study.md - study template
  * ================================
  * @description
- * - one file per feature/workflow, `docs/study/`
+ * - one file per feature/workflow, `docs/study/`, named `<feature>.md` in kebab-case
  * - tracked in git
  * - scrub client names, tokens, and other sensitive detail before it lands in a commit
  * - written on request, after a feature ships, to build a mental model of how it works
  * - lists files in ideal-build order, not alphabetical or touched-order
  * - studies are written in maximally concise, roadmap-style language — a map, not a textbook
- * @see AGENTS.md, docs/study/
+ * - `lines` carry a single clause, capped at 100 characters, and never wrap
+ * - `AGENTS/templates/study.sh` validates a study against every rule above a script can judge
+ * @see AGENTS.md, AGENTS/templates/study.sh, docs/study/
  */
 ```
 
@@ -40,3 +42,12 @@ how to build the next similar thing, using this as the reference
 > 2. build one raw source under `apis/`, one job, no formatting
 > 3. derive + format + cache in `aggregate.ts`
 > 4. wire the dumb UI row last
+
+```text
+VERIFY - not part of the artifact
+- RUN `AGENTS/templates/study.sh` once the study is written; pass a path to scope the run
+- FIX every ERROR, since each one breaks a rule stated in the header above
+- STOP on a `secret` finding and ask the user before truncating it; the key needs rotating first
+- JUSTIFY or fix every WARN; the sidecar tolerates them, the next reader may not
+- ANSWER the checklist it prints, since those rules are the ones no script can judge
+```

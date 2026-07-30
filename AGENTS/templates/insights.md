@@ -14,7 +14,8 @@
  * - skip the raw sidecar dump; keep the read of it, not the printout
  * - an opportunity that recurs across dated files is a finding; restate it, never edit the older report
  * - a Q1 entry that survives three reports has stopped being urgent in practice, say so
- * @see AGENTS.md, AGENTS/git/gitinsights.md, docs/insights/
+ * - `AGENTS/templates/insights.sh` validates a report against every rule above a script can judge
+ * @see AGENTS.md, AGENTS/templates/insights.sh, AGENTS/git/gitinsights.md, docs/insights/
  */
 ```
 
@@ -58,3 +59,12 @@ opportunities restated from an earlier report, with how many reports they have s
 
 ## Insight #2: repeat the above format for each `@gitinsights` run on the same day
 never edit an earlier report; a recurring opportunity is signal about what keeps getting skipped
+
+```text
+VERIFY - not part of the artifact
+- RUN `AGENTS/templates/insights.sh` once the report is appended; pass a path to scope the run
+- FIX every ERROR, since each one breaks a rule stated in the header above
+- STOP on a `secret` finding and ask the user before truncating it; the key needs rotating first
+- JUSTIFY or fix every WARN; the sidecar tolerates them, the next reader may not
+- ANSWER the checklist it prints, since those rules are the ones no script can judge
+```

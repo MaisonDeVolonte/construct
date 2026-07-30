@@ -8,7 +8,10 @@ loads rules, workflows, and hooks into your ai coding agent
 ## Structure
 - `AGENTS/git/` — one `@git*` trigger doc per workflow, each paired with its shell sidecar
 - `AGENTS/hooks/` — harness hooks, wired up in `.claude/settings.local.json`
+- `AGENTS/shared/` — sourced by the above, never run; pure and read-only, and never mutates a file
+  - a rule belongs here only when it changes for reasons outside this repo, like a token prefix
 - `AGENTS/templates/` — the shape every artifact type must follow; templates only, never artifacts
+  - a `*.md` template states the rules; its `*.sh` sidecar enforces the checkable ones
 - `docs/` — the artifacts themselves, one directory per type:
   - `docs/logs/`, `docs/audits/`, `docs/brutal/`, `docs/insights/` — dated `YYYY-MM-DD.md`, appended to across the day
   - `docs/plans/` — one file per plan; `docs/study/` — one file per feature
@@ -40,10 +43,12 @@ loads rules, workflows, and hooks into your ai coding agent
 - [@gitgud](AGENTS/git/gitgud.md): SAFE; query branch delta, merge remote main into it, and run fresh CI
 - [@githappy](AGENTS/git/githappy.md): RELEASE; bumps version, adds tag, merges to production, and release notes
 - [@gitinsights](AGENTS/git/gitinsights.md): READ-ONLY; verifies references, scans logs and codebase, and insights file
+- VALIDATE any pair with `bash AGENTS/templates/git.sh`; it checks that a doc and its sidecar exist
+  together, that the doc runs it, branches on its exit code, and is listed here with a posture
 
 ### CI (see `.github/workflows/ci.yml`)
 - `verify` is a required status check, so no PR merges until it passes
-- shellchecks every sidecar and hook at warning severity, then `bash -n` across `AGENTS/`
+- shellchecks every trigger, hook, and template sidecar at warning severity, then `bash -n` across `AGENTS/`
 - re-runs `AGENTS/git/gitinsights.sh` and fails the build on any broken reference
 - code markers (TODO/FIXME) are reported but never gated; they are opportunities, not errors
 - required checks are what let `@gitdeliver` queue `gh pr merge --auto`, which needs a blocked PR
@@ -56,17 +61,42 @@ loads rules, workflows, and hooks into your ai coding agent
 - `AGENTS/hooks/taskcompleted.sh` appends a note to the bottom of the day's log
 - `AGENTS/hooks/stop.sh` notes every 30 minutes, synthesizes every 2 hours, into the day's log
 
+### Verify (see `AGENTS/templates/`)
+- every template pairs with a `*.sh` sidecar that asserts an artifact against the rules it states
+- RUN it after writing or appending to one: `bash AGENTS/templates/<type>.sh`, then fix what it reports
+- run it from the host project, since it scans that project's `docs/`, not this repo's
+- no argument scans the whole artifact directory; pass files or a directory to scope the run
+- ERROR breaks a rule the template states outright: section order, the 100-char cap, a wrapped
+  body line, a malformed entry, a numbered reference resolving to nothing
+- WARN names a smell the template tolerates: an untracked artifact, a skipped number, an orphan
+  note, an empty matrix quadrant, a telemetry dump, a commit sha or a `key=` assignment
+- a `secret` finding is a provider token, a private key block, or a url carrying its own password
+- the patterns behind it live once, in `AGENTS/shared/secrets.sh`, since providers add prefixes
+- it is an ERROR by design, so the run stops: ASK the user before truncating or editing anything
+- every match is reported truncated to six characters, since this output gets pasted elsewhere
+- truncating the file does not un-leak a key that already reached a commit, so rotate it first
+- `--strict` promotes warnings to errors; exits 1 on any error, so it works as a gate
+- each run closes with the rules no script can judge, so a template stays covered, not half-tested
+- a rule worth enforcing belongs in the sidecar; a rule needing judgement belongs in that list
+- `AGENTS/templates/git.sh` is the odd one out: it checks trigger/sidecar pairs, not `docs/` artifacts
+
 ### Audits (see `AGENTS/templates/audits.md`)
 - `@gitaudit` appends every run to `docs/audits/`, one file per day, many audits per file
 - audits are never edited after the fact; a stale finding shows how long it went unresolved
+- VALIDATE with `bash AGENTS/templates/audits.sh`; it checks entry order, findings, and parity
+  between a finding and the resolution that answers it
 
 ### Brutal (see `AGENTS/templates/brutal.md`)
 - `@gitbrutal` appends every run to `docs/brutal/`, one file per day, many scorecards per file
 - scorecards are never softened or re-graded; a lane stuck at D across dated files is the signal
+- VALIDATE with `bash AGENTS/templates/brutal.sh`; it checks all three grade lanes are reported,
+  every claim is paired with a reality, and the verdict is there
 
 ### Insights (see `AGENTS/templates/insights.md`)
 - `@gitinsights` appends every run to `docs/insights/`, one file per day, many reports per file
 - reports are never edited; an opportunity that recurs across dated files is a finding in itself
+- VALIDATE with `bash AGENTS/templates/insights.sh`; it checks all four quadrants, and flags a
+  carried opportunity that has outlived being called urgent
 
 ### Logs (see `AGENTS/templates/logs.md`)
 - one file per day, gitignored here, holding both the work and the prompts that drove it
@@ -76,15 +106,21 @@ loads rules, workflows, and hooks into your ai coding agent
   - `@logthread` instructs the agent to `add a thread` to the bottom of the day's log
   - `@lognote` instructs the agent to `append a note` to the bottom of the day's log
   - `@logsynth` instructs the agent to `synthesize notes` at the bottom of the day's log
+- VALIDATE with `bash AGENTS/templates/logs.sh`; it checks the 50-line thread cap, the 5-bullet
+  note cap, timestamped prompts, and notes left unsynthesized in a closed thread
 
 ### Plans (see `AGENTS/templates/plans.md`)
 - BEGIN complex tasks by writing a detailed plan in `docs/plans/` (see `AGENTS/templates/plans.md`)
 - COMPLETE plans with a summary at the bottom of the corresponding plan file
+- VALIDATE with `bash AGENTS/templates/plans.sh`; it checks section order, an unlabelled risk, a
+  malformed stage, and a `(see #x)` resolving to nothing
 
 ### Study (see `AGENTS/templates/study.md`)
 - on request, write a study to `docs/study/`
 - list files touched by a shipped feature in ideal-build order
 - for building a mental model, not for reference docs
+- VALIDATE with `bash AGENTS/templates/study.sh`; it checks the file list, the 3-line model cap,
+  the numbered pattern, and warns when the list is in alphabetical order rather than build order
 
 ## Conventions
 `@retardify` applies every rule below (Files, Wayfinding, Module Order, Comments, Code) to one target file or function:
