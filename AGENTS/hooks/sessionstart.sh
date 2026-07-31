@@ -5,7 +5,7 @@
 # @description
 # - runs before user begins typing
 # - creates today's log file if none exists yet
-# - injects today's log + most recent prior log + README.md into session context
+# - injects today's log + most recent prior log + README.md + AGENTS.md into session context
 # - works with `claude`; does not work with `grok`
 # @see AGENTS.md, AGENTS/templates/logs.md, docs/logs/
 
@@ -19,6 +19,7 @@ for log in docs/logs/*.md; do
   PREV_LOG="$log"
 done
 READ_ME="README.md"
+AGENTS_MD="AGENTS.md"
 CHAR_LIMIT=6000
 
 # make today's log file if one doesn't exist
@@ -45,14 +46,19 @@ if [ -f "$READ_ME" ];
 then README_FULL=$(cat "$READ_ME")
 else README_FULL="(README.md not found)"; fi
 
+if [ -f "$AGENTS_MD" ];
+then AGENTS_MD_FULL=$(cat "$AGENTS_MD")
+else AGENTS_MD_FULL="(AGENTS.md not found)"; fi
+
 # inject files into session context
 jq -n \
   --arg readMe "$README_FULL" \
+  --arg agentsMd "$AGENTS_MD_FULL" \
   --arg todayLog "$TODAY_LOG_TRUNC" \
   --arg prevLog "$PREV_LOG_TRUNC" \
   '{
     hookSpecificOutput: {
       hookEventName: "SessionStart",
-      additionalContext: ($readMe + "\n\n" + $prevLog + "\n\n" + $todayLog)
+      additionalContext: ($readMe + "\n\n" + $agentsMd + "\n\n" + $prevLog + "\n\n" + $todayLog)
     }
   }'
