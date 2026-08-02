@@ -32,7 +32,7 @@ jobs:
       - name: shellcheck
         run: |
           shellcheck --version
-          shellcheck -x --severity=warning AGENTS/git/*.sh AGENTS/hooks/*.sh AGENTS/templates/*.sh AGENTS/shared/*.sh
+          shellcheck -x --severity=warning AGENTS/git/*.sh AGENTS/hooks/*.sh AGENTS/templates/*.sh AGENTS/security/*.sh
 
       # every script must at least parse, including any the lint globs above miss
       - name: syntax

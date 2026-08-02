@@ -2,3 +2,6 @@
 .DS_Store
 
 docs/logs/
+
+# sidecar scratch — repo-local because the sandbox denies writes outside cwd
+tmp/

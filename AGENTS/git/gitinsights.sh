@@ -5,6 +5,7 @@
 # @description
 # - sidecar for `@gitinsights` — deterministic checks for broken refs and code markers
 # - seeds today's insights file and reports its path, so the agent appends to a known target
+# - `--keep` preserves the tmp/ scratch file, which a failed run preserves anyway
 # @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitinsights.md, AGENTS/templates/insights.md, docs/insights/
 
 set -euo pipefail
@@ -27,9 +28,20 @@ then mkdir -p docs/insights; echo "# $TODAYS_INSIGHTS" > "$TODAYS_INSIGHTS"; fi
 INSIGHTS_TIME=$(date '+%Y-%m-%d %H:%M')
 INSIGHTS_COUNT=$(grep -c '^## Insight #' "$TODAYS_INSIGHTS" 2>/dev/null || true)
 
+KEEP=0
+for arg in "$@"; do
+  if [ "$arg" = "--keep" ]; then KEEP=1; fi
+done
+
+# repo-local scratch: the sandbox denies writes outside cwd, and macos mktemp ignores TMPDIR
+TMPROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tmp"
+TMPTAG=$(basename "${BASH_SOURCE[0]}" .sh)
+mkdir -p "$TMPROOT"
+
 # findings collect here as "category: detail" lines; this is report-only, so the run never fails
-FINDINGS=$(mktemp)
-trap 'rm -f "$FINDINGS"' EXIT
+FINDINGS=$(mktemp "$TMPROOT/$TMPTAG-findings.XXXXXX")
+# a failed run leaves scratch behind to read; --keep does the same after a clean one
+trap 'st=$?; if [ "$KEEP" -eq 0 ] && [ "$st" -eq 0 ]; then rm -f "$FINDINGS"; fi' EXIT
 
 # dirs never worth scanning: dependencies, build output, and generated code
 EXCLUDES=(--exclude-dir=node_modules --exclude-dir=.git --exclude-dir=.next --exclude-dir=.open-next --exclude-dir=webflow --exclude-dir=report --exclude-dir=results --exclude='*.generated.*')
