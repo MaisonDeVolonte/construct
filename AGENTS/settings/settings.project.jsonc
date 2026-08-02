@@ -1,3 +1,35 @@
+/**
+ * =====================================================
+ * @file settings.project.jsonc - the floor that travels
+ * =====================================================
+ * @description
+ * - copy to .claude/settings.json
+ * - committed, so this is the only scope that travels with a clone
+ * - the deny floor and the npx ask are verbatim copies of managed, on purpose: a clone lands
+ *   on machines with no ceiling installed, and this file is the ceiling that travels
+ * - `generated` is the one block managed does not carry: those paths are repo-shaped, so they
+ *   travel with the clone rather than sitting in a machine file that may never see this repo
+ * - [enabled: true] so a fresh clone is sandboxed even before any managed file exists
+ * - no build-tool allows (npm, pnpm, node, tsc, eslint): sandboxed commands auto-approve, so
+ *   those rules did nothing but widen the unsandboxed fallback; the sandbox is the grant
+ * - npx stays on ask in every scope, since it fetches and executes remote packages, and a
+ *   scoped ask forces a prompt even for sandboxed commands
+ * - sidecar allows cover regular-permissions mode, where sandboxed commands still prompt;
+ *   the `.sh*` tail matches arguments too, which the old bare `.sh` form silently did not
+ * - gh is the one excludedCommands entry: a Go CLI that fails TLS under Seatbelt, so it runs
+ *   unsandboxed through the permission flow: broad allow here, destructive denies in the
+ *   floor above, and pretooluse.sh as the backstop reading the whole command string
+ * - WebFetch is narrowed to the docs domains this repo actually fetches; each domain allow
+ *   also seeds the sandbox bash allowlist, which is why the bare form had to go
+ * - allowedDomains is the sandboxed-bash egress: github.com for the https remote, api.github.com
+ *   because gh inside a sidecar is a sandboxed child the exclusion above never reaches, and the
+ *   npm registry for the day this repo gains a package.json; unlisted domains prompt
+ * - cannot set `filesystem.disabled`, by design; a checked-out project can never switch
+ *   isolation off, and only managed can, since its credentials block pins the key there
+ * @see AGENTS.md, AGENTS/settings/settings.managed.jsonc, AGENTS/settings/settings.user.jsonc,
+ *      AGENTS/settings/settings.local.jsonc, AGENTS/hooks/pretooluse.sh
+ */
+
 {
   "sandbox": {
     "enabled": true,
