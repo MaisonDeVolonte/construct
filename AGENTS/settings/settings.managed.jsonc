@@ -1,0 +1,129 @@
+/**
+ * =======================================================
+ * @file settings.managed.jsonc - the machine-wide ceiling
+ * =======================================================
+ * @description
+ * - copy to /Library/Application Support/ClaudeCode/managed-settings.json
+ * - machine-wide baseline; the only scope needing `sudo`, so nothing here should change often
+ * - holds policy, never machine detail: no toolchain paths, no cache dirs, no per-repo grants
+ * - 1. booleans (these settings win across all scopes)
+ *   - [enabled: true] sandbox on for whole machine, blocking agent writes to every settings.json
+ *     - block 3 pins `filesystem.disabled` here, since setting it true would void that protection
+ *   - [failIfUnavailable: true] refuse to start rather than silently run unsandboxed
+ *   - [allowUnsandboxedCommands: false] refuse to retry a command outside of the sandbox
+ *   - [excludedCommands: ] deliberately absent; additive from every scope and managed cannot cap it
+ * - 2. filesystem (bash only)
+ *   - [disabled: false] pinned to this file by the credentials block below
+ *   - [allowManagedReadPathsOnly: false] keeps sandboxed reads allow-by-default
+ *     - setting to true makes reads deny-by-default, so every read path needs a sudo edit here
+ *   - [denyRead: targeted] the credential stores live in block 3; this list is the odd extras
+ *   - [denyWrite: empty] sandboxed writes outside cwd and session temp are deny-by-default
+ * - 3. credentials (the structural lock)
+ *   - listing any `files` entry pins filesystem.disabled to this file alone; that is its real job
+ *   - it is also what makes dropping allowManagedReadPathsOnly safe, since a widened allowRead
+ *     in any lower scope still cannot reopen these paths
+ *   - `envVars` are unset before each sandboxed command; unlike the file denies, env scrubbing
+ *     survives filesystem.disabled, so the tokens stay protected even if that layer is dropped
+ * - 4. permissions (agent tools; the sandbox never sees these calls)
+ *   - deny is the hard floor: it beats a matching allow from any scope, in either direction
+ *   - credential paths repeat block 3 because that block covers bash, not Read/Edit/Write
+ *   - ask: npx only, since a scoped ask still prompts even when the sandbox would auto-allow,
+ *     and npx fetches and executes remote packages the deny floor cannot enumerate
+ *   - no allow list at all; every convenience grant lives in the user or project file
+ *   - Read and Edit rules here would also merge into the sandbox filesystem config below
+ *   - the settings deny is not redundant with block 1: the sandbox stops bash from writing a
+ *     settings.json, while Edit and Write never enter the sandbox and need a permission rule
+ *   - project mirrors this floor verbatim; deny only narrows, so the copy can never weaken it
+ *   - repo-shaped paths (tfstate, webflow, compose) stay in project, never in this file
+ * @see AGENTS.md, AGENTS/settings/settings.user.jsonc, AGENTS/settings/settings.project.jsonc,
+ *      AGENTS/settings/settings.local.jsonc
+ */
+
+{
+  "sandbox": {
+    "enabled": true,
+    "failIfUnavailable": true,
+    "allowUnsandboxedCommands": false,
+    "filesystem": {
+      "disabled": false,
+      "allowManagedReadPathsOnly": false,
+      "denyRead": [
+        "/Volumes",
+        "~/Library/Keychains"
+      ],
+      "denyWrite": []
+    },
+    "credentials": {
+      "files": [
+        { "path": "~/.ssh", "mode": "deny" },
+        { "path": "~/.aws", "mode": "deny" },
+        { "path": "~/.config/gcloud", "mode": "deny" },
+        { "path": "~/.kube", "mode": "deny" },
+        { "path": "~/.gnupg", "mode": "deny" },
+        { "path": "~/.netrc", "mode": "deny" },
+        { "path": "~/.npmrc", "mode": "deny" },
+        { "path": "~/.bash_history", "mode": "deny" },
+        { "path": "~/.zsh_history", "mode": "deny" }
+      ],
+      "envVars": [
+        { "name": "ANTHROPIC_API_KEY", "mode": "deny" },
+        { "name": "GITHUB_TOKEN", "mode": "deny" },
+        { "name": "GH_TOKEN", "mode": "deny" },
+        { "name": "NPM_TOKEN", "mode": "deny" },
+        { "name": "AWS_ACCESS_KEY_ID", "mode": "deny" },
+        { "name": "AWS_SECRET_ACCESS_KEY", "mode": "deny" }
+      ]
+    }
+  },
+  "permissions": {
+    "deny": [
+      "Write(~/.claude/**)", "Edit(~/.claude/**)",
+      "Write(.claude/**)", "Edit(.claude/**)",
+
+      "Bash(sudo *)",
+      "Bash(mkfs*)", "Bash(dd *)",
+      "Bash(rm -rf *)", "Bash(rm -fr *)", "Bash(rm -R *)", "Bash(rm -r *)",
+      "Bash(chmod -R *)", "Bash(chown -R *)",
+
+      "Bash(eval *)",
+      "Bash(node -e *)", "Bash(node --eval *)",
+      "Bash(python -c *)", "Bash(python3 -c *)",
+      "Bash(perl -e *)", "Bash(ruby -e *)",
+      "Bash(curl * | bash)", "Bash(curl * | sh)", "Bash(curl * | python*)",
+      "Bash(wget * | bash)", "Bash(wget * | sh)", "Bash(wget * | python*)",
+      "Bash(*fs.rm*)", "Bash(*fs.unlink*)", "Bash(*fs.rmdir*)", "Bash(*rimraf*)",
+
+      "Bash(gh repo delete*)", "Bash(gh repo archive*)", "Bash(gh release delete*)",
+      "Bash(gh auth *)", "Bash(gh ssh-key *)", "Bash(gh gpg-key *)",
+      "Bash(gh secret *)", "Bash(gh variable *)",
+      "Bash(git push --mirror*)", "Bash(git push * --mirror*)",
+      "Bash(git push --prune*)", "Bash(git push * --prune*)",
+      "Bash(git push --delete*)", "Bash(git push * --delete*)",
+      "Bash(git push --force*)", "Bash(git push -f*)",
+      "Bash(git push * --force*)", "Bash(git push * -f*)",
+      "Bash(git push origin main*)", "Bash(git push origin master*)",
+
+      "Bash(dropdb *)", "Bash(db:drop*)", "Bash(prisma migrate reset*)",
+
+      "Bash(git filter-branch*)", "Bash(git reflog expire*)",
+      "Bash(git update-ref -d*)", "Bash(git gc --prune*)",
+      "Bash(git branch -D*)", "Bash(git branch * -D*)",
+      "Bash(git branch -f*)", "Bash(git branch * -f*)",
+      "Bash(git branch --force*)", "Bash(git branch --delete --force*)",
+      "Bash(git reset --hard*)",
+      "Bash(git checkout -f*)", "Bash(git checkout --force*)",
+      "Bash(git clean -f*)", "Bash(git clean -d*)", "Bash(git clean -x*)", "Bash(git clean * -f*)",
+      "Bash(git stash clear*)", "Bash(git stash drop*)",
+
+      "Read(**/.env*)", "Write(**/.env*)", "Edit(**/.env*)",
+      "Read(//**/*.pem)", "Read(//**/*.key)", "Read(//**/*.p12)", "Read(//**/*.crt)",
+      "Read(~/.ssh/**)", "Read(~/.aws/**)", "Read(~/.config/gcloud/**)", "Read(~/.kube/**)",
+      "Read(~/.gnupg/**)", "Read(~/.netrc)", "Read(~/.npmrc)",
+      "Read(~/.bash_history)", "Read(~/.zsh_history)",
+      "Read(~/Library/Keychains/**)"
+    ],
+    "ask": [
+      "Bash(npx *)"
+    ]
+  }
+}

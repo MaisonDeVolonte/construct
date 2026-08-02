@@ -1,0 +1,31 @@
+/**
+ * =======================================================
+ * @file settings.local.jsonc - hooks and temporary grants
+ * =======================================================
+ * @description
+ * - copy to .claude/settings.local.json
+ * - outranks project and user settings, sitting directly below managed and the cli flag
+ * - gitignored: every hook here vanishes on a fresh clone; deny lists survive, hooks do not
+ * - `PreToolUse` runs before every permission rule, vetoing what the allow list would pass
+ * - the right home for a temporary grant, since nothing here gets committed by accident
+ * - every `Always Allow` you click lands here as an allow rule, which is what `cmd-alt-a` audits
+ * - bash grants persist per repo and command, while edit grants only last the session
+ * - a grant is an ordinary allow rule, so a deny or ask in any scope still beats it
+ * - [enabled: true] restated so this checkout stays sandboxed on its own; booleans agree everywhere
+ * @see AGENTS.md, AGENTS/settings/settings.managed.jsonc, AGENTS/settings/settings.project.jsonc,
+ *      AGENTS/hooks/
+ */
+
+{
+  "sandbox": {
+    "enabled": true
+  },
+  "hooks": {
+    "SessionStart": [{ "hooks": [{ "type": "command", "command": "AGENTS/hooks/sessionstart.sh" }] }],
+    "PreToolUse": [{ "matcher": "Bash", "hooks": [{ "type": "command", "command": "AGENTS/hooks/pretooluse.sh" }] }],
+    "PostToolUse": [{ "matcher": "Write|Edit", "hooks": [{ "type": "command", "command": "AGENTS/hooks/posttooluse.sh", "timeout": 120 }] }],
+    "TaskCreated": [{ "hooks": [{ "type": "command", "command": "AGENTS/hooks/taskcreated.sh" }] }],
+    "TaskCompleted": [{ "hooks": [{ "type": "command", "command": "AGENTS/hooks/taskcompleted.sh" }] }],
+    "Stop": [{ "hooks": [{ "type": "command", "command": "AGENTS/hooks/stop.sh" }] }]
+  }
+}

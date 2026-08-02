@@ -1,0 +1,55 @@
+/**
+ * ===========================================================
+ * @file settings.user.jsonc - copy to ~/.claude/settings.json
+ * ===========================================================
+ * @description
+ * - user-wide; paths and reads only, since this scope follows me into every repo on the disk,
+ *   including ones i have not read
+ * - "does this help me across all my agentic work, and is it safe in a repo i haven't read?"
+ * - no `Bash(...)` rules at all, for two reasons that make them dead weight here:
+ *   - the built-in read-only set (ls, cat, grep, git reads, etc) runs promptless in every mode
+ *   - sandboxed commands auto-approve, so an allow list never gets consulted for them
+ *   - what remains for permissions is denying and asking, and those live in managed
+ * - allowWrite is package-manager scribble that lands outside cwd: npm's cache and logs,
+ *   pnpm's store and cache; a denied write there surfaces as a confusing tool failure
+ * - add a browser cache (ms-playwright, Cypress) only when a project actually installs one
+ * - `Read(~/Developer/**)` is machine detail: another machine calls it `~/src` or `~/code`;
+ *   it also merges into the sandbox filesystem config, so bash reads inherit the same grant
+ * - no bare `Read` allow, since that would make the ask floor inert machine-wide
+ * - no bare `WebFetch` either: it equals `WebFetch(domain:*)`, which would pre-allow every
+ *   domain for sandboxed bash; every host here is named one by one instead
+ * - allowedDomains carries the github hosts and the npm registry, since every repo on this disk
+ *   uses git and installs packages; a repo-specific host still belongs in that repo's project
+ * - the cost is real: a sandboxed command in a repo i have not read can reach them too
+ * - named hosts, never `*.github.com`: a wildcard would pull in gist, a ready exfil channel
+ * - `WebSearch` is the one tool grant: read-only, and useful in every repo
+ * - [enabled: true] restated here so non-repo directories stay sandboxed without managed
+ * @see AGENTS.md, AGENTS/settings/settings.managed.jsonc, AGENTS/settings/settings.project.jsonc
+ */
+
+{
+  "sandbox": {
+    "enabled": true,
+    "filesystem": {
+      "allowWrite": [
+        "~/.npm",
+        "~/.cache",
+        "~/Library/pnpm",
+        "~/Library/Caches/pnpm"
+      ]
+    },
+    "network": {
+      "allowedDomains": [
+        "github.com",
+        "api.github.com",
+        "registry.npmjs.org"
+      ]
+    }
+  },
+  "permissions": {
+    "allow": [
+      "Read(~/Developer/**)",
+      "WebSearch"
+    ]
+  }
+}
