@@ -84,7 +84,8 @@ mkdir -p "$TMPROOT"
 FINDINGS=$(mktemp "$TMPROOT/$TMPTAG-findings.XXXXXX")
 SCRATCH=$(mktemp -d "$TMPROOT/$TMPTAG-scratch.XXXXXX")
 # a failed run leaves scratch behind to read; --keep does the same after a clean one
-trap 'st=$?; if [ "$KEEP" -eq 0 ] && [ "$st" -eq 0 ]; then rm -rf "$FINDINGS" "$SCRATCH"; fi' EXIT
+cleanup() { st=$?; if [ "$KEEP" -eq 0 ] && [ "$st" -eq 0 ]; then rm -rf "$FINDINGS" "$SCRATCH"; fi; }
+trap cleanup EXIT
 
 err()  { printf 'ERROR|%s|%s|%s|%s\n' "$1" "$2" "$3" "$4" >> "$FINDINGS"; }
 warn() { printf 'WARN|%s|%s|%s|%s\n' "$1" "$2" "$3" "$4" >> "$FINDINGS"; }
