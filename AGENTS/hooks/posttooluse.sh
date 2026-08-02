@@ -6,8 +6,14 @@
 # - runs after Write|Edit succeeds
 # - extracts the touched file path from claude or grok payloads
 # - runs `eslint --fix` if it's a js/jsx/ts/tsx file
-# - silent on non-fixable issues, never blocks the turn
-# @see AGENTS.md, .claude/settings.json, .grok/settings.json, .grok/hooks/
+# - shapes comments and the wayfinding header through their two template sidecars
+# - findings come back as context, never as a block: the write already landed
+# - the agent fixes them on its next turn, which is where a style rule actually changes behaviour
+# - silent when nothing is wrong, so a clean file costs one exit and no context
+# @see AGENTS.md, AGENTS/templates/comments.sh, AGENTS/templates/wayfinders.sh, .claude/settings.json
+
+# the sidecars report per finding, and a long file could bury the turn in style notes
+MAX_FINDINGS=20
 
 FILE=$(jq -r '
   .tool_response.filePath
@@ -18,8 +24,31 @@ FILE=$(jq -r '
   // empty
 ')
 
+# a rename or a delete leaves a path that no longer resolves, and there is nothing to shape
+if [ -z "$FILE" ] || [ ! -f "$FILE" ]; then exit 0; fi
+
 case "$FILE" in
   *.js|*.jsx|*.ts|*.tsx) npx eslint --fix "$FILE" 2>/dev/null ;;
 esac
+
+# the sidecars sit beside this hook, wherever the operator repo is symlinked in from
+TEMPLATES=$(cd "$(dirname "${BASH_SOURCE[0]}")/../templates" 2>/dev/null && pwd || true)
+if [ ! -d "$TEMPLATES" ]; then exit 0; fi
+
+# both exit 1 on ERROR, which is right for a gate and wrong here: this hook never fails a write,
+# so their exit codes are absorbed and only what they printed is passed along
+FINDINGS=$(
+  {
+    bash "$TEMPLATES/comments.sh" "$FILE" 2>/dev/null || true
+    bash "$TEMPLATES/wayfinders.sh" "$FILE" 2>/dev/null || true
+  } | grep -E '^(ERROR|WARN)[[:space:]]' | head -n "$MAX_FINDINGS" || true
+)
+
+if [ -z "$FINDINGS" ]; then exit 0; fi
+
+jq -n --arg ctx "comment and wayfinder findings for $FILE (see AGENTS/templates/comments.md and
+AGENTS/templates/wayfinders.md); fix the ERRORs, justify or fix the WARNs:
+$FINDINGS" \
+  '{hookSpecificOutput: {hookEventName: "PostToolUse", additionalContext: $ctx}}'
 
 exit 0
