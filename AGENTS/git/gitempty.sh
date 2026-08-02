@@ -4,6 +4,8 @@
 # ==============================================
 # @description
 # - sidecar for `@gitempty` — stash, prune dead remotes, fast-forward trunk
+# - deliberately deletes NOTHING; `git fetch --prune` only drops tracking refs, never a branch
+# - branch deletion is the trigger's job, and it hands the commands to the user to run
 # @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitempty.md
 
 # exit if any command fails, including unset variables and pipeline errors
