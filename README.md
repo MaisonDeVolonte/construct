@@ -1,132 +1,55 @@
-# Agent Rules
-loads rules, workflows, and hooks into your ai coding agent
-
-- DEFAULT posture is strictly READ-ONLY e.g. chat, brainstorm, evaluate, and plan
-- DO NOT write code, edit files, or run commands without the explicit `@letsdoit` trigger
-- EXCEPTIONS: context gathering, writing to `docs/` artifacts, and @customtrigger automations
-
-## Structure
-- `AGENTS/git/` — one `@git*` trigger doc per workflow, each paired with its shell sidecar
-- `AGENTS/hooks/` — harness hooks, wired up in `.claude/settings.local.json`
-- `AGENTS/shared/` — sourced by the above, never run; pure and read-only, and never mutates a file
-  - a rule belongs here only when it changes for reasons outside this repo, like a token prefix
-- `AGENTS/templates/` — the shape every artifact type must follow; templates only, never artifacts
-  - a `*.md` template states the rules; its `*.sh` sidecar enforces the checkable ones
-- `docs/` — the artifacts themselves, one directory per type:
-  - `docs/logs/`, `docs/audits/`, `docs/brutal/`, `docs/insights/` — dated `YYYY-MM-DD.md`, appended to across the day
-  - `docs/plans/` — one file per plan; `docs/study/` — one file per feature
-  - this repo tracks its own `docs/`, seeded with one worked example each in `plans/` and `study/`
-  - except `docs/logs/`, which is gitignored; logs are individually useful, the rest are worth sharing
-- `.github/workflows/ci.yml` — the `verify` check required to merge
-
-## Updates
-- `AGENTS.md` and `AGENTS/` are symlinks into a standalone operator repo, not host project files
-- host projects gitignore both, so rule and workflow changes never surface in their `git status`
-- `docs/` is NOT symlinked; it is a real directory in whatever project the agent is running in
-- so artifacts land beside the work that produced them, not in the operator repo
-- host projects track their own `docs/`; the repo boundary is what keeps client detail private
-- a PUBLIC host project is the exception, so scrub client names out of anything committed there
-- RESOLVE the operator repo with `readlink AGENTS.md`; its root is the parent of the resolved path
-- SHIP agent changes by committing and pushing from the resolved repo, never the host project
-- RUN any `AGENTS/git/` workflow from the resolved repo, since each only sees the repo it runs in
-- SCRUB dated artifacts to their header line before they ship; nothing sensitive belongs in a commit
+# Agents
 
 ## Workflows
+- DEFAULT posture is READ-ONLY e.g. chat, brainstorm, evaluate, and plan
+- DO NOT write code, edit files, or run commands without explicit approval
 
-### Git (see `AGENTS/templates/git.md`)
-- [@gitaudit](AGENTS/git/gitaudit.md): READ-ONLY; diagnostics, triage, report, summary, tasks, and audit file
-- [@gitbrutal](AGENTS/git/gitbrutal.md): READ-ONLY; brutally honest code review, progress report, and brutal file
+### Git (see `AGENTS/git/`)
+each pairs with a matching `.sh` sidecar that runs the automation
+- [@gitaudit](AGENTS/git/gitaudit.md): READ-ONLY; diagnostics, triage, report, summary, tasks (saved to file)
+- [@gitbrutal](AGENTS/git/gitbrutal.md): READ-ONLY; brutally honest code review, progress report (saved to file)
 - [@gitcontinue](AGENTS/git/gitcontinue.md): SAFE; stash, sync, and pop
 - [@gitdeliver](AGENTS/git/gitdeliver.md): GATED; atomically stage, commit, branch, push, pr, build, and check
-- [@gitempty](AGENTS/git/gitempty.md): DESTRUCTIVE; prune, stash, fast-forward, restore, and gated branch deletion
-- [@gitfresh](AGENTS/git/gitfresh.md): DESTRUCTIVE; stash, hard reset, purges local changes, and syncs fresh main
+- [@gitempty](AGENTS/git/gitempty.md): GATED; prune, stash, fast-forward, restore, and hands over delete commands
+- [@gitfresh](AGENTS/git/gitfresh.md): GATED; stash, hard reset, purges local changes, and syncs fresh main
 - [@gitgud](AGENTS/git/gitgud.md): SAFE; query branch delta, merge remote main into it, and run fresh CI
 - [@githappy](AGENTS/git/githappy.md): RELEASE; bumps version, adds tag, merges to production, and release notes
-- [@gitinsights](AGENTS/git/gitinsights.md): READ-ONLY; verifies references, scans logs and codebase, and insights file
-- VALIDATE any pair with `bash AGENTS/templates/git.sh`; it checks that a doc and its sidecar exist
-  together, that the doc runs it, branches on its exit code, and is listed here with a posture
-
-### CI (see `.github/workflows/ci.yml`)
-- `verify` is a required status check, so no PR merges until it passes
-- shellchecks every trigger, hook, and template sidecar at warning severity, then `bash -n` across `AGENTS/`
-- re-runs `AGENTS/git/gitinsights.sh` and fails the build on any broken reference
-- code markers (TODO/FIXME) are reported but never gated; they are opportunities, not errors
-- required checks are what let `@gitdeliver` queue `gh pr merge --auto`, which needs a blocked PR
+- [@gitinsights](AGENTS/git/gitinsights.md): READ-ONLY; verifies references, scans logs and codebase (saved to file)
 
 ### Hooks (see `AGENTS/hooks/`)
-- `AGENTS/hooks/sessionstart.sh` creates a new empty log file in `docs/logs/`
-- `AGENTS/hooks/pretooluse.sh` blocks git force pushes and force branch deletes before they run
-- `AGENTS/hooks/posttooluse.sh` runs lint on agent code at time of generation
-- `AGENTS/hooks/taskcreated.sh` nudges a new thread when a new task is unrelated to the most recent one
-- `AGENTS/hooks/taskcompleted.sh` appends a note to the bottom of the day's log
-- `AGENTS/hooks/stop.sh` notes every 30 minutes, synthesizes every 2 hours, into the day's log
+- [sessionstart](AGENTS/hooks/sessionstart.sh): injects the README and the two most recent log files into context
+- [pretooluse](AGENTS/hooks/pretooluse.sh): failover for the committed deny list, reading the whole command string
+- [posttooluse](AGENTS/hooks/posttooluse.sh): lints, then reports comment and wayfinder findings, never blocking
+- [taskcreated](AGENTS/hooks/taskcreated.sh): nudges a new thread when a task is unrelated to the last one, advisory only
+- [taskcompleted](AGENTS/hooks/taskcompleted.sh): blocks the turn to make the agent note the day's log
+- [stop](AGENTS/hooks/stop.sh): every hour, saves notes and prompts, then synthesizes the day's log
 
-### Verify (see `AGENTS/templates/`)
-- every template pairs with a `*.sh` sidecar that asserts an artifact against the rules it states
-- RUN it after writing or appending to one: `bash AGENTS/templates/<type>.sh`, then fix what it reports
-- run it from the host project, since it scans that project's `docs/`, not this repo's
-- no argument scans the whole artifact directory; pass files or a directory to scope the run
-- ERROR breaks a rule the template states outright: section order, the 100-char cap, a wrapped
-  body line, a malformed entry, a numbered reference resolving to nothing
-- WARN names a smell the template tolerates: an untracked artifact, a skipped number, an orphan
-  note, an empty matrix quadrant, a telemetry dump, a commit sha or a `key=` assignment
-- a `secret` finding is a provider token, a private key block, or a url carrying its own password
-- the patterns behind it live once, in `AGENTS/shared/secrets.sh`, since providers add prefixes
-- it is an ERROR by design, so the run stops: ASK the user before truncating or editing anything
-- every match is reported truncated to six characters, since this output gets pasted elsewhere
-- truncating the file does not un-leak a key that already reached a commit, so rotate it first
-- `--strict` promotes warnings to errors; exits 1 on any error, so it works as a gate
-- each run closes with the rules no script can judge, so a template stays covered, not half-tested
-- a rule worth enforcing belongs in the sidecar; a rule needing judgement belongs in that list
-- `AGENTS/templates/git.sh` is the odd one out: it checks trigger/sidecar pairs, not `docs/` artifacts
+### Templates (see `AGENTS/templates/`)
+each pairs with a matching `.sh` sidecar that verifies conformance
+- [audits](AGENTS/templates/audits.md): `@gitaudit` appends findings and resolutions
+- [brutal](AGENTS/templates/brutal.md): `@gitbrutal` adversarial graded scorecards
+- [comments](AGENTS/templates/comments.md): inline comment shape in every source file
+- [git](AGENTS/templates/git.md): `@git*` triggers and sidecars follow this shape
+- [graphs](AGENTS/templates/graphs.md): `@graphspec` writes graph spec prompt files
+- [insights](AGENTS/templates/insights.md): `@gitinsights` searches repo for opportunities
+- [logs](AGENTS/templates/logs.md): `@logthread`, `@lognote` and `@logsynth` maintain agent logs
+- [plans](AGENTS/templates/plans.md): `@graphspec --execute` detailed fanout plan generation
+- [study](AGENTS/templates/study.md): `@studyguide` writes detailed retrospective with graded quiz
+- [wayfinders](AGENTS/templates/wayfinders.md): the header every source file opens with
 
-### Audits (see `AGENTS/templates/audits.md`)
-- `@gitaudit` appends every run to `docs/audits/`, one file per day, many audits per file
-- audits are never edited after the fact; a stale finding shows how long it went unresolved
-- VALIDATE with `bash AGENTS/templates/audits.sh`; it checks entry order, findings, and parity
-  between a finding and the resolution that answers it
-
-### Brutal (see `AGENTS/templates/brutal.md`)
-- `@gitbrutal` appends every run to `docs/brutal/`, one file per day, many scorecards per file
-- scorecards are never softened or re-graded; a lane stuck at D across dated files is the signal
-- VALIDATE with `bash AGENTS/templates/brutal.sh`; it checks all three grade lanes are reported,
-  every claim is paired with a reality, and the verdict is there
-
-### Insights (see `AGENTS/templates/insights.md`)
-- `@gitinsights` appends every run to `docs/insights/`, one file per day, many reports per file
-- reports are never edited; an opportunity that recurs across dated files is a finding in itself
-- VALIDATE with `bash AGENTS/templates/insights.sh`; it checks all four quadrants, and flags a
-  carried opportunity that has outlived being called urgent
-
-### Logs (see `AGENTS/templates/logs.md`)
-- one file per day, gitignored here, holding both the work and the prompts that drove it
-- `prompts` append to the thread they drove, so the ask sits next to what came of it
-- `notes` get absorbed into thread prose on synthesis; `prompts` get pruned but stay a list
-- manual triggers (yes, i manually save games that have autosave, i'm that guy)
-  - `@logthread` instructs the agent to `add a thread` to the bottom of the day's log
-  - `@lognote` instructs the agent to `append a note` to the bottom of the day's log
-  - `@logsynth` instructs the agent to `synthesize notes` at the bottom of the day's log
-- VALIDATE with `bash AGENTS/templates/logs.sh`; it checks the 50-line thread cap, the 5-bullet
-  note cap, timestamped prompts, and notes left unsynthesized in a closed thread
-
-### Plans (see `AGENTS/templates/plans.md`)
-- BEGIN complex tasks by writing a detailed plan in `docs/plans/` (see `AGENTS/templates/plans.md`)
-- COMPLETE plans with a summary at the bottom of the corresponding plan file
-- VALIDATE with `bash AGENTS/templates/plans.sh`; it checks section order, an unlabelled risk, a
-  malformed stage, and a `(see #x)` resolving to nothing
-
-### Study (see `AGENTS/templates/study.md`)
-- on request, write a study to `docs/study/`
-- list files touched by a shipped feature in ideal-build order
-- for building a mental model, not for reference docs
-- VALIDATE with `bash AGENTS/templates/study.sh`; it checks the file list, the 3-line model cap,
-  the numbered pattern, and warns when the list is in alphabetical order rather than build order
+### Verifying
+- `test what you deploy`: a passing local run is not a shipped artifact
+- `run the build first`: a dev build ships debug data that the production build strips
+- `kill the port`: a process still bound to it serves the build it started with
+- `assert on a file the change wrote`: an unchanged hash proves nothing
+- `print the value`: when the result contradicts the code, see what the code actually got
+- `look at the bytes`: encrypted stores, binary files, and truncated reads all grep as empty
 
 ## Conventions
-`@retardify` applies every rule below (Files, Wayfinding, Module Order, Comments, Code) to one target file or function:
+`@retardify` applies all conventions in this section to target files or code:
 - rename the file if its casing/extension violates `Files`
-- resync the `Wayfinding` header's @description/@see with the file as it now stands
-- reorder imports/exports per `Module Order`
+- resync the `Wayfinders` @description/@see with the file as it now stands
+- reorder imports/exports per `Modules` order
 - rewrite or prune `Comments` that explain how instead of why
 - apply mechanical `Code` rewrites (e.g. ternaries → named-boolean guards)
 - user gate logic changes that would trade away real information
@@ -137,10 +60,10 @@ loads rules, workflows, and hooks into your ai coding agent
 - `PascalCase.tsx` — ui-rendering components
 - `camelCase.tsx` — logic and behavior components
 - `camelCase.ts` — utilities and helpers
-- `MatchCase.css` — co-located css matches their counterpart
+- `MatchCase.css` — co-located css matches its counterpart
 - `kebab-case.css` — general/global css
 
-### Wayfinding
+### Wayfinders
 ```javascript
 /**
  * ====================================================
@@ -161,24 +84,17 @@ loads rules, workflows, and hooks into your ai coding agent
 
 ### Modules
 - `external` packages (ordered alphabetically)
-- // empty line
 - `webflow` components (ordered by appearance)
-- // empty line
 - `internal` @/always/aliased/first-party/code
   - `data/files`
   - `config/schemas`
   - `ui/components`
   - `css` (ordered by cascade specificity)
-- // empty line
 - `reexported` module bindings
-- // empty line
 - `exported` bindings
   - `exported values`
-  - // empty line
   - `internal values`
-  - // empty line
   - `types`
-  - // empty line
   - `functions`
 
 *example:*
@@ -201,9 +117,7 @@ const FOO_TIMER = 3600;
 
 export type FooNode = { path: string; type: string };
 
-export async function getFoo(): Promise<FooNode[]> {
-  return [];
-}
+export async function getFoo(): Promise<FooNode[]> { return []; }
 ```
 
 ### Comments
@@ -214,19 +128,6 @@ export async function getFoo(): Promise<FooNode[]> {
 - if a file is really long, consider adding header comments to break it up into sections:
   `// SECTION TITLE `
 
-### Verify
-- `measure the artifact that ships`, not a convenient proxy for it
-- `dev servers lie` — next embeds raw fetch responses in its flight payload, so dev html shows
-  unstripped api data that production never sends. build before judging payload contents
-- `stale processes lie` — a server still bound to a port serves the build it started with. kill
-  the port, do not trust a 200
-- `pick a signal that changes` — a shell chunk hash never moves for a page-level edit, so it
-  cannot prove a deploy landed. assert on something the change actually touches
-- `instrument over theorise` — when an observation contradicts a deterministic function, print
-  what the function sees. one probe beats six hypotheses
-- `absence of evidence` — a clean grep is not proof: encrypted stores, binary configs and
-  truncated transfers all read as empty
-
 ### Code
 - `retard-maxx` like a jr-engineer who does everything the long, extremely boring way
 - `simplify` logic over advanced, deeply nested, or overly efficient abstractions
@@ -234,7 +135,7 @@ export async function getFoo(): Promise<FooNode[]> {
 - `sequence` logic from top to bottom in order of state, definitions, guards, then execution
 - `name` things using clear, concise, intuitively understood language
 - `linebreaks` are to separate distinct conceptual blocks, not for single-line statements
-- `first principles` such as DRY, SoC, POLA, etc are a vibe; RDD, WTF, WET, etc is not a vibe
+- `first principles` such as DRY, SoC, POLA, etc are a vibe; RDD, WTF, WET, etc are not a vibe
 
 *example:*
 ```typescript
@@ -300,3 +201,166 @@ export function writeCode(requirements: Requirement[], request: string) {
   return finalSolution;
 }
 ```
+
+## Settings (see `AGENTS/settings/`)
+inspired by: 
+- [Hardening Cheatsheet](https://dev.to/riotaro/hardening-cheatsheet-for-claude-codes-settingsjson-20lk)
+- [Settings Reference](https://claudeguide.io/claude-code-settings-json-reference)
+- [Permissions Guide](https://www.claudedirectory.org/blog/claude-code-permissions-guide)
+
+### Tools
+- [corpus](AGENTS/security/corpus.tsv): labeled command corpus for audits; never executed
+- [permissions.sh](AGENTS/security/permissions.sh): replays the corpus then audits the settings rules
+- [secrets.sh](AGENTS/security/secrets.sh): shared credential patterns, used in every template sidecar
+
+### Authoring
+- write lists most-destructive-first (for human readers)
+- one broad allow with narrow denies beats enumerating every safe subcommand
+- rule match exactly: wildcard every position a flag could occupy
+- spaces are load-bearing: `Bash(ls *)` matches `ls -la` but not `lsof`; `Bash(ls*)` matches both
+- ask is for what the sandbox cannot contain, since it prompts even when auto-allow would not
+
+### Scopes
+- [managed](AGENTS/settings/settings.managed.jsonc): 
+  - copy to → `/Library/Application Support/ClaudeCode/managed-settings.json`
+  - used for policy nothing below may override (booleans and the deny floor)
+  - "does this protect me long term and is it worth a sudo edit?"
+- [user](AGENTS/settings/settings.user.jsonc): 
+  - copy to → `~/.claude/settings.json`
+  - used for machine detail, since this laptop's paths differ from the next one
+  - "does this help me across all projects in my user profile?"
+- [project](AGENTS/settings/settings.project.jsonc): 
+  - copy to → `.claude/settings.json`
+  - used for repo truths that survive a clone, including a portable deny copy
+  - "does this help everyone working in this project?"
+- [local](AGENTS/settings/settings.local.jsonc): 
+  - copy to → `.claude/settings.local.json`
+  - used for custom hooks, temporary grants, and every 'Always Allow' you have clicked
+  - "does this help only me, only in this project, and for specific reasons?"
+- cli: `--settings`, session only, no file
+  - used for trying a rule before it lands in a file (nothing here persists)
+
+### Tool Denies
+one bullet per block in the `deny` array; any scope may add a deny, none may remove another's
+- managed: `/Library/Application Support/ClaudeCode/managed-settings.json`
+  - `policy`: the files that decide what an agent may do
+  - `system`: root, disk formatting, recursive delete, ownership rewrite
+  - `execution`: eval, inline interpreters, curl-to-shell, node filesystem deletes
+  - `remote`: repo or release deletes, identity or secret changes, force or ref deletes
+  - `data`: database drops, migration resets
+  - `history`: filter-branch, force branch ops, hard reset, clean, stash drops
+  - `credentials`: env files, keys, certs, credential stores, shell history
+- project: `.claude/settings.json`
+  - everything in managed, verbatim, so a clone carries its own floor
+  - `generated`: exported output, infrastructure state
+
+### Domain Allows
+one bullet per host in `allowedDomains`; an unlisted host prompts, a denied host refuses (see #17)
+- managed: no host list, since the ceiling carries booleans and denies rather than egress
+- user: `~/.claude/settings.json`
+  - `github.com`: git over https, since every repo on this disk has a github remote
+  - `api.github.com`: gh, a sandboxed child in each sidecar the top-level exclusion never reaches
+  - `registry.npmjs.org`: npm and pnpm installs, matching the caches already in allowWrite
+- project: `.claude/settings.json`
+  - everything in user, verbatim, so a clone carries its own egress
+  - `code.claude.com`, `docs.claude.com`: WebFetch allows that seed the bash allowlist (see #21)
+
+### Sandboxing
+- sandboxing on macos uses the built-in `seatbelt` framework (kernel) for enforcement
+- sandboxed commands cannot write `settings.json`, at any scope (see #12)
+- sandbox is enabled for every scope (managed, cli, user, project, local)
+- sandbox-incompatible commands listed in anthropic docs: `gh`, `gcloud`, `terraform`, `docker`, `watchman`
+  - verified working: `gh` (see #13)
+- read-only bash commands are allowed by default (fixed, gated with deny or ask):
+  - `ls`, `cat`, `echo`, `pwd`, `head`, `tail`, `grep`, `find`, `wc`, `which`, `diff`, `stat`, `du`, `cd`, and read-only forms of `git`
+
+### Enforcement
+- sandbox is for containing, permissions are for denying
+- both must pass: an allow rule opens no sandbox path, and an open path grants no permission
+- the `sees` row is what bites: permissions trust the whole script, sandbox polices its children
+- sandboxed commands never consult allow lists; deny and ask still apply
+
+|          | permissions        | sandbox                   |
+|----------|--------------------|---------------------------|
+| governs  | tool               | bash (and children)       |
+| active   | always             | when sandboxed            |
+| layers   | one                | filesystem and domain     |
+| runs     | before             | during (at kernel)        |
+| sees     | string             | script (and children)     |
+| resolves | deny → ask → allow | path specificity          |
+| denies   | a clean refusal    | 'Operation not permitted' |
+| prompts  | ask or no match    | unlisted domains          |
+
+### Precedence
+- verdict: hook deny → deny → ask → hook allow → allow (see #1 - #3, #5)
+- scope: managed → cli → local → project → user; scalars override, arrays merge (see #4)
+
+| rule family        | resolves by                            | see            |
+|--------------------|----------------------------------------|----------------|
+| permissions        | category order, first match wins       | #6 - #8        |
+| sandbox filesystem | narrowest path, allow or deny          | #12, #14 - #16 |
+| sandbox domain     | denied beats allowed, unlisted prompts | #14, #17       |
+| additive lists     | no contest, every entry counts         | #18 - #19      |
+
+- Read/Edit and WebFetch(domain:) `allows` also seed the sandbox (see #20 - #21)
+- an always-allow grant is just an allow rule in local; deny still beats it (see #9 - #11)
+
+### Misconceptions
+- each assumes a simpler system than exists: one gate, one file, or one failure mode
+- when a rule surprises you, the right column usually names the reason
+
+| instinct                   | actually                            |
+|----------------------------|-------------------------------------|
+| more allows, more autonomy | sandboxed bash never reads them     |
+| deny is allow's opposite   | deny wins from any scope, any depth |
+| a block will prompt me     | files fail silently, domains prompt |
+| settings.json is what runs | all scopes merge; check `/sandbox`  |
+| managed is strictest       | managed is unoverridable            |
+| rules see inside scripts   | permissions see one string per call |
+| an allow makes it work     | the sandbox is a second gate        |
+
+### Diagnostics
+- [permissions.sh](AGENTS/security/permissions.sh) replays a corpus through the real hook and audits the live rules
+- `/sandbox` prints the merged settings (source of truth)
+- start from the symptom, since the layer that blocked a call is rarely the one you were watching
+
+| symptom                      | layer                  | fix                                  |
+|------------------------------|------------------------|--------------------------------------|
+| 'Operation not permitted'    | sandbox filesystem     | allowWrite/allowRead (see #17)       |
+| prompt naming unlisted host  | sandbox domain         | allowedDomains (see #21)             |
+| prompt for ordinary command  | permissions, no match  | add allow in project scope (see #6)  |
+| blocked despite an allow     | permissions or hook    | grep for matching deny (see #1, #18) |
+| tool missing from context    | permissions, bare deny | add tool specifier (see #7)          |
+| runs by hand but .sh fails   | sandbox filesystem     | grant child commands (see #14)       |
+| a setting that looks ignored | scope merge            | diff `/sandbox` config (see #4, #15) |
+
+### Sources
+
+#### [hooks](https://code.claude.com/docs/en/hooks):
+1. a PreToolUse hook can block a tool call, and no allow rule can override that block
+2. it blocks by exiting 2, or by printing `permissionDecision: deny` and exiting 0
+3. exit 1 does not block; a hook that crashes lets the call through
+
+#### [settings](https://code.claude.com/docs/en/settings):
+4. managed wins outright; every array below merges across all scopes
+
+#### [permissions](https://code.claude.com/docs/en/permissions):
+5. a hook allow only skips the prompt; deny and ask still apply
+6. specificity never reorders: `Bash(aws *)` deny beats `Bash(aws s3 ls)` allow
+7. a bare tool deny (e.g. `Bash`) removes the tool from context entirely
+8. covers every tool: bash, read, edit, webfetch, mcp, etc
+9. always allow writes an allow rule into local, so any deny or ask still beats it
+10. bash grants persist per repo and command; edit grants only last the session
+11. approving a compound command saves one rule per subcommand, up to five
+
+#### [sandboxing](https://code.claude.com/docs/en/sandboxing):
+12. `filesystem.disabled` voids denyRead, credentials.files, and settings.json protection
+13. `gh` commands successfully reached the api despite anthropic's sandbox warnings
+14. both layers bind only sandboxed commands; excludedCommands escapes them
+15. `allowManagedReadPathsOnly` honors managed `allowRead` only; denies still merge
+16. `credentials.envVars` survives `filesystem.disabled`, since env scrubbing is not a file rule
+17. unlisted domains prompt; file denials are silent, failing "Operation not permitted"
+18. deny only narrows, so any scope may add one and none may remove another's
+19. `excludedCommands` has no managed lock, so any scope can widen it
+20. `Read` and `Edit` rules merge into the final sandbox filesystem config
+21. `WebFetch(domain:)` allows join the bash allowlist; never the reverse
