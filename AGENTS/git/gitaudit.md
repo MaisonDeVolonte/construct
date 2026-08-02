@@ -49,7 +49,8 @@
 
 4. THEN append the same report to the audit file (see `AGENTS/templates/audits.md`)
   ```text
-  - the sidecar already seeded the file; take the target from the `--- audit ---` telemetry:
+  - the sidecar reports the target but never creates it; take it from `--- audit ---`:
+  - CREATE the file first if it does not exist, with `# <audit_file>` as its only line
     - `audit_file` is the path, `audit_time` is the heading timestamp
     - `audit_count` is how many audits the file already holds, so this one is #(audit_count + 1)
   - append a new `## Audit #N: YYYY-MM-DD HH:MM` section, never overwrite an earlier audit

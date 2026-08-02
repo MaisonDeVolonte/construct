@@ -4,7 +4,7 @@
 # ===============================================
 # @description
 # - sidecar for `@gitinsights` — deterministic checks for broken refs and code markers
-# - seeds today's insights file and reports its path, so the agent appends to a known target
+# - reports today's insights path and report count, and never creates the file itself
 # - `--keep` preserves the tmp/ scratch file, which a failed run preserves anyway
 # @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitinsights.md, AGENTS/templates/insights.md, docs/insights/
 
@@ -20,13 +20,14 @@ if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
 # scan from the repo root so every reference resolves regardless of the invocation dir
 cd "$(git rev-parse --show-toplevel)"
 
-# one file per day, many reports per file — seeded here so the agent has a known target;
+# one file per day, many reports per file — reported never created, so a ci scan leaves nothing
 # the cd above already anchored us to the repo root, so these paths stay relative
 TODAYS_INSIGHTS="docs/insights/$(date +%Y-%m-%d).md"
-if [ ! -f "$TODAYS_INSIGHTS" ];
-then mkdir -p docs/insights; echo "# $TODAYS_INSIGHTS" > "$TODAYS_INSIGHTS"; fi
 INSIGHTS_TIME=$(date '+%Y-%m-%d %H:%M')
-INSIGHTS_COUNT=$(grep -c '^## Insight #' "$TODAYS_INSIGHTS" 2>/dev/null || true)
+# no file yet means no reports yet, which is the count the agent numbers its first one from
+if [ -f "$TODAYS_INSIGHTS" ];
+then INSIGHTS_COUNT=$(grep -c '^## Insight #' "$TODAYS_INSIGHTS" || true)
+else INSIGHTS_COUNT=0; fi
 
 KEEP=0
 for arg in "$@"; do

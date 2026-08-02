@@ -61,7 +61,8 @@
 
 5. THEN append the same scorecard to the brutal file (see `AGENTS/templates/brutal.md`)
   ```text
-  - the sidecar already seeded the file; take the target from the `--- BRUTAL ARCHIVE ---` telemetry:
+  - the sidecar reports the target but never creates it; take it from `--- BRUTAL ARCHIVE ---`:
+  - CREATE the file first if it does not exist, with `# <brutal_file>` as its only line
     - `brutal_file` is the path, `brutal_time` is the heading timestamp
     - `brutal_count` is how many scorecards the file already holds, so this one is #(brutal_count + 1)
   - append a new `## Brutal #N: YYYY-MM-DD HH:MM` section, never overwrite an earlier scorecard
