@@ -41,7 +41,8 @@ mkdir -p "$TMPROOT"
 # findings collect here as "category: detail" lines; this is report-only, so the run never fails
 FINDINGS=$(mktemp "$TMPROOT/$TMPTAG-findings.XXXXXX")
 # a failed run leaves scratch behind to read; --keep does the same after a clean one
-trap 'st=$?; if [ "$KEEP" -eq 0 ] && [ "$st" -eq 0 ]; then rm -f "$FINDINGS"; fi' EXIT
+cleanup() { st=$?; if [ "$KEEP" -eq 0 ] && [ "$st" -eq 0 ]; then rm -f "$FINDINGS"; fi; }
+trap cleanup EXIT
 
 # dirs never worth scanning: dependencies, build output, and generated code
 EXCLUDES=(--exclude-dir=node_modules --exclude-dir=.git --exclude-dir=.next --exclude-dir=.open-next --exclude-dir=webflow --exclude-dir=report --exclude-dir=results --exclude='*.generated.*')
