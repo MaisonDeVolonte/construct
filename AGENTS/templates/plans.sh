@@ -8,19 +8,19 @@
 # - ERROR breaks a rule the template states outright; WARN names a smell the template tolerates
 # - defaults to every file in `docs/plans/`; pass files or a directory to scope it
 # - `--strict` promotes warnings to errors; exits 1 on any error, 0 otherwise
-# @see AGENTS.md, AGENTS/shared/secrets.sh, AGENTS/templates/plans.md, AGENTS/git/gitinsights.sh, docs/plans/
+# @see AGENTS.md, AGENTS/security/secrets.sh, AGENTS/templates/plans.md, AGENTS/git/gitinsights.sh, docs/plans/
 
 set -euo pipefail
 
 # ==============
 # PREFLIGHT
 # ==============
-# the shared checks sit beside this file, not beside the repo being scanned: resolve them before
+# the shared scan sits beside this file, not beside the repo being scanned: resolve them before
 # anything cds to a repo root, since BASH_SOURCE arrives relative and would follow that cd
-SHARED=$(cd "$(dirname "${BASH_SOURCE[0]}")/../shared" 2>/dev/null && pwd || true)
+SHARED=$(cd "$(dirname "${BASH_SOURCE[0]}")/../security" 2>/dev/null && pwd || true)
 if [ ! -f "$SHARED/secrets.sh" ]; then
-  echo "fatal: no AGENTS/shared/secrets.sh beside this sidecar" >&2; exit 1; fi
-# shellcheck source=../shared/secrets.sh
+  echo "fatal: no AGENTS/security/secrets.sh beside this sidecar" >&2; exit 1; fi
+# shellcheck source=../security/secrets.sh
 . "$SHARED/secrets.sh"
 
 # character counts, not byte counts: bash's ${#var} is multibyte-aware under a utf-8 locale, and
