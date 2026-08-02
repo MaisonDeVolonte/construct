@@ -68,7 +68,8 @@
 
 6. THEN append the same report to the insights file (see `AGENTS/templates/insights.md`)
   ```text
-  - the sidecar already seeded the file; take the target from its telemetry header:
+  - the sidecar reports the target but never creates it; take it from the telemetry header:
+  - CREATE the file first if it does not exist, with `# <insights_file>` as its only line
     - `insights_file` is the path, `insights_time` is the heading timestamp
     - `insights_count` is how many reports the file already holds, so this one is #(insights_count + 1)
   - append a new `## Insight #N: YYYY-MM-DD HH:MM` section, never overwrite an earlier report

@@ -136,7 +136,7 @@ check_tracked() {
   fi
 }
 
-# the sidecar seeds the file with its own path as the h1, so a mismatch means the file was copied
+# the agent opens the file with its own path as the h1, so a mismatch means the file was copied
 # from another day — and a recurring opportunity is invisible once two days share a file
 check_header() {
   local file=$1 expected actual

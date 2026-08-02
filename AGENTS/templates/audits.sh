@@ -132,7 +132,7 @@ check_tracked() {
   fi
 }
 
-# the sidecar seeds the file with its own path as the h1, so a mismatch means the file was
+# the agent opens the file with its own path as the h1, so a mismatch means the file was
 # copied from another day — and a copied header is how two days of audits end up in one file
 check_header() {
   local file=$1 expected actual
