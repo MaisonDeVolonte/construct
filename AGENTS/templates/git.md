@@ -8,6 +8,7 @@
  * - starts with a native shell script sidecar
  * - fail: outputs raw terminal errors
  * - success: evaluates telemetry and executes subsequent actions
+ * - the only template whose sidecar scans `AGENTS/git/`, not a `docs/` artifact directory
  * - `AGENTS/templates/git.sh` validates every trigger doc and sidecar pair against the rules above
  * @see AGENTS.md, AGENTS/templates/git.sh, /AGENTS/git/
  */

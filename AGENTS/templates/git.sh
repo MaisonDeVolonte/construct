@@ -7,23 +7,24 @@
 # - one check per machine-checkable rule; every rule needing judgement prints as a human checklist
 # - ERROR breaks a rule the template states outright; WARN names a smell the template tolerates
 # - defaults to every pair in `AGENTS/git/`; pass a doc, a sidecar, or a directory to scope it
-# - `--strict` promotes warnings to errors; exits 1 on any error, 0 otherwise
-# @see AGENTS.md, AGENTS/shared/secrets.sh, AGENTS/templates/git.md, AGENTS/git/, AGENTS/templates/plans.sh, .github/workflows/ci.yml
+# - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
+# @see AGENTS.md, AGENTS/security/secrets.sh, AGENTS/templates/git.md, AGENTS/git/, AGENTS/templates/plans.sh, .github/workflows/ci.yml
 
 set -euo pipefail
 
 # ==============
 # PREFLIGHT
 # ==============
-# the shared checks sit beside this file, not beside the repo being scanned: resolve them before
+# the shared scan sits beside this file, not beside the repo being scanned: resolve them before
 # anything cds to a repo root, since BASH_SOURCE arrives relative and would follow that cd
-SHARED=$(cd "$(dirname "${BASH_SOURCE[0]}")/../shared" 2>/dev/null && pwd || true)
+SHARED=$(cd "$(dirname "${BASH_SOURCE[0]}")/../security" 2>/dev/null && pwd || true)
 if [ ! -f "$SHARED/secrets.sh" ]; then
-  echo "fatal: no AGENTS/shared/secrets.sh beside this sidecar" >&2; exit 1; fi
-# shellcheck source=../shared/secrets.sh
+  echo "fatal: no AGENTS/security/secrets.sh beside this sidecar" >&2; exit 1; fi
+# shellcheck source=../security/secrets.sh
 . "$SHARED/secrets.sh"
 
 STRICT=0
+KEEP=0
 TEMPLATE="AGENTS/templates/git.md"
 TRIGGERS="AGENTS/git"
 
@@ -34,6 +35,7 @@ PAIRS=()
 for arg in "$@"; do
   case "$arg" in
     --strict) STRICT=1;;
+    --keep) KEEP=1;;
     -h|--help) sed -n '2,11p' "$0"; exit 0;;
     -*) echo "fatal: unknown flag $arg" >&2; exit 1;;
     *) PAIRS+=("$arg");;
@@ -71,10 +73,16 @@ INDEX=''
 if [ -f AGENTS.md ]; then INDEX=AGENTS.md
 elif [ -f README.md ]; then INDEX=README.md; fi
 
+# repo-local scratch: the sandbox denies writes outside cwd, and macos mktemp ignores TMPDIR
+TMPROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tmp"
+TMPTAG=$(basename "${BASH_SOURCE[0]}" .sh)
+mkdir -p "$TMPROOT"
+
 # findings collect as "SEV|file|line|category|detail" — line is its own field so the report can
 # sort numerically; joining it to the path first sorts 121 above 31. the run fails on ERROR only
-FINDINGS=$(mktemp)
-trap 'rm -f "$FINDINGS"' EXIT
+FINDINGS=$(mktemp "$TMPROOT/$TMPTAG-findings.XXXXXX")
+# a failed run leaves scratch behind to read; --keep does the same after a clean one
+trap 'st=$?; if [ "$KEEP" -eq 0 ] && [ "$st" -eq 0 ]; then rm -f "$FINDINGS"; fi' EXIT
 
 err()  { printf 'ERROR|%s|%s|%s|%s\n' "$1" "$2" "$3" "$4" >> "$FINDINGS"; }
 warn() { printf 'WARN|%s|%s|%s|%s\n' "$1" "$2" "$3" "$4" >> "$FINDINGS"; }
