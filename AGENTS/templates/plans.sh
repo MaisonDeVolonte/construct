@@ -7,7 +7,7 @@
 # - one check per machine-checkable rule; every rule needing judgement prints as a human checklist
 # - ERROR breaks a rule the template states outright; WARN names a smell the template tolerates
 # - defaults to every file in `docs/plans/`; pass files or a directory to scope it
-# - `--strict` promotes warnings to errors; exits 1 on any error, 0 otherwise
+# - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
 # @see AGENTS.md, AGENTS/security/secrets.sh, AGENTS/templates/plans.md, AGENTS/git/gitinsights.sh, docs/plans/
 
 set -euo pipefail
@@ -30,15 +30,31 @@ if [ -n "$UTF8_LOCALE" ]; then export LC_ALL="$UTF8_LOCALE"; fi
 
 MAX_WIDTH=100
 STRICT=0
+KEEP=0
 TEMPLATE="AGENTS/templates/plans.md"
 
 # the template's own section order, which is the one thing every plan must agree on
-EXPECTED_SECTIONS=$'Context\nGoal\nSolution\nRisks\nChecklist\nFuture Work\nNotes'
+EXPECTED_SECTIONS=$'Context\nGoal\nSolution\nRisks\nChecklist\nReadiness\nNotes'
+
+# readiness runs blockers first, since that table gates starting the plan at all
+EXPECTED_READINESS=$'Blockers\nAgents\nPermissions'
+
+# the only actions a permissions row may propose; deny beats allow, so a denied path is
+# narrowed at the deny rule rather than granted an allow that can never take effect
+PERMISSION_ACTIONS=$'add to allow\nnarrow deny\nremove from deny\nadd to deny\nadd to allowWrite\nadd to allowRead\nadd to denyRead\nadd to allowedDomains\nadd to deniedDomains\nadd to excludedCommands'
+
+# the layer decides the rule shape, so the row check knows whether to expect `Tool(pattern)`
+# or a bare path or host; a bash write needs a sandbox row even when a permission rule allows it
+PERMISSION_LAYERS=$'permissions\nsandbox filesystem\nsandbox domain'
+
+# managed is a sudo edit and a policy decision, so a plan proposes the four below and never it
+PERMISSION_SCOPES=$'user\nproject\nlocal\ncli'
 
 PLANS=()
 for arg in "$@"; do
   case "$arg" in
     --strict) STRICT=1;;
+    --keep) KEEP=1;;
     -h|--help) sed -n '2,12p' "$0"; exit 0;;
     -*) echo "fatal: unknown flag $arg" >&2; exit 1;;
     *) PLANS+=("$arg");;
@@ -65,11 +81,18 @@ for path in "${PLANS[@]}"; do
 done
 PLANS=("${EXPANDED[@]}")
 
+# repo-local scratch: the sandbox denies writes outside cwd, and macos mktemp ignores TMPDIR
+TMPROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tmp"
+TMPTAG=$(basename "${BASH_SOURCE[0]}" .sh)
+mkdir -p "$TMPROOT"
+
 # findings collect as "SEV|file|line|category|detail" — line is its own field so the report can
 # sort numerically; joining it to the path first sorts 121 above 31. the run fails on ERROR only
-FINDINGS=$(mktemp)
-SCRATCH=$(mktemp -d)
-trap 'rm -rf "$FINDINGS" "$SCRATCH"' EXIT
+FINDINGS=$(mktemp "$TMPROOT/$TMPTAG-findings.XXXXXX")
+SCRATCH=$(mktemp -d "$TMPROOT/$TMPTAG-scratch.XXXXXX")
+# a failed run leaves scratch behind to read; --keep does the same after a clean one
+cleanup() { st=$?; if [ "$KEEP" -eq 0 ] && [ "$st" -eq 0 ]; then rm -rf "$FINDINGS" "$SCRATCH"; fi; }
+trap cleanup EXIT
 
 err()  { printf 'ERROR|%s|%s|%s|%s\n' "$1" "$2" "$3" "$4" >> "$FINDINGS"; }
 warn() { printf 'WARN|%s|%s|%s|%s\n' "$1" "$2" "$3" "$4" >> "$FINDINGS"; }
@@ -81,6 +104,57 @@ section() {
     /^## / { inside = 0 }
     inside { print NR "\t" $0 }
   ' "$1"
+}
+
+# markdown counts cells between pipes, so mask the escaped ones first: a permission rule like
+# `Bash(curl * | bash)` is a real entry in the settings files and would read as extra columns
+table_cells() {
+  printf '%s' "$1" | sed 's/\\|/~/g' | awk -F'|' '{ n = NF - 2; if (n < 0) n = 0; print n }'
+}
+
+# one cell of a table row, 1-indexed, trimmed; masking keeps an escaped pipe inside its own cell
+row_cell() {
+  printf '%s' "$1" | sed 's/\\|/~/g' \
+    | awk -F'|' -v n="$2" '{ cell = $(n + 1); gsub(/^[ \t]+|[ \t]+$/, "", cell); print cell }'
+}
+
+# the 1-indexed position of a named column in a header row, empty when the table lacks it.
+# columns are looked up by name rather than position, since the order is the template's to change
+col_index() {
+  printf '%s' "$1" | sed 's/\\|/~/g' | awk -F'|' -v want="$2" '
+    {
+      for (i = 2; i < NF; i++) {
+        cell = $i
+        gsub(/^[ \t]+|[ \t]+$/, "", cell)
+        if (tolower(cell) == want) { print i - 1; exit }
+      }
+    }'
+}
+
+# a count cell is a number, or an em dash standing in for zero; anything else is prose
+count_cell() {
+  case "$1" in
+    ""|"—"|"–"|"-") printf '0';;
+    *[!0-9]*) printf '';;
+    *) printf '%s' "$1";;
+  esac
+}
+
+# how many checkboxes a numbered stage holds; deferred work is unnumbered, so it counts for none
+stage_items() {
+  local file=$1 want=$2 lineno text stage current=0 count=0
+  while IFS=$'\t' read -r lineno text; do
+    case "$text" in
+      "### "*)
+        stage=$(printf '%s' "$text" | sed -n 's/^### \([0-9]\{1,\}\)\..*/\1/p')
+        current=${stage:-0}
+        continue;;
+      "- [ ] "*|"- [x] "*)
+        if [ "$current" = "$want" ]; then count=$((count + 1)); fi
+        continue;;
+    esac
+  done < <(section "$file" Checklist)
+  printf '%s' "$count"
 }
 
 # ==============
@@ -130,7 +204,7 @@ check_header() {
   fi
 }
 
-# "sections run in this order: context, goal, solution, risks, checklist, future work, notes"
+# "sections run in this order: context, goal, solution, risks, checklist, readiness, notes"
 check_sections() {
   local file=$1 actual
   actual=$(grep -E '^## ' "$file" | sed 's/^## //' || true)
@@ -203,14 +277,22 @@ check_risks() {
 }
 
 # stages are "### <n>. <name>" and hold "short directives, verb first, one line each".
-# one orienting line under a stage header is fine; rationale between items belongs in a note
+# one orienting line under a stage header is fine; rationale between items belongs in a note.
+# "deferred work closes the checklist", so it is the one unnumbered heading allowed here
 check_checklist() {
-  local file=$1 lineno text stage previous=0 items=0
+  local file=$1 lineno text stage previous=0 items=0 deferred=0
   while IFS=$'\t' read -r lineno text; do
     if [ -z "$text" ]; then continue; fi
     case "$text" in
+      "### Deferred Work")
+        items=0
+        deferred=$lineno
+        continue;;
       "### "*)
         items=0
+        if [ "$deferred" -ne 0 ]; then
+          warn "$file" "$lineno" stage_after_deferred "deferred work closes the checklist"
+        fi
         stage=$(printf '%s' "$text" | sed -n 's/^### \([0-9]\{1,\}\)\..*/\1/p')
         if [ -z "$stage" ]; then
           err "$file" "$lineno" stage_header "stages are '### <n>. <name>'"
@@ -229,6 +311,118 @@ check_checklist() {
       warn "$file" "$lineno" checklist_prose "no prose between items; point at a note instead"
     fi
   done < <(section "$file" Checklist)
+}
+
+# "agents count every item in a stage as agentic, gated, or human-only, and the three sum".
+# a row that does not sum is provably wrong, which is the whole reason the counts are counts
+check_agents_row() {
+  local file=$1 lineno=$2 text=$3 header=$4 stage agentic gated human total items
+  stage=$(row_cell "$text" "$(col_index "$header" stage)" | sed -n 's/^\([0-9]\{1,\}\)\..*/\1/p')
+  if [ -z "$stage" ]; then
+    err "$file" "$lineno" agents_row "each row leads with a numbered stage from the checklist"
+    return
+  fi
+  agentic=$(count_cell "$(row_cell "$text" "$(col_index "$header" agentic)")")
+  gated=$(count_cell "$(row_cell "$text" "$(col_index "$header" gated)")")
+  human=$(count_cell "$(row_cell "$text" "$(col_index "$header" human-only)")")
+  if [ -z "$agentic" ] || [ -z "$gated" ] || [ -z "$human" ]; then
+    err "$file" "$lineno" agents_counts "a count is a number or an em dash, never prose"
+    return
+  fi
+  total=$((agentic + gated + human))
+  items=$(stage_items "$file" "$stage")
+  if [ "$items" -eq 0 ]; then
+    err "$file" "$lineno" agents_stage "stage $stage has no checklist items to classify"
+  elif [ "$total" -ne "$items" ]; then
+    err "$file" "$lineno" agents_sum "counts sum to $total; stage $stage holds $items items"
+  fi
+}
+
+# "every permission rule is quoted exactly from a settings file", so the cell carries a real
+# rule string; the action vocabulary is closed because deny beats allow
+check_permissions_row() {
+  local file=$1 lineno=$2 text=$3 header=$4 rule layer scope action
+  rule=$(row_cell "$text" "$(col_index "$header" rule)")
+  layer=$(row_cell "$text" "$(col_index "$header" layer)")
+  scope=$(row_cell "$text" "$(col_index "$header" scope)")
+  action=$(row_cell "$text" "$(col_index "$header" suggestion)")
+
+  # a permissions row quotes `Tool(pattern)`, while a sandbox row quotes a bare path or host,
+  # so the shape check follows the layer rather than assuming every row is a permission rule
+  if [ "$layer" = "permissions" ]; then
+    printf '%s' "$rule" | grep -qE '`[A-Za-z]+\([^`]*\)`' \
+      || err "$file" "$lineno" permission_rule 'quote the rule itself, as `Tool(pattern)`'
+  else
+    printf '%s' "$rule" | grep -qE '`[^`]+`' \
+      || err "$file" "$lineno" permission_rule 'quote the path or host in backticks'
+  fi
+
+  if ! printf '%s' "$PERMISSION_LAYERS" | grep -qxF "$layer"; then
+    err "$file" "$lineno" permission_layer "layer is one of: $(printf '%s' "$PERMISSION_LAYERS" | tr '\n' '/')"
+  fi
+  if ! printf '%s' "$PERMISSION_SCOPES" | grep -qxF "$scope"; then
+    err "$file" "$lineno" permission_scope "scope is one of: $(printf '%s' "$PERMISSION_SCOPES" | tr '\n' '/')"
+  fi
+  if ! printf '%s' "$PERMISSION_ACTIONS" | grep -qxF "$action"; then
+    err "$file" "$lineno" permission_action "action is one of: $(printf '%s' "$PERMISSION_ACTIONS" | tr '\n' '/')"
+  fi
+}
+
+# a table the row checks cannot read is reported once, against its header, rather than once per
+# row: the missing column is the single cause, and repeating it per row buries everything else
+check_table_header() {
+  local file=$1 lineno=$2 header=$3 sub=$4 name missing=""
+  case "$sub" in
+    Agents) set -- stage agentic gated human-only;;
+    Permissions) set -- rule layer scope suggestion;;
+    *) return 0;;
+  esac
+  for name in "$@"; do
+    if [ -z "$(col_index "$header" "$name")" ]; then missing="$missing $name"; fi
+  done
+  if [ -n "$missing" ]; then
+    err "$file" "$lineno" table_header "$sub is missing a column:$missing"
+    return 1
+  fi
+  return 0
+}
+
+# "readiness states feasibility only" — three tables in a fixed order, each shape-checked against
+# its own header row, since a row short one cell renders as a silently truncated table
+check_readiness() {
+  local file=$1 lineno text actual sub="" header=0 cells hdr=""
+  # a plan missing the section entirely is already reported by check_sections; saying it twice
+  # buries the finding that matters under a second one naming the same cause
+  if [ -z "$(section "$file" Readiness)" ]; then return; fi
+  actual=$(section "$file" Readiness | cut -f2- | grep -E '^### ' | sed 's/^### //' || true)
+  if [ "$actual" != "$EXPECTED_READINESS" ]; then
+    err "$file" 1 readiness_order "got $(printf '%s' "$actual" | tr '\n' '>' | sed 's/>$//')"
+  fi
+
+  while IFS=$'\t' read -r lineno text; do
+    case "$text" in
+      "### "*) sub=$(printf '%s' "$text" | sed 's/^### //'); header=0; hdr=""; continue;;
+      "|"*) ;;
+      *) continue;;
+    esac
+    cells=$(table_cells "$text")
+    if [ "$header" -eq 0 ]; then
+      header=$cells
+      hdr=$text
+      check_table_header "$file" "$lineno" "$hdr" "$sub" || hdr=""
+      continue
+    fi
+    if [ "$cells" -ne "$header" ]; then
+      err "$file" "$lineno" table_shape "$cells columns where the header has $header"
+      continue
+    fi
+    case "$text" in *---*) continue;; esac
+    if [ -z "$hdr" ]; then continue; fi
+    case "$sub" in
+      Agents) check_agents_row "$file" "$lineno" "$text" "$hdr";;
+      Permissions) check_permissions_row "$file" "$lineno" "$text" "$hdr";;
+    esac
+  done < <(section "$file" Readiness)
 }
 
 # "`notes` are numbered so every `(see #x)` resolves" and "a note nothing points at is either
@@ -279,6 +473,7 @@ for plan in "${PLANS[@]}"; do
   check_goal     "$plan"
   check_risks    "$plan"
   check_checklist "$plan"
+  check_readiness "$plan"
   check_notes    "$plan"
   scan_secrets   "$plan"
 done
@@ -326,6 +521,10 @@ cat <<'EOF'
 - solution lines are decisions; a line that could be pasted into the checklist belongs there
 - risks sort by blast radius and irreversibility, never by likelihood
 - stages run in sequence and each ships as its own pr
+- readiness states feasibility only; a row proposing new work belongs in the checklist
+- every permission rule is quoted from a settings file, or the row says it is a proposal
+- a bash step writing outside the working directory has a sandbox row, not only a permission one
+- blockers are unrelated work found in other open plans, not work this plan creates
 - every list is ordered deliberately; if the order is not obvious, a note says why
 - a claim with a number in it is verified before it lands, or it does not land
 - notes are self-contained, since readers jump in from one line and jump straight back
