@@ -252,6 +252,9 @@ false  ○───●  STRICT MODE: commands that fail are not retried at all
 ```
 - sandboxing on macos uses the built-in `seatbelt` framework (kernel) for enforcement
 - sandboxed commands cannot write `settings.json`, at any scope (see #12)
+  - the same protection binds git: a branch switch cannot revert a delivered `.claude/settings.json`
+  - so a delivery touching it strands a modified copy, and the post-merge pull needs a hatch restore
+  - confirm the copy matches origin first: `git diff origin/main -- .claude/settings.json`
 - sandbox is enabled for every scope (managed, cli, user, project, local)
 - `failIfUnavailable`: default false warns and runs unsandboxed; true refuses to start
 - sandbox-incompatible commands listed in anthropic docs: `gh`, `gcloud`, `terraform`, `docker`, `watchman`
@@ -413,6 +416,7 @@ different credential entirely
 | tool missing from context    | permissions, bare deny | add tool specifier (see #7)          |
 | runs by hand but .sh fails   | sandbox filesystem     | grant child commands (see #14)       |
 | a setting that looks ignored | scope merge            | diff `/sandbox` config (see #4, #15) |
+| pull aborts on settings.json | sandbox filesystem     | confirm it matches origin, then restore and pull via the hatch |
 
 ### Sources
 
