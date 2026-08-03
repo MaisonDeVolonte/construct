@@ -9,7 +9,7 @@ each pairs with a matching `.sh` sidecar that runs the automation
 - [@gitaudit](AGENTS/git/gitaudit.md): READ-ONLY; diagnostics, triage, report, summary, tasks (saved to file)
 - [@gitbrutal](AGENTS/git/gitbrutal.md): READ-ONLY; brutally honest code review, progress report (saved to file)
 - [@gitcontinue](AGENTS/git/gitcontinue.md): SAFE; stash, sync, and pop
-- [@gitdeliver](AGENTS/git/gitdeliver.md): GATED; atomically stage, commit, branch, push, pr, build, and check
+- [@gitdeliver](AGENTS/git/gitdeliver.md): GATED; branch, atomically stage, commit, push, pr, watch
 - [@gitempty](AGENTS/git/gitempty.md): GATED; prune, stash, fast-forward, restore, and hands over delete commands
 - [@gitfresh](AGENTS/git/gitfresh.md): GATED; stash, hard reset, purges local changes, and syncs fresh main
 - [@gitgud](AGENTS/git/gitgud.md): SAFE; query branch delta, merge remote main into it, and run fresh CI
@@ -240,6 +240,26 @@ inspired by:
 - cli: `--settings`, session only, no file
   - used for trying a rule before it lands in a file (nothing here persists)
 
+### Sandboxing
+```
+sandbox.allowUnsandboxedCommands
+
+true   ●───○  TEST MODE:   commands that fail are retried outside the sandbox
+              recommended: permissions.ask ["Bash(dangerouslyDisableSandbox:true)"]
+
+false  ○───●  STRICT MODE: commands that fail are not retried at all
+              recommended: sandbox.excludedCommands ["your *", "* commands"]
+```
+- sandboxing on macos uses the built-in `seatbelt` framework (kernel) for enforcement
+- sandboxed commands cannot write `settings.json`, at any scope (see #12)
+- sandbox is enabled for every scope (managed, cli, user, project, local)
+- `failIfUnavailable`: default false warns and runs unsandboxed; true refuses to start
+- sandbox-incompatible commands listed in anthropic docs: `gh`, `gcloud`, `terraform`, `docker`, `watchman`
+  - `gh` reproduces the warning: cgo verifies via the platform verifier, so no ca env var reaches it
+  - `enableWeakerNetworkIsolation` restores the trustd lookup it needs, correcting #13
+- read-only bash commands are allowed by default (fixed, gated with deny or ask):
+  - `ls`, `cat`, `echo`, `pwd`, `head`, `tail`, `grep`, `find`, `wc`, `which`, `diff`, `stat`, `du`, `cd`, and read-only forms of `git`
+
 ### Tool Denies
 one bullet per block in the `deny` array; any scope may add a deny, none may remove another's
 - managed: `/Library/Application Support/ClaudeCode/managed-settings.json`
@@ -265,14 +285,72 @@ one bullet per host in `allowedDomains`; an unlisted host prompts, a denied host
   - everything in user, verbatim, so a clone carries its own egress
   - `code.claude.com`, `docs.claude.com`: WebFetch allows that seed the bash allowlist (see #21)
 
-### Sandboxing
-- sandboxing on macos uses the built-in `seatbelt` framework (kernel) for enforcement
-- sandboxed commands cannot write `settings.json`, at any scope (see #12)
-- sandbox is enabled for every scope (managed, cli, user, project, local)
-- sandbox-incompatible commands listed in anthropic docs: `gh`, `gcloud`, `terraform`, `docker`, `watchman`
-  - verified working: `gh` (see #13)
-- read-only bash commands are allowed by default (fixed, gated with deny or ask):
-  - `ls`, `cat`, `echo`, `pwd`, `head`, `tail`, `grep`, `find`, `wc`, `which`, `diff`, `stat`, `du`, `cd`, and read-only forms of `git`
+### Credentials
+`sandbox.credentials` hides secrets from sandboxed bash only; Read/Edit/Write need a permission rule
+- `files`: paths refused for reads, and `deny` is the only mode they accept
+- `envVars`: names unset before each sandboxed command, surviving `filesystem.disabled` (see #16)
+- `mask`: substitutes a sentinel instead of unsetting, so the tool still authenticates
+  - needs `network.tlsTerminate`, or it fails closed
+  - every `injectHosts` entry must also sit in `allowedDomains`
+  - honored from user, managed, and cli only; `deny` beats it in any scope
+- an entry with an empty path or name is stripped with a warning at startup
+
+### Keys
+one token per machine, named for the machine, so revoking it tells you exactly what breaks
+- a fine-grained pat, held in `~/.operator/.env`, one `export` per service
+- a lost laptop then revokes one credential instead of every project's access
+- user-owned throughout, so no sudo to read, edit, or rotate
+- `mask` stops the token leaving, never stops it being used, so the pat's scope is the real limit
+- adding a service is one more `export`, plus a matching `mask` or `deny` entry
+
+every token in the file inherits the same layers, so the axis is the layer, never the token
+
+| layer                | what it stops                       |
+|----------------------|-------------------------------------|
+| `~/.operator` at 700 | every other account on the machine  |
+| `Read(//**/.env*)`   | the Read tool, and sandboxed bash   |
+| `credentials.files`  | sandboxed bash reading the file     |
+| `pretooluse.sh`      | any command naming a denied path    |
+| `mask`               | the real value entering the sandbox |
+
+- how to install a personal access token
+  - `mkdir -p ~/.operator && chmod 700 ~/.operator`
+  - add one `export PAT_NAME="name_pat_token"` line per service to `~/.operator/.env`
+  - `nano ~/.zshrc`
+  - paste at the bottom `[ -r ~/.operator/.env ] && source ~/.operator/.env`
+  - save with ctrl+o, enter, ctrl+x
+  - configure user scope settings.json
+    - add credentials.files deny for `~/.operator/.env`
+    - add credentials.envVars mask for `PAT_NAME`, injectHosts `api.domain.com`
+  - quit and reopen the editor, not just the shell
+
+#### GitHub
+`GH_TOKEN` is masked to `api.github.com` and `github.com`; `GITHUB_TOKEN` stays denied, being a
+different credential entirely
+
+| operation           | sandboxed | why                                            |
+|---------------------|-----------|------------------------------------------------|
+| api through curl    | works     | honors the proxy ca, and Bearer is plaintext   |
+| api through gh      | never     | cgo verifies via the platform verifier         |
+| git fetch, ls-remote| works     | libcurl honors the proxy ca                    |
+| git push            | never     | basic auth base64s the sentinel out of reach   |
+| git push, hatch     | works     | unsandboxed commands hold the real token       |
+
+- curl is the only client `mask` can serve, so it replaces gh for every api call in a sidecar
+- gh fails whatever the config: no env var reaches a cgo-linked verifier, and excluding it
+  unsandboxes the entire command string rather than just gh
+- push stays on the retry hatch by choice, since dropping `mask` to gain it would put the real
+  token in every sandboxed command for a capability `@gitdeliver` is gated against anyway
+- revisit only if anthropic ships a non-cgo gh, or the proxy learns to substitute inside base64
+- an unlisted github host is refused, and `*.github.com` is avoided on purpose since it reaches gist
+- upstream issues to watch, since a shipped fix moves rows in the table above (checked 2026-08-03):
+  - [#26466](https://github.com/anthropics/claude-code/issues/26466): the liveliest go-tls thread; gh fails through the built-in proxy
+  - [#77333](https://github.com/anthropics/claude-code/issues/77333): the same OSStatus -26276 measured here, reported on tahoe
+  - [#82793](https://github.com/anthropics/claude-code/issues/82793): allowMachLookup unwired, so enableWeakerNetworkIsolation stays the only go-tls fix
+  - [#81157](https://github.com/anthropics/claude-code/issues/81157): an excludedCommands glob unsandboxes the whole invocation, matching what was measured here
+  - [#82109](https://github.com/anthropics/claude-code/issues/82109): excludedCommands also skips commands inside shell loops, more reason it stays dropped
+  - [#81211](https://github.com/anthropics/claude-code/issues/81211): feature ask for domain-scoped credential injection, the conversation nearest to `mask`
+  - [#82255](https://github.com/anthropics/claude-code/issues/82255): the macos proxy drops git-over-ssh credentials; a second push path if it lands
 
 ### Enforcement
 - sandbox is for containing, permissions are for denying
@@ -318,6 +396,7 @@ one bullet per host in `allowedDomains`; an unlisted host prompts, a denied host
 | managed is strictest       | managed is unoverridable            |
 | rules see inside scripts   | permissions see one string per call |
 | an allow makes it work     | the sandbox is a second gate        |
+| excludedCommands is narrow | it unsandboxes the whole call       |
 
 ### Diagnostics
 - [permissions.sh](AGENTS/security/permissions.sh) replays a corpus through the real hook and audits the live rules
@@ -327,6 +406,7 @@ one bullet per host in `allowedDomains`; an unlisted host prompts, a denied host
 | symptom                      | layer                  | fix                                  |
 |------------------------------|------------------------|--------------------------------------|
 | 'Operation not permitted'    | sandbox filesystem     | allowWrite/allowRead (see #17)       |
+| tool suggests `sudo chown`   | sandbox filesystem     | allowWrite the named path (see #17)  |
 | prompt naming unlisted host  | sandbox domain         | allowedDomains (see #21)             |
 | prompt for ordinary command  | permissions, no match  | add allow in project scope (see #6)  |
 | blocked despite an allow     | permissions or hook    | grep for matching deny (see #1, #18) |
