@@ -1,18 +1,68 @@
 {
   "sandbox": {
     "enabled": true,
-    "excludedCommands": [
-      "gh *"
-    ],
+    "failIfUnavailable": true,
+    "allowUnsandboxedCommands": true,
+    "enableWeakerNetworkIsolation": true,
+
+    "filesystem": {
+      "allowWrite": [
+        "~/.npm",
+        "~/.cache",
+        "~/Library/pnpm",
+        "~/Library/Caches/pnpm"
+      ],
+      "denyRead": [
+        "/Volumes",
+        "~/Library/Keychains"
+      ],
+      "denyWrite": []
+    },
+
     "network": {
+      "strictAllowlist": true,
+      "tlsTerminate": {},
       "allowedDomains": [
         "github.com",
         "api.github.com",
         "registry.npmjs.org"
       ]
+    },
+
+    "credentials": {
+      "files": [
+        { "path": "~/.aws",                   "mode": "deny" },
+        { "path": "~/.bash_history",          "mode": "deny" },
+        { "path": "~/.config/gcloud",         "mode": "deny" },
+        { "path": "~/.gnupg",                 "mode": "deny" },
+        { "path": "~/.kube",                  "mode": "deny" },
+        { "path": "~/.netrc",                 "mode": "deny" },
+        { "path": "~/.npmrc",                 "mode": "deny" },
+        { "path": "~/.operator/.env",         "mode": "deny" },
+        { "path": "~/.ssh",                   "mode": "deny" },
+        { "path": "~/.zsh_history",           "mode": "deny" }
+      ],
+      "envVars": [
+        { "name": "ANTHROPIC_API_KEY",        "mode": "deny" },
+        { "name": "AWS_ACCESS_KEY_ID",        "mode": "deny" },
+        { "name": "AWS_SECRET_ACCESS_KEY",    "mode": "deny" },
+        { "name": "GITHUB_TOKEN",             "mode": "deny" },
+        { "name": "IGCLI_SERP_KEY",           "mode": "deny" },
+        { "name": "NPM_TOKEN",                "mode": "deny" },
+        { "name": "npm_config_cache",         "mode": "deny" },
+        { "name": "npm_config_global_prefix", "mode": "deny" },
+        { "name": "npm_config_globalconfig",  "mode": "deny" },
+        { "name": "npm_config_local_prefix",  "mode": "deny" },
+        { "name": "npm_config_prefix",        "mode": "deny" },
+
+        { "name": "GH_TOKEN", "mode": "mask", "injectHosts": ["api.github.com"] }
+      ]
     }
   },
+
   "permissions": {
+    "ask": [ "Bash(dangerouslyDisableSandbox:true)" ],
+
     "deny": [
       "Write(~/.claude/**)", "Edit(~/.claude/**)",
       "Write(.claude/**)", "Edit(.claude/**)",
@@ -52,34 +102,17 @@
       "Bash(git clean -f*)", "Bash(git clean -d*)", "Bash(git clean -x*)", "Bash(git clean * -f*)",
       "Bash(git stash clear*)", "Bash(git stash drop*)",
 
-      "Read(**/.env*)", "Write(**/.env*)", "Edit(**/.env*)",
-      "Read(//**/*.pem)", "Read(//**/*.key)", "Read(//**/*.p12)", "Read(//**/*.crt)",
+      "Read(//**/.env*)", "Write(//**/.env*)", "Edit(//**/.env*)",
+      "Read(~/**/*.pem)", "Read(~/**/*.crt)", "Read(//**/*.key)", "Read(//**/*.p12)",
       "Read(~/.ssh/**)", "Read(~/.aws/**)", "Read(~/.config/gcloud/**)", "Read(~/.kube/**)",
       "Read(~/.gnupg/**)", "Read(~/.netrc)", "Read(~/.npmrc)",
       "Read(~/.bash_history)", "Read(~/.zsh_history)",
-      "Read(~/Library/Keychains/**)",
+      "Read(~/Library/Keychains/**)"
+    ],
 
-      "Edit(**/.git/**)", "Write(**/.git/**)",
-      "Edit(**/.husky/**)", "Write(**/.husky/**)",
-      "Edit(**/.devin/**)", "Write(**/.devin/**)",
-      "Edit(**/.cursor/**)", "Write(**/.cursor/**)",
-      "Edit(terraform/**/*.tfstate*)", "Write(terraform/**/*.tfstate*)",
-      "Edit(**/*docker-compose.prod*)", "Write(**/*docker-compose.prod*)",
-      "Edit(webflow/**)", "Write(webflow/**)"
-    ],
-    "ask": [
-      "Bash(npx *)"
-    ],
     "allow": [
-      "Write(AGENTS/**/*.md)", "Edit(AGENTS/**/*.md)",
-      "Write(docs/**)", "Edit(docs/**)",
-
-      "Bash(AGENTS/git/*.sh*)", "Bash(AGENTS/hooks/*.sh*)",
-      "Bash(AGENTS/templates/*.sh*)", "Bash(AGENTS/security/*.sh*)",
-
-      "Bash(gh *)",
-
-      "WebFetch(domain:code.claude.com)", "WebFetch(domain:docs.claude.com)"
+      "Read(~/Developer/**)",
+      "WebSearch"
     ]
   }
 }

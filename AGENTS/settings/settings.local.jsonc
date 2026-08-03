@@ -4,22 +4,25 @@
  * =======================================================
  * @description
  * - copy to .claude/settings.local.json
- * - outranks project and user settings, sitting directly below managed and the cli flag
- * - gitignored: every hook here vanishes on a fresh clone; deny lists survive, hooks do not
- * - `PreToolUse` runs before every permission rule, vetoing what the allow list would pass
- * - the right home for a temporary grant, since nothing here gets committed by accident
- * - every `Always Allow` you click lands here as an allow rule, which is what `cmd-alt-a` audits
- * - bash grants persist per repo and command, while edit grants only last the session
- * - a grant is an ordinary allow rule, so a deny or ask in any scope still beats it
- * - [enabled: true] restated so this checkout stays sandboxed on its own; booleans agree everywhere
- * @see AGENTS.md, AGENTS/settings/settings.managed.jsonc, AGENTS/settings/settings.project.jsonc,
- *      AGENTS/hooks/
+ * - gitignored, so hooks here vanish on a fresh clone
+ * - the right home for a temporary grant, since nothing here is committed
+ * - mechanics live in README.md
+ * - this block covers only why these values
+ * - `enabled` restated so this checkout stays sandboxed on its own
+ * - `ask` on dangerouslyDisableSandbox makes each escape visible
+ * - `hooks` is the real payload, and nothing else belongs in this scope
+ *   - `PreToolUse` runs before every rule, vetoing what an allow would pass
+ *   - `PostToolUse` matches Write and Edit only, and never blocks
+ * - every `Always Allow` click lands here as an allow rule
+ * - a grant here is an ordinary allow, so any deny or ask still beats it
+ * @see AGENTS.md, README.md, AGENTS/settings/, AGENTS/hooks/
  */
 
 {
-  "sandbox": {
-    "enabled": true
-  },
+  "sandbox": { "enabled": true },
+
+  "permissions": { "ask": [ "Bash(dangerouslyDisableSandbox:true)" ] },
+
   "hooks": {
     "SessionStart": [{ "hooks": [{ "type": "command", "command": "AGENTS/hooks/sessionstart.sh" }] }],
     "PreToolUse": [{ "matcher": "Bash", "hooks": [{ "type": "command", "command": "AGENTS/hooks/pretooluse.sh" }] }],
