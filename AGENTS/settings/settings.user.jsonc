@@ -1,52 +1,165 @@
 /**
  * ===========================================================
- * @file settings.user.jsonc - copy to ~/.claude/settings.json
+ * @file settings.user.jsonc - the working floor for all repos
  * ===========================================================
  * @description
- * - user-wide; paths and reads only, since this scope follows me into every repo on the disk,
- *   including ones i have not read
- * - "does this help me across all my agentic work, and is it safe in a repo i haven't read?"
- * - no `Bash(...)` rules at all, for two reasons that make them dead weight here:
- *   - the built-in read-only set (ls, cat, grep, git reads, etc) runs promptless in every mode
- *   - sandboxed commands auto-approve, so an allow list never gets consulted for them
- *   - what remains for permissions is denying and asking, and those live in managed
- * - allowWrite is package-manager scribble that lands outside cwd: npm's cache and logs,
- *   pnpm's store and cache; a denied write there surfaces as a confusing tool failure
- * - add a browser cache (ms-playwright, Cypress) only when a project actually installs one
- * - `Read(~/Developer/**)` is machine detail: another machine calls it `~/src` or `~/code`;
- *   it also merges into the sandbox filesystem config, so bash reads inherit the same grant
- * - no bare `Read` allow, since that would make the ask floor inert machine-wide
- * - no bare `WebFetch` either: it equals `WebFetch(domain:*)`, which would pre-allow every
- *   domain for sandboxed bash; every host here is named one by one instead
- * - allowedDomains carries the github hosts and the npm registry, since every repo on this disk
- *   uses git and installs packages; a repo-specific host still belongs in that repo's project
- * - the cost is real: a sandboxed command in a repo i have not read can reach them too
- * - named hosts, never `*.github.com`: a wildcard would pull in gist, a ready exfil channel
- * - `WebSearch` is the one tool grant: read-only, and useful in every repo
- * - [enabled: true] restated here so non-repo directories stay sandboxed without managed
- * @see AGENTS.md, AGENTS/settings/settings.managed.jsonc, AGENTS/settings/settings.project.jsonc
+ * - copy to ~/.claude/settings.json
+ * - holds the floor while the config is unproven
+ * - a fix here needs an editor, not sudo
+ * - mechanics live in README.md
+ * - this block covers only why these values
+ * - BOOLEANS
+ *   - `enabled` restated so non-repo directories stay sandboxed without managed
+ *   - `failIfUnavailable` sits here so a lockout stays editable
+ *   - `allowUnsandboxedCommands` stays open for attended work
+ *   - the ask below is what instruments it
+ *   - set it false in project for any repo running unattended
+ *   - `enableWeakerNetworkIsolation` re-permits the trustd lookup go needs for tls
+ *   - verify egress still refuses an unlisted host after enabling it
+ * - FILESYSTEM
+ *   - `disabled` is stated because no managed credentials block pins it
+ *   - `allowWrite` is this machine's package-manager scribble
+ *   - it misses the cache Zed exports as npm_config_cache
+ *   - `denyRead` is the odd extras only
+ *   - `denyWrite` is empty because writes outside `allowWrite` already fail
+ * - NETWORK
+ *   - `strictAllowlist` denies unlisted hosts; without it the list only suppresses prompts
+ *   - `tlsTerminate` lets the proxy swap masked credentials in, and mask fails closed without it
+ *   - `allowedDomains` covers git, gh's api, and the npm registry
+ *   - named hosts only, since a github wildcard pulls in gist
+ *   - every repo on this disk inherits them, read or unread
+ * - CREDENTIALS
+ *   - `files` blocks the token stores
+ *   - gh is absent from both layers on purpose, so nothing of ours blocks it
+ *   - `IGCLI_SERP_KEY` came from probing the environment, not from a list
+ *   - NPM_TOKEN is publish-only, so installs are unaffected
+ *   - `GH_TOKEN` uses `mask`, so the sandbox sees a sentinel and the proxy swaps the real one
+ *   - a masked name must never also be denied, since `deny` wins in every scope
+ *   - `GITHUB_TOKEN` stays denied, since it holds the unrelated gitascms token
+ *   - `~/.operator/.env` sources GH_TOKEN, and is listed here as well as caught by the
+ *     `.env*` deny, so a regression in either rule still covers the token
+ *   - that directory must be chmod 700 on creation, since umask gives a new home dir 755
+ * - PERMISSIONS
+ *   - `ask` on dangerouslyDisableSandbox makes each escape visible
+ *   - `deny` repeats the credential paths for the tool layer
+ *   - `allow` stays tiny so the floor is never inert
+ *   - `Read(~/Developer/**)` is machine detail, not policy
+ * - promote a block to managed only once it has run clean
+ * @see AGENTS.md, README.md, AGENTS/settings/
  */
 
 {
   "sandbox": {
     "enabled": true,
+    "failIfUnavailable": true,
+    "allowUnsandboxedCommands": true,
+    "enableWeakerNetworkIsolation": true,
+
     "filesystem": {
       "allowWrite": [
         "~/.npm",
         "~/.cache",
         "~/Library/pnpm",
         "~/Library/Caches/pnpm"
-      ]
+      ],
+      "denyRead": [
+        "/Volumes",
+        "~/Library/Keychains"
+      ],
+      "denyWrite": []
     },
+
     "network": {
+      "strictAllowlist": true,
+      "tlsTerminate": {},
       "allowedDomains": [
         "github.com",
         "api.github.com",
         "registry.npmjs.org"
       ]
+    },
+
+    "credentials": {
+      "files": [
+        { "path": "~/.aws",                   "mode": "deny" },
+        { "path": "~/.bash_history",          "mode": "deny" },
+        { "path": "~/.config/gcloud",         "mode": "deny" },
+        { "path": "~/.gnupg",                 "mode": "deny" },
+        { "path": "~/.kube",                  "mode": "deny" },
+        { "path": "~/.netrc",                 "mode": "deny" },
+        { "path": "~/.npmrc",                 "mode": "deny" },
+        { "path": "~/.operator/.env",         "mode": "deny" },
+        { "path": "~/.ssh",                   "mode": "deny" },
+        { "path": "~/.zsh_history",           "mode": "deny" }
+      ],
+      "envVars": [
+        { "name": "ANTHROPIC_API_KEY",        "mode": "deny" },
+        { "name": "AWS_ACCESS_KEY_ID",        "mode": "deny" },
+        { "name": "AWS_SECRET_ACCESS_KEY",    "mode": "deny" },
+        { "name": "GITHUB_TOKEN",             "mode": "deny" },
+        { "name": "IGCLI_SERP_KEY",           "mode": "deny" },
+        { "name": "NPM_TOKEN",                "mode": "deny" },
+        { "name": "npm_config_cache",         "mode": "deny" },
+        { "name": "npm_config_global_prefix", "mode": "deny" },
+        { "name": "npm_config_globalconfig",  "mode": "deny" },
+        { "name": "npm_config_local_prefix",  "mode": "deny" },
+        { "name": "npm_config_prefix",        "mode": "deny" },
+
+        { "name": "GH_TOKEN", "mode": "mask", "injectHosts": ["api.github.com", "github.com"] }
+      ]
     }
   },
+
   "permissions": {
+    "ask": [ "Bash(dangerouslyDisableSandbox:true)" ],
+
+    "deny": [
+      "Write(~/.claude/**)", "Edit(~/.claude/**)",
+      "Write(.claude/**)", "Edit(.claude/**)",
+
+      "Bash(sudo *)",
+      "Bash(mkfs*)", "Bash(dd *)",
+      "Bash(rm -rf *)", "Bash(rm -fr *)", "Bash(rm -R *)", "Bash(rm -r *)",
+      "Bash(chmod -R *)", "Bash(chown -R *)",
+
+      "Bash(eval *)",
+      "Bash(node -e *)", "Bash(node --eval *)",
+      "Bash(python -c *)", "Bash(python3 -c *)",
+      "Bash(perl -e *)", "Bash(ruby -e *)",
+      "Bash(curl * | bash)", "Bash(curl * | sh)", "Bash(curl * | python*)",
+      "Bash(wget * | bash)", "Bash(wget * | sh)", "Bash(wget * | python*)",
+      "Bash(*fs.rm*)", "Bash(*fs.unlink*)", "Bash(*fs.rmdir*)", "Bash(*rimraf*)",
+
+      "Bash(gh repo delete*)", "Bash(gh repo archive*)", "Bash(gh release delete*)",
+      "Bash(gh auth *)", "Bash(gh ssh-key *)", "Bash(gh gpg-key *)",
+      "Bash(gh secret *)", "Bash(gh variable *)",
+      "Bash(git push --mirror*)", "Bash(git push * --mirror*)",
+      "Bash(git push --prune*)", "Bash(git push * --prune*)",
+      "Bash(git push --delete*)", "Bash(git push * --delete*)",
+      "Bash(git push --force*)", "Bash(git push -f*)",
+      "Bash(git push * --force*)", "Bash(git push * -f*)",
+      "Bash(git push origin main*)", "Bash(git push origin master*)",
+
+      "Bash(dropdb *)", "Bash(db:drop*)", "Bash(prisma migrate reset*)",
+
+      "Bash(git filter-branch*)", "Bash(git reflog expire*)",
+      "Bash(git update-ref -d*)", "Bash(git gc --prune*)",
+      "Bash(git branch -D*)", "Bash(git branch * -D*)",
+      "Bash(git branch -f*)", "Bash(git branch * -f*)",
+      "Bash(git branch --force*)", "Bash(git branch --delete --force*)",
+      "Bash(git reset --hard*)",
+      "Bash(git checkout -f*)", "Bash(git checkout --force*)",
+      "Bash(git clean -f*)", "Bash(git clean -d*)", "Bash(git clean -x*)", "Bash(git clean * -f*)",
+      "Bash(git stash clear*)", "Bash(git stash drop*)",
+
+      "Read(//**/.env*)", "Write(//**/.env*)", "Edit(//**/.env*)",
+      "Read(~/**/*.pem)", "Read(~/**/*.crt)", "Read(//**/*.key)", "Read(//**/*.p12)",
+      "Read(~/.ssh/**)", "Read(~/.aws/**)", "Read(~/.config/gcloud/**)", "Read(~/.kube/**)",
+      "Read(~/.gnupg/**)", "Read(~/.netrc)", "Read(~/.npmrc)",
+      "Read(~/.bash_history)", "Read(~/.zsh_history)",
+      "Read(~/Library/Keychains/**)"
+    ],
+
     "allow": [
       "Read(~/Developer/**)",
       "WebSearch"
