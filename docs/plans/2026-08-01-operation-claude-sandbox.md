@@ -112,8 +112,8 @@ README.md                           precedence, diagnostics, guidance, and cited
 - [x] verify gh against the masked sentinel; it cannot, so curl replaces it (see #18, #33)
 - [x] expect git push to need its own credential path, since git ignores GH_TOKEN (see #30)
 - [x] rewrite the sidecars' gh api calls against curl, the only client mask can serve (see #33)
-- [ ] regrant the pat contents read and write plus pull requests write, then rerun the release
-      and update-branch writes, since every write path 403s today (see #37)
+- [x] regrant the pat contents read and write plus pull requests write, then rerun the release
+      and update-branch writes, since every write path 403s today (see #37, #38)
 - [x] decide whether delivery stays attended: it does, mask stays on, push uses the hatch (see #35)
 - [ ] revisit only if gh ships without cgo, or the proxy substitutes inside base64 (see #33)
 - [ ] confirm the resolved merge in the /sandbox config tab
@@ -325,3 +325,11 @@ suggested rules to set in order for agents to work reliably:
     update-branch) stay 403 until the pat is regranted contents read and write plus pull requests
     write; #33's conclusion survives a second route, and the hatch stays for push by github's
     choice this time
+38. two follow-ups measured 2026-08-03 after the first sandboxed gitdeliver: the settings.json
+    write protection also binds git, so a branch switch cannot revert a delivered
+    .claude/settings.json and the stranded copy blocks the post-merge fast-forward; the copy was
+    byte-identical to the merged version, so the remedy is git diff origin/main to confirm, then
+    restore and pull through the hatch, expected on any bucket touching .claude/settings.json;
+    and the pat regrant landed, with a draft release created and deleted through the mask, which
+    clears the release path #37 found closed while update-branch stays unmeasured until an open
+    pr exists to try it on
