@@ -4,7 +4,8 @@
 # =========================================================
 # @description
 # - sidecar for `@gitdeliver` — preflight before the atomic-bucket delivery loop
-# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitdeliver.md
+# - github auth preflights through curl + bearer since gh cannot verify tls in the sandbox
+# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitdeliver.md, README.md
 
 set -euo pipefail
 
@@ -12,9 +13,21 @@ set -euo pipefail
 if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   echo "fatal: not a git repository" >&2; exit 1; fi
 
-# check for github cli
-if ! command -v gh >/dev/null 2>&1 || ! gh auth status >/dev/null 2>&1; then
-  echo "fatal: gh cli missing or unauthenticated" >&2; exit 1; fi
+# check for curl and jq, the two tools every github api step rides on
+if ! command -v curl >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
+  echo "fatal: curl and jq are required (brew install jq)" >&2; exit 1; fi
+
+# check the github token is present; inside the sandbox it holds the masked sentinel
+# the proxy swaps for the real value — outside it holds the real token (curl takes both)
+if [ -z "${GH_TOKEN:-}" ]; then
+  echo "fatal: GH_TOKEN is not set (see README.md > Settings > Keys)" >&2; exit 1; fi
+
+# prove the token authenticates before the delivery loop starts; bearer auth is the one
+# shape the mask proxy can substitute (see README.md > Settings > Keys > GitHub)
+AUTH_CODE=$(curl -sS --max-time 15 -o /dev/null -w '%{http_code}' \
+  -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/user 2>/dev/null || echo 000)
+if [ "$AUTH_CODE" != "200" ]; then
+  echo "fatal: github api auth failed (http $AUTH_CODE)" >&2; exit 1; fi
 
 # check for in-progress git operations
 if [ -d ".git/rebase-merge" ] || [ -d ".git/rebase-apply" ] || [ -f ".git/MERGE_HEAD" ] || [ -f ".git/CHERRY_PICK_HEAD" ]; then

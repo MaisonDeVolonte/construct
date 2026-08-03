@@ -4,7 +4,8 @@
 # ====================================================
 # @description
 # - sidecar for `@githappy` — bumps version, tags, promotes main to production
-# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/githappy.md
+# - publishes the release through curl + bearer since gh cannot verify tls in the sandbox
+# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/githappy.md, README.md
 
 set -euo pipefail
 
@@ -22,9 +23,35 @@ fi
 if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   echo "fatal: not a git repository" >&2; exit 1; fi
 
-# check for github cli
-if ! command -v gh >/dev/null 2>&1 || ! gh auth status >/dev/null 2>&1; then
-  echo "fatal: gh cli missing or unauthenticated" >&2; exit 1; fi
+# check for curl and jq, the two tools the github release step rides on
+if ! command -v curl >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
+  echo "fatal: curl and jq are required (brew install jq)" >&2; exit 1; fi
+
+# check the github token is present; inside the sandbox it holds the masked sentinel
+# the proxy swaps for the real value — outside it holds the real token (curl takes both)
+if [ -z "${GH_TOKEN:-}" ]; then
+  echo "fatal: GH_TOKEN is not set (see README.md > Settings > Keys)" >&2; exit 1; fi
+
+# owner/repo parsed from the origin url in both its https and ssh shapes
+REMOTE_URL=$(git remote get-url origin 2>/dev/null || echo "")
+if ! echo "$REMOTE_URL" | grep -q 'github\.com'; then
+  echo "fatal: origin is not a github remote" >&2; exit 1; fi
+REPO_SLUG=$(echo "$REMOTE_URL" | sed -e 's#^.*github\.com[:/]##' -e 's#\.git$##')
+GITHUB_API="https://api.github.com"
+
+# every github call goes through curl with a bearer header, the one auth shape the mask
+# proxy can substitute (see README.md > Settings > Keys > GitHub)
+github_api() {
+  curl -sS --max-time 30 \
+    -H "Authorization: Bearer $GH_TOKEN" \
+    -H "Accept: application/vnd.github+json" \
+    "$@"
+}
+
+# prove the token authenticates before anything bumps or pushes
+AUTH_CODE=$(github_api -o /dev/null -w '%{http_code}' "$GITHUB_API/user" 2>/dev/null || echo 000)
+if [ "$AUTH_CODE" != "200" ]; then
+  echo "fatal: github api auth failed (http $AUTH_CODE)" >&2; exit 1; fi
 
 # query remote to ensure origin/HEAD exists locally
 git remote set-head origin --auto >/dev/null 2>&1 || true
@@ -83,7 +110,13 @@ echo "=== pushing $NEW_VERSION to origin ==="
 git push origin "$DEFAULT_BRANCH" --follow-tags
 
 echo "=== creating github release $NEW_VERSION ==="
-gh release create "$NEW_VERSION" --generate-notes --title "Release $NEW_VERSION"
+# publish through the rest api; the tag already exists on origin from --follow-tags above
+RELEASE_BODY=$(jq -n --arg tag "$NEW_VERSION" --arg title "Release $NEW_VERSION" \
+  '{tag_name: $tag, name: $title, generate_release_notes: true}')
+RELEASE_JSON=$(github_api -X POST -d "$RELEASE_BODY" "$GITHUB_API/repos/$REPO_SLUG/releases" 2>/dev/null || echo '{}')
+RELEASE_URL=$(echo "$RELEASE_JSON" | jq -r '.html_url // empty' 2>/dev/null || echo "")
+if [ -z "$RELEASE_URL" ]; then
+  echo "fatal: release create failed — $(echo "$RELEASE_JSON" | jq -r '.message // "no response"')" >&2; exit 1; fi
 
 cat <<EOF
 
@@ -97,6 +130,7 @@ if [ "$PRODUCTION_BRANCH" != "" ]; then
 fi
 
 cat <<EOF
+RELEASE: $RELEASE_URL
 STATUS: pushed and released on github
 ==================================
 EOF

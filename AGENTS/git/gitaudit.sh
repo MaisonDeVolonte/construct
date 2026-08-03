@@ -5,7 +5,8 @@
 # @description
 # - sidecar for `@gitaudit` — probes repo/branch state for telemetry
 # - reports today's audit path and audit count, and never creates the file itself
-# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitaudit.md, AGENTS/templates/audits.md, docs/audits/
+# - team probes ride curl + Bearer against the github rest api, the one path the sandbox serves
+# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitaudit.md, AGENTS/templates/audits.md, docs/audits/, README.md
 
 # probes: echo "key: $(git some command 2>/dev/null || echo n/a)"
 
@@ -13,7 +14,8 @@
 if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
 echo "FATAL ERROR: Not a git repository (or any of the parent directories)" >&2; exit 1; fi
 
-# setup: targets default remote branch, handles fallback naming, prunes stale tracking refs across all networks
+# setup: targets the default remote branch, falling back when origin/HEAD is missing
+# prunes stale tracking refs so the branch loop below reads the real remote state
 git remote set-head origin --auto >/dev/null 2>&1 || true
 DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
 DEFAULT_BRANCH=${DEFAULT_BRANCH:-main}
@@ -69,13 +71,42 @@ if [ -n "$FORK" ]; then
 else echo "conflict_risk_files: n/a"; fi
 
 # team: last build, active PRs, review PRs, assigned issues
+# probed through curl + the rest api since gh cannot verify tls from inside the sandbox
 echo "--- team ---"
-if gh auth status >/dev/null 2>&1; then
-  echo "last_build: $(gh run list --branch "$CURRENT_BRANCH" --limit 1 --json status,conclusion -q '.[0] | "\(.status) \(.conclusion)"' 2>/dev/null || echo none)"
-  echo "active_prs: $(gh pr list --author '@me' 2>/dev/null | wc -l | tr -d ' ')"
-  echo "review_prs: $(gh pr list --search 'review-requested:@me' 2>/dev/null | wc -l | tr -d ' ')"
-  echo "assigned_issues: $(gh issue list --assignee '@me' 2>/dev/null | wc -l | tr -d ' ')"
-else echo "github: gh unavailable (team probes skipped)"; fi
+GITHUB_API="https://api.github.com"
+
+# owner/repo parsed from the origin url, handling https and ssh shapes alike
+REPO_SLUG=$(git remote get-url origin 2>/dev/null | grep 'github\.com' | sed -e 's#^.*github\.com[:/]##' -e 's#\.git$##')
+
+# bearer auth is the one shape the mask proxy can substitute; basic auth would base64 the
+# sentinel out of its reach (see README.md > Settings > Keys > GitHub)
+github_api() {
+  curl -sS --max-time 15 \
+    -H "Authorization: Bearer $GH_TOKEN" \
+    -H "Accept: application/vnd.github+json" \
+    "$@"
+}
+
+# probes only run when the token, the tools, and the remote all resolve; login doubles as "me"
+GH_LOGIN=""
+if [ -n "${GH_TOKEN:-}" ] && [ -n "$REPO_SLUG" ] && command -v curl >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+  GH_LOGIN=$(github_api "$GITHUB_API/user" 2>/dev/null | jq -r '.login // empty' 2>/dev/null)
+fi
+
+if [ -n "$GH_LOGIN" ]; then
+  # newest workflow run on this branch: "completed success", "in_progress pending", or none
+  echo "last_build: $(github_api "$GITHUB_API/repos/$REPO_SLUG/actions/runs?branch=$CURRENT_BRANCH&per_page=1" 2>/dev/null \
+    | jq -r 'if .workflow_runs[0] then "\(.workflow_runs[0].status) \(.workflow_runs[0].conclusion // "pending")" else "none" end' 2>/dev/null || echo n/a)"
+
+  # one fetch of the open prs feeds both counts below
+  OPEN_PRS=$(github_api "$GITHUB_API/repos/$REPO_SLUG/pulls?state=open&per_page=100" 2>/dev/null || echo '[]')
+  echo "active_prs: $(echo "$OPEN_PRS" | jq --arg me "$GH_LOGIN" '[.[] | select(.user.login == $me)] | length' 2>/dev/null || echo n/a)"
+  echo "review_prs: $(echo "$OPEN_PRS" | jq --arg me "$GH_LOGIN" '[.[] | select(any(.requested_reviewers[]?; .login == $me))] | length' 2>/dev/null || echo n/a)"
+
+  # the issues endpoint returns prs too, so drop anything carrying a pull_request stub
+  echo "assigned_issues: $(github_api "$GITHUB_API/repos/$REPO_SLUG/issues?state=open&assignee=$GH_LOGIN&per_page=100" 2>/dev/null \
+    | jq '[.[] | select(.pull_request == null)] | length' 2>/dev/null || echo n/a)"
+else echo "github: api unavailable (team probes skipped)"; fi
 
 # absorbed: would merging this branch into the trunk change anything?
 # `merged` asks git cherry, which compares patch-ids, so a rebased or squashed branch reads as
@@ -98,7 +129,7 @@ for branch in $(git for-each-ref --sort=-committerdate --format='%(refname:short
   B_BEHIND=$(git rev-list --count "$branch..$DEFAULT_BRANCH" 2>/dev/null || echo '?')
   if git merge-base --is-ancestor "$branch" "$DEFAULT_BRANCH" 2>/dev/null; then B_REACHABLE=yes; else B_REACHABLE=no; fi
   if git rev-parse --verify --quiet "refs/remotes/origin/$branch" >/dev/null; then B_REMOTE=yes; else B_REMOTE=no; fi
-  if git cherry "$DEFAULT_BRANCH" "$branch" 2>/dev/null | grep -q '^+'; then B_MERGED=no; else B_MERGED=yes; fi
+  if [ -n "$(git cherry "$DEFAULT_BRANCH" "$branch" 2>/dev/null | grep '^+')" ]; then B_MERGED=no; else B_MERGED=yes; fi
   B_ABSORBED=$(is_absorbed "$DEFAULT_BRANCH" "$branch")
   echo "branch: $branch | last: $B_LAST | ahead: $B_AHEAD | behind: $B_BEHIND | upstream: ${B_TRACK:-none} | reachable: $B_REACHABLE | remote: $B_REMOTE | merged: $B_MERGED | absorbed: $B_ABSORBED | last_commit: $(git log -1 --format='%s' "$branch" 2>/dev/null)"
 done
@@ -110,7 +141,7 @@ for branch in $(git for-each-ref --sort=-committerdate --format='%(refname)' ref
   R_LAST=$(git log -1 --format='%cr' "origin/$branch" 2>/dev/null || echo n/a)
   R_AHEAD=$(git rev-list --count "origin/$DEFAULT_BRANCH..origin/$branch" 2>/dev/null || echo '?')
   if git merge-base --is-ancestor "origin/$branch" "origin/$DEFAULT_BRANCH" 2>/dev/null; then R_REACHABLE=yes; else R_REACHABLE=no; fi
-  if git cherry "origin/$DEFAULT_BRANCH" "origin/$branch" 2>/dev/null | grep -q '^+'; then R_MERGED=no; else R_MERGED=yes; fi
+  if [ -n "$(git cherry "origin/$DEFAULT_BRANCH" "origin/$branch" 2>/dev/null | grep '^+')" ]; then R_MERGED=no; else R_MERGED=yes; fi
   R_ABSORBED=$(is_absorbed "origin/$DEFAULT_BRANCH" "origin/$branch")
   echo "remote_branch: $branch | last: $R_LAST | ahead: $R_AHEAD | reachable: $R_REACHABLE | merged: $R_MERGED | absorbed: $R_ABSORBED | last_commit: $(git log -1 --format='%s' "origin/$branch" 2>/dev/null)"
 done
