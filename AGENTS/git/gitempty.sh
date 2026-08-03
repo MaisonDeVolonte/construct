@@ -34,7 +34,11 @@ git merge-base --is-ancestor "$DEFAULT_BRANCH" "origin/$DEFAULT_BRANCH" \
   || { echo "can't run @gitempty with diverged $DEFAULT_BRANCH"; exit 1; }
 
 # if uncommitted changes, create a temporary stash
-if [ "$STASHED_CHANGES" -gt 0 ]; then git stash push -u -m "gitempty" >/dev/null; fi
+STASH_CREATED=0
+if [ "$STASHED_CHANGES" -gt 0 ]; then
+  git stash push -u -m "gitempty" >/dev/null
+  STASH_CREATED=1
+fi
 
 # count how many commits local default branch is ahead of remote default branch
 FAST_FORWARDED=$(git rev-list --count "$DEFAULT_BRANCH..origin/$DEFAULT_BRANCH")
@@ -45,9 +49,10 @@ git merge --ff-only "origin/$DEFAULT_BRANCH" >/dev/null
 # return to starting branch
 git switch "$STARTING_BRANCH" >/dev/null
 
-# if there was a stash, pop it
-if git stash list | grep -q "gitempty"; then
-  # If stash pop fails due to a conflict, we catch it instead of letting set -e crash us
+# if this run made a stash, pop it; track it with a flag rather than searching the stash list,
+# since `git stash list | grep -q` sigpipes the producer and pipefail reads that as "no stash"
+if [ "$STASH_CREATED" -eq 1 ]; then
+  # a pop conflict is caught here instead of letting set -e crash the run
   if git stash pop >/dev/null; then STASH_RESTORED_STATUS="successfully restored"
   else STASH_RESTORED_STATUS="failed to restore"; fi
 fi
