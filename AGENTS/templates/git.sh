@@ -8,7 +8,7 @@
 # - ERROR breaks a rule the template states outright; WARN names a smell the template tolerates
 # - defaults to every pair in `AGENTS/git/`; pass a doc, a sidecar, or a directory to scope it
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
-# @see AGENTS.md, AGENTS/security/secrets.sh, AGENTS/templates/git.md, AGENTS/git/, AGENTS/templates/plans.sh, .github/workflows/ci.yml
+# @see AGENTS.md, AGENTS/settings/secrets.sh, AGENTS/templates/git.md, AGENTS/git/, AGENTS/templates/plans.sh, .github/workflows/ci.yml
 
 set -euo pipefail
 
@@ -17,10 +17,10 @@ set -euo pipefail
 # ==============
 # the shared scan sits beside this file, not beside the repo being scanned: resolve them before
 # anything cds to a repo root, since BASH_SOURCE arrives relative and would follow that cd
-SHARED=$(cd "$(dirname "${BASH_SOURCE[0]}")/../security" 2>/dev/null && pwd || true)
+SHARED=$(cd "$(dirname "${BASH_SOURCE[0]}")/../settings" 2>/dev/null && pwd || true)
 if [ ! -f "$SHARED/secrets.sh" ]; then
-  echo "fatal: no AGENTS/security/secrets.sh beside this sidecar" >&2; exit 1; fi
-# shellcheck source=../security/secrets.sh
+  echo "fatal: no AGENTS/settings/secrets.sh beside this sidecar" >&2; exit 1; fi
+# shellcheck source=../settings/secrets.sh
 . "$SHARED/secrets.sh"
 
 STRICT=0
@@ -52,14 +52,38 @@ if [ ${#PAIRS[@]} -eq 0 ]; then
   PAIRS=("$TRIGGERS")
 fi
 
+# a trigger is one lowercase word, so `gitfresh.md` is a trigger and `settings.user.md` is the
+# reference doc for a data file; a directory scan sees both and only the first is a pair
+is_trigger_name() {
+  case "$(basename "$1")" in
+    [a-z]*.md|[a-z]*.sh) ;;
+    *) return 1;;
+  esac
+  printf '%s' "$(basename "$1")" | grep -qE '^[a-z]+\.(md|sh)$'
+}
+
+# a sub-tool is invoked by another script rather than by a trigger, so it has no doc to pair with;
+# listing them beats guessing, since nothing in the filename says which kind a script is
+is_subtool() {
+  case "$(basename "$1")" in
+    permissions.sh|scopes.sh|secrets.sh) return 0;;
+    *) return 1;;
+  esac
+}
+
 # a pair is named by its doc, so a directory expands to the docs inside it and a sidecar maps back
 # to the doc that is supposed to drive it — that mapping is what surfaces an orphaned script
 EXPANDED=()
 for path in "${PAIRS[@]}"; do
   if [ -d "$path" ]; then
-    for nested in "$path"/*.md; do [ -f "$nested" ] && EXPANDED+=("$nested"); done
+    for nested in "$path"/*.md; do
+      [ -f "$nested" ] || continue
+      is_trigger_name "$nested" || continue
+      EXPANDED+=("$nested")
+    done
     for nested in "$path"/*.sh; do
       [ -f "$nested" ] || continue
+      is_subtool "$nested" && continue
       [ -f "${nested%.sh}.md" ] || EXPANDED+=("$nested")
     done
   elif [ -f "$path" ]; then EXPANDED+=("$path")
@@ -100,13 +124,14 @@ where() {
 #   each takes a doc path and appends findings; to add one, write a function and list it below
 # ==============
 
-# "`AGENTS/git/` — one `@git*` trigger doc per workflow, each paired with its shell sidecar"
+# "one trigger doc per workflow, each paired with its shell sidecar" — the pair is what makes a
+# trigger reachable, so the sidecar is looked for beside the doc rather than in one fixed folder
 check_pair() {
   local doc=$1 name sidecar
   name=$(basename "$doc" .md)
-  sidecar="$TRIGGERS/$name.sh"
-  if ! printf '%s' "$(basename "$doc")" | grep -qE '^git[a-z]+\.md$'; then
-    err "$doc" 1 filename "trigger docs are named git<workflow>.md, all lowercase"
+  sidecar="$(dirname "$doc")/$name.sh"
+  if ! printf '%s' "$(basename "$doc")" | grep -qE '^[a-z]+\.md$'; then
+    err "$doc" 1 filename "trigger docs are named <workflow>.md, all lowercase"
   fi
   if [ ! -f "$sidecar" ]; then
     err "$doc" 1 unpaired "no $sidecar; every trigger doc starts with a shell sidecar"
@@ -137,8 +162,9 @@ check_doc_wayfinding() {
   if ! grep -q "^ \* @see.*$TEMPLATE" "$doc"; then
     warn "$doc" "$(where "$doc" '^ \* @see')" wayfinding "@see should name $TEMPLATE, the shape it follows"
   fi
-  if ! grep -q "^ \* @see.*$TRIGGERS/$name\.sh" "$doc"; then
-    warn "$doc" "$(where "$doc" '^ \* @see')" wayfinding "@see should name its own sidecar, $TRIGGERS/$name.sh"
+  if ! grep -q "^ \* @see.*$(dirname "$doc")/$name\.sh" "$doc"; then
+    warn "$doc" "$(where "$doc" '^ \* @see')" wayfinding \
+      "@see should name its own sidecar, $(dirname "$doc")/$name.sh"
   fi
 }
 
@@ -154,10 +180,11 @@ check_trigger() {
 # "starts with a native shell script sidecar" — the doc has to actually run the thing, in a block
 # somebody can copy, and the path has to be the sidecar that belongs to it
 check_invocation() {
-  local doc=$1 name
+  local doc=$1 name home
   name=$(basename "$doc" .md)
-  if ! grep -qE "^[[:space:]]*$TRIGGERS/$name\.sh([[:space:]]|$)" "$doc"; then
-    err "$doc" 1 invocation "the doc never runs $TRIGGERS/$name.sh"
+  home=$(dirname "$doc")
+  if ! grep -qE "^[[:space:]]*$home/$name\.sh([[:space:]]|$)" "$doc"; then
+    err "$doc" 1 invocation "the doc never runs $home/$name.sh"
   fi
   if ! grep -qE '^[[:space:]]*```bash' "$doc"; then
     warn "$doc" 1 invocation "put the command in a \`\`\`bash block, exactly as it should be run"
@@ -241,7 +268,7 @@ check_index() {
   local doc=$1 name entry
   name=$(basename "$doc" .md)
   if [ -z "$INDEX" ]; then return 0; fi
-  entry=$(grep -nE "\(AGENTS/git/$name\.md\)" "$INDEX" | head -n 1 || true)
+  entry=$(grep -nE "\(AGENTS/[a-z]+/$name\.md\)" "$INDEX" | head -n 1 || true)
   if [ -z "$entry" ]; then
     err "$doc" 1 unindexed "$INDEX does not list @$name; nobody will find it"
     return 0

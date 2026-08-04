@@ -8,7 +8,7 @@
 # - ERROR breaks a rule the template states outright; WARN names a smell the template tolerates
 # - defaults to every file in `docs/audits/`; pass files or a directory to scope it
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
-# @see AGENTS.md, AGENTS/security/secrets.sh, AGENTS/templates/audits.md, AGENTS/git/gitaudit.md, AGENTS/templates/plans.sh, docs/audits/
+# @see AGENTS.md, AGENTS/settings/secrets.sh, AGENTS/templates/audits.md, AGENTS/git/gitaudit.md, AGENTS/templates/plans.sh, docs/audits/
 
 set -euo pipefail
 
@@ -17,14 +17,14 @@ set -euo pipefail
 # ==============
 # the shared scan sits beside this file, not beside the repo being scanned: resolve them before
 # anything cds to a repo root, since BASH_SOURCE arrives relative and would follow that cd
-SHARED=$(cd "$(dirname "${BASH_SOURCE[0]}")/../security" 2>/dev/null && pwd || true)
+SHARED=$(cd "$(dirname "${BASH_SOURCE[0]}")/../settings" 2>/dev/null && pwd || true)
 if [ ! -f "$SHARED/secrets.sh" ]; then
-  echo "fatal: no AGENTS/security/secrets.sh beside this sidecar" >&2; exit 1; fi
-# shellcheck source=../security/secrets.sh
+  echo "fatal: no AGENTS/settings/secrets.sh beside this sidecar" >&2; exit 1; fi
+# shellcheck source=../settings/secrets.sh
 . "$SHARED/secrets.sh"
 
 # character counts, not byte counts: bash's ${#var} is multibyte-aware under a utf-8 locale, and
-# every em dash in a finding is 3 bytes — a byte count would flag lines that are legally under the cap
+# every em dash in a finding is 3 bytes, so a byte count flags lines that are legally under the cap
 UTF8_LOCALE=$(locale -a 2>/dev/null | grep -iE '^(C|en_US)\.(utf-?8)$' | head -n 1 || true)
 if [ -n "$UTF8_LOCALE" ]; then export LC_ALL="$UTF8_LOCALE"; fi
 
@@ -35,10 +35,17 @@ TEMPLATE="AGENTS/templates/audits.md"
 ARTIFACTS="docs/audits"
 
 # the subsections every audit carries, which is the one thing every entry must agree on
-EXPECTED_SECTIONS=$'state\nfindings\nresolutions\noutcome'
+EXPECTED_SECTIONS=$'state\nfindings\nresolutions\ntelemetry'
 
-# the labels `@gitaudit` assigns; the vocabulary can grow, so an unknown label only warns
-KNOWN_LABELS='Ghost Branch|Local Clutter|Rebase Absorbed|Conflict Risk|Dirty Trunk'
+# the labels each trigger assigns, resolved by the kind in the filename; every vocabulary can
+# grow, so an unknown label only warns, and an unknown kind matches anything rather than nagging
+labels_for() {
+  case "$1" in
+    git)      printf '%s' 'Ghost Branch|Local Clutter|Rebase Absorbed|Conflict Risk|Dirty Trunk';;
+    settings) printf '%s' 'Parse|Drift|Verbs|Scope|Hygiene|Coverage|Guard|Probe|Wrapped';;
+    *)        printf '%s' '.*';;
+  esac
+}
 
 AUDITS=()
 for arg in "$@"; do
@@ -110,13 +117,14 @@ subsection() {
 #   each takes an audit path and appends findings; to add one, write a function and list it below
 # ==============
 
-# "one audit file per day" — the date in the name is what makes the archive append-only
+# "one audit file per day and kind" — the date keeps the archive append-only, and the kind stops
+# two triggers writing the same day from interleaving into one unreadable file
 check_filename() {
   local file=$1 base dir
   base=$(basename "$file")
   dir=$(dirname "$file")
-  if ! printf '%s' "$base" | grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2}\.md$'; then
-    err "$file" 1 filename "one audit file per day, named YYYY-MM-DD.md"
+  if ! printf '%s' "$base" | grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z]+\.md$'; then
+    err "$file" 1 filename "one audit file per day and kind, named YYYY-MM-DD-<kind>.md"
   fi
   case "$dir" in
     "$ARTIFACTS"|"./$ARTIFACTS"|*"/$ARTIFACTS") ;;
@@ -145,17 +153,26 @@ check_header() {
 
 # "appended each run, many audits per file" — numbering and timestamps are the append order
 check_entries() {
-  local file=$1 start end heading number stamp expected=1 previous='' count=0 date
-  date=$(basename "$file" .md)
+  local file=$1 start end heading number stamp label expected=1 previous='' count=0 base date kind
+  # the name carries both facts an entry is checked against, so split it once rather than per entry
+  base=$(basename "$file" .md)
+  date=$(printf '%s' "$base" | cut -c1-10)
+  kind=$(printf '%s' "$base" | cut -c12-)
   while IFS=$'\t' read -r start end heading; do
     count=$((count + 1))
     if ! printf '%s' "$heading" \
-      | grep -qE '^Audit #[0-9]+: [0-9]{4}-[0-9]{2}-[0-9]{2} ([01][0-9]|2[0-3]):[0-5][0-9]$'; then
-      err "$file" "$start" entry_heading "entries read '## Audit #N: YYYY-MM-DD HH:MM'"
+      | grep -qE '^[A-Z][A-Za-z]* Audit #[0-9]+: [0-9]{4}-[0-9]{2}-[0-9]{2} ([01][0-9]|2[0-3]):[0-5][0-9]$'
+    then
+      err "$file" "$start" entry_heading "entries read '## <Kind> Audit #N: YYYY-MM-DD HH:MM'"
       continue
     fi
-    number=$(printf '%s' "$heading" | sed -n 's/^Audit #\([0-9]\{1,\}\):.*/\1/p')
-    stamp=$(printf '%s' "$heading" | sed -n 's/^Audit #[0-9]\{1,\}: \(.*\)$/\1/p')
+    number=$(printf '%s' "$heading" | sed -n 's/^[A-Za-z]\{1,\} Audit #\([0-9]\{1,\}\):.*/\1/p')
+    stamp=$(printf '%s' "$heading" | sed -n 's/^[A-Za-z]\{1,\} Audit #[0-9]\{1,\}: \(.*\)$/\1/p')
+    # a settings entry inside the git file reads as one archive and diffs as two, so pair them here
+    label=$(printf '%s' "$heading" | sed -n 's/^\([A-Za-z]\{1,\}\) Audit #.*/\1/p' | tr '[:upper:]' '[:lower:]')
+    if [ "$label" != "$kind" ]; then
+      err "$file" "$start" entry_kind "a $label audit in the file for $kind"
+    fi
     if [ "$number" -ne "$expected" ]; then
       err "$file" "$start" entry_numbering "audit $number where $expected was expected"
     fi
@@ -174,14 +191,14 @@ check_entries() {
   fi
 }
 
-# the four subsections, in the template's order; an audit missing `outcome` is an audit nobody
-# ever closed, and reordering them breaks reading two days of audits side by side
+# the four subsections, in the template's order; `telemetry` closes an entry because the raw run
+# is the evidence behind every claim above it, and reordering breaks reading two days side by side
 check_subsections() {
   local file=$1 start end heading actual
   while IFS=$'\t' read -r start end heading; do
     actual=$(awk -v s="$start" -v e="$end" 'NR >= s && NR <= e && /^### / { print substr($0, 5) }' "$file")
     if [ -z "$actual" ]; then
-      err "$file" "$start" section_order "no ### subsections; expected state>findings>resolutions>outcome"
+      err "$file" "$start" section_order "no ### subsections; expected state>findings>resolutions>telemetry"
     elif [ "$actual" != "$EXPECTED_SECTIONS" ]; then
       err "$file" "$start" section_order "got $(printf '%s' "$actual" | tr '\n' '>' | sed 's/>$//')"
     fi
@@ -191,29 +208,24 @@ check_subsections() {
 # "`findings` lead with the label the trigger assigned" as a "numbered list of issues, each with
 # its label and the branch/file it names"
 check_findings() {
-  local file=$1 start end heading lineno text number label expected count
+  local file=$1 start end heading lineno text label count known
+  known=$(labels_for "$(basename "$file" .md | cut -c12-)")
   while IFS=$'\t' read -r start end heading; do
-    expected=1
     count=0
     while IFS=$'\t' read -r lineno text; do
-      number=$(printf '%s' "$text" | sed -n 's/^\([0-9]\{1,\}\)\. .*/\1/p')
-      if [ -z "$number" ]; then continue; fi
+      if ! printf '%s' "$text" | grep -qE '^- '; then continue; fi
       count=$((count + 1))
-      if [ "$number" -ne "$expected" ]; then
-        err "$file" "$lineno" finding_numbering "finding $number where $expected was expected"
-      fi
-      expected=$((number + 1))
-      if ! printf '%s' "$text" | grep -qE '^[0-9]+\. \*\*[^*]+\*\* — .'; then
-        err "$file" "$lineno" finding_shape 'findings read "N. **Label** — what is wrong, and on what"'
+      if ! printf '%s' "$text" | grep -qE '^- \*\*[^*]+\*\* — .'; then
+        err "$file" "$lineno" finding_shape 'findings read "- **Label** — what is wrong, and on what"'
         continue
       fi
-      label=$(printf '%s' "$text" | sed -n 's/^[0-9]\{1,\}\. \*\*\([^*]*\)\*\*.*/\1/p')
-      if ! printf '%s' "$label" | grep -qE "^($KNOWN_LABELS)\$"; then
-        warn "$file" "$lineno" finding_label "'$label' is not a label the trigger assigns"
+      label=$(printf '%s' "$text" | sed -n 's/^- \*\*\([^*]*\)\*\*.*/\1/p')
+      if ! printf '%s' "$label" | grep -qE "^($known)\$"; then
+        warn "$file" "$lineno" finding_label "'$label' is not a label this trigger assigns"
       fi
     done < <(subsection "$file" "$start" "$end" findings)
     if [ "$count" -eq 0 ]; then
-      warn "$file" "$start" no_findings "no numbered findings; a clean audit says so in one line"
+      warn "$file" "$start" no_findings "no findings listed; a clean audit says so in one line"
     fi
   done < <(entries "$file")
 }
@@ -223,12 +235,13 @@ check_findings() {
 check_resolutions() {
   local file=$1 start end heading lineno text found=0 fixed=0
   while IFS=$'\t' read -r start end heading; do
-    found=$(subsection "$file" "$start" "$end" findings | cut -f2- | grep -cE '^[0-9]+\. ' || true)
+    found=$(subsection "$file" "$start" "$end" findings | cut -f2- | grep -cE '^- ' || true)
     fixed=0
     while IFS=$'\t' read -r lineno text; do
-      if ! printf '%s' "$text" | grep -qE '^[0-9]+\. '; then continue; fi
+      # a resolution is a checkbox, since the reader's next move is to tick it or not
+      if ! printf '%s' "$text" | grep -qE '^- \[[ x]\] '; then continue; fi
       fixed=$((fixed + 1))
-      if ! printf '%s' "$text" | grep -qE '`|@git'; then
+      if ! printf '%s' "$text" | grep -qE '`|@[a-z]'; then
         warn "$file" "$lineno" resolution_shape "name a command or an @agent shortcut, not prose"
       fi
     done < <(subsection "$file" "$start" "$end" resolutions)
@@ -238,13 +251,19 @@ check_resolutions() {
   done < <(entries "$file")
 }
 
-# "what the user actually did, appended after the fact; `pending` until then" — blank is neither
-check_outcome() {
-  local file=$1 start end heading body
+# "the raw run, fenced, every check and its verdict" — the prose above is a reading of this, so an
+# entry without it asks the reader to trust a summary they cannot check
+check_telemetry() {
+  local file=$1 start end heading body fenced
   while IFS=$'\t' read -r start end heading; do
-    body=$(subsection "$file" "$start" "$end" outcome | cut -f2- | grep -v '^[[:space:]]*$' || true)
+    body=$(subsection "$file" "$start" "$end" telemetry | cut -f2- | grep -v '^[[:space:]]*$' || true)
     if [ -z "$body" ]; then
-      err "$file" "$start" outcome 'outcome reads `pending` until the user acts, never blank'
+      err "$file" "$start" telemetry "telemetry holds the raw sidecar output, never blank"
+      continue
+    fi
+    fenced=$(printf '%s' "$body" | grep -c '^```' || true)
+    if [ "${fenced:-0}" -lt 2 ]; then
+      warn "$file" "$start" telemetry "fence the raw output, so a reader can tell it from prose"
     fi
   done < <(entries "$file")
 }
@@ -260,16 +279,13 @@ check_width() {
   done < "$file"
 }
 
-# "skip the raw telemetry dump; keep the read of it, not the printout" — a fenced block in an
-# audit is almost always that dump, and an unclosed fence swallows every audit after it
+# a fenced block belongs in `telemetry` and nowhere else, since the sections above it are read
+# rather than dumped; an unclosed fence is the worse fault, swallowing every audit after it
 check_fences() {
   local file=$1 hit count=0
   while IFS= read -r hit; do
     if [ -z "$hit" ]; then continue; fi
     count=$((count + 1))
-    if [ $((count % 2)) -eq 1 ]; then
-      warn "$file" "${hit%%:*}" telemetry_dump "keep the read of the telemetry, not the printout"
-    fi
   done < <(grep -nE '^[[:space:]]*```' "$file" || true)
   if [ $((count % 2)) -ne 0 ]; then
     err "$file" 1 fences "$count fence markers; one is unclosed"
@@ -297,7 +313,7 @@ for audit in "${AUDITS[@]}"; do
   check_subsections "$audit"
   check_findings    "$audit"
   check_resolutions "$audit"
-  check_outcome     "$audit"
+  check_telemetry   "$audit"
   check_width       "$audit"
   check_fences      "$audit"
   check_placeholders "$audit"

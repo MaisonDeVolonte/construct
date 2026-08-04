@@ -32,14 +32,15 @@ jobs:
       - name: shellcheck
         run: |
           shellcheck --version
-          shellcheck -x --severity=warning AGENTS/git/*.sh AGENTS/hooks/*.sh AGENTS/templates/*.sh AGENTS/security/*.sh
+          shellcheck -x --severity=warning AGENTS/git/*.sh AGENTS/hooks/*.sh AGENTS/templates/*.sh AGENTS/settings/*.sh
 
       # every script must at least parse, including any the lint globs above miss
       - name: syntax
         run: |
           find AGENTS -name '*.sh' -print0 | xargs -0 -n1 bash -n
 
-      # the sidecar is report-only by contract, so the gate reads its telemetry instead of its exit code
+      # the sidecar is report-only by contract, so the gate reads its
+      # telemetry rather than its exit code
       - name: reference integrity
         run: |
           set -euo pipefail

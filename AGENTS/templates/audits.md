@@ -4,54 +4,62 @@
  * @file audits.md - audit archive template
  * =========================================
  * @description
- * - tracked in git, one audit file per day, appended across runs
+ * - tracked in git, one audit file per day and kind, appended across runs
  * - scrub client names, tokens, and other sensitive detail before it lands in a commit
- * - written by `@gitaudit` only, appended each run, many audits per file
+ * - written by any `@*audit` trigger, appended each run, many audits per file
+ * - the kind in the filename and the kind in each heading must match, so one archive reads as one
+ * - this file owns the shape a validator can check; each sidecar owns the fields inside an entry
  * - `audits` capture repo state at a moment in time, so they are never edited after the fact
  * - `findings` lead with the label the trigger assigned (Ghost Branch, Local Clutter, etc)
- * - `lines` should contain a single clause/fact/action, limited to 100 characters
- * - skip the raw telemetry dump; keep the read of it, not the printout
+ * - `lines` are hyphen bullets holding a single clause/fact/action, limited to 100 characters
+ * - `telemetry` closes each entry with the raw run, fenced, so every claim above it is checkable
  * - carry unresolved findings forward by restating them, never by editing the older audit
  * - err on the side of brevity, not completeness
  * - `AGENTS/templates/audits.sh` validates an audit file against every rule above a script can judge
- * @see AGENTS.md, AGENTS/templates/audits.sh, AGENTS/git/gitaudit.md, docs/audits/
+ * @see AGENTS.md, AGENTS/templates/audits.sh, AGENTS/git/gitaudit.md,
+ *      AGENTS/settings/settingsaudit.md, docs/audits/
  */
 ```
 
-# docs/audits/YYYY-MM-DD.md
+# docs/audits/YYYY-MM-DD-<kind>.md
 
-## Audit #1: YYYY-MM-DD HH:MM
+## <Kind> Audit #1: YYYY-MM-DD HH:MM
 
 ### state
-one or two lines on how/why the repo is in its current shape
+hyphen bullets on what the run found, one clause each
 
 *example:*
-> 3 branches outlived their prs, main is 2 behind origin, working tree clean otherwise
+> - 3 branches carry work, 1 of them unmerged and 11 days stale
+> - the trunk is level with origin and the last build passed
 
 ### findings
-numbered list of issues, each with its label and the branch/file it names:
-1. **Label** — what is wrong, and on what
+one bullet per issue, leading with the label the trigger assigned
 
 *example:*
-> 1. **Ghost Branch** — `fix/nav-overflow` tracks a deleted upstream, 11 days stale
-> 2. **Conflict Risk** — `feat/pricing` and origin/main both touch 4 files
-> 3. **Local Clutter** — `chore/deps` is merged with no upstream
+> - **Ghost Branch** — `fix/nav-overflow` tracks a deleted upstream, 11 days stale
+> - **Conflict Risk** — `feat/pricing` and origin/main both touch 4 files
+> - **Local Clutter** — `chore/deps` is merged with no upstream
 
 ### resolutions
-resolution steps per finding, manual command first, `@agent` shortcut second
+one checkbox per finding, in the same order, naming a command or an `@agent` shortcut
 
 *example:*
-> 1. `git branch -d fix/nav-overflow` or `@gitempty`
-> 2. `@gitgud` to merge origin/main in and surface conflicts early
-> 3. `@gitempty`
+> - [ ] `git branch -d fix/nav-overflow` or `@gitempty`
+> - [ ] `@gitgud` to merge origin/main in and surface conflicts early
+> - [ ] `@gitempty`
 
-### outcome
-what the user actually did, appended after the fact; `pending` until then
+### telemetry
+the raw sidecar output, fenced and unedited, so every claim above can be checked against it
 
 *example:*
-> pruned both ghost branches, deferred the pricing merge until the pr lands
+> ```text
+> --- @gitaudit telemetry ---
+> current_branch: main
+> staged_files: 0
+> ---------------------------
+> ```
 
-## Audit #2: repeat the above format for each `@gitaudit` run on the same day
+## <Kind> Audit #2: repeat the above format for each run of the same kind on the same day
 never edit an earlier audit; a stale finding is signal about how long it went unresolved
 
 ```text

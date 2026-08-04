@@ -27,10 +27,11 @@ git fetch --prune origin >/dev/null 2>&1 || true
 # this sidecar for branch classification alone; paths anchor to the repo root, not the caller's dir
 echo "--- audit ---"
 ROOT=$(git rev-parse --show-toplevel)
-TODAYS_AUDIT="docs/audits/$(date +%Y-%m-%d).md"
+# the kind in the name keeps two triggers writing the same day out of one interleaved file
+TODAYS_AUDIT="docs/audits/$(date +%Y-%m-%d)-git.md"
 # no file yet means no audits yet, which is the count the agent numbers its first one from
 if [ -f "$ROOT/$TODAYS_AUDIT" ];
-then AUDIT_COUNT=$(grep -c '^## Audit #' "$ROOT/$TODAYS_AUDIT" || true)
+then AUDIT_COUNT=$(grep -c '^## Git Audit #' "$ROOT/$TODAYS_AUDIT" || true)
 else AUDIT_COUNT=0; fi
 echo "audit_file: $TODAYS_AUDIT"
 echo "audit_time: $(date '+%Y-%m-%d %H:%M')"
