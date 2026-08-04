@@ -8,7 +8,9 @@
  * - floats uncommitted changes onto trunk, then drains them one atomic `type(scope)`
  *   bucket at a time: branch → commit → push → pr → auto-merge on green → back to trunk
  * - `--first` flag stops after the first pr; re-runnable, `git status` drives the loop
- * - gated: drafts each pr command and waits for user confirmation before executing
+ * - gated: never delivers; it emits one copy-paste block per bucket for the user to run
+ * - push authenticates only outside the sandbox, so the whole bucket is the user's to run
+ * - the paste IS the gate, which is why no separate confirmation step exists
  * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitdeliver.sh
  */
 ```
@@ -16,6 +18,8 @@
 **@gitdeliver:** Run ONLY on explicit `@gitdeliver` command
 - floats uncommitted changes onto the trunk, then drains them one atomic bucket at a time
 - each atomic bucket: branch → commit → push → PR → auto-merge on green, then back to the trunk for the next
+- the reasoning is the automation: bucketing, ordering, and message drafting are what it does for you
+- never runs a bucket; every one is handed over as a block you paste into your own terminal
 - leaves you on the trunk, not a feature branch — the trunk is your working surface
 - every change is either uncommitted on the trunk or committed on a pushed branch
 - re-run anytime to resume; git status drives the loop, so it picks up whatever's left
@@ -68,7 +72,13 @@ $ATOMIC_DESCRIPTION # multiline string of hyphen-delimited bullets
 $ATOMIC_COMMIT # $ATOMIC_TYPE($ATOMIC_SCOPE): $ATOMIC_TITLE
 ```
 
-4. present the following draft command and wait for confirmation:
+4. verify the bucket before handing it over, since a red PR costs a round trip
+- resolve every reference the bucket breaks against `git show HEAD:<file>`, NEVER the working copy
+- a path the working tree already fixed still reads broken to CI until its bucket lands
+- run the validators the bucket touches, and `AGENTS/git/gitinsights.sh` for reference integrity
+- findings under `tmp/` are gitignored and never reach CI, so exclude them before counting
+
+5. hand over the following block, then STOP; the paste is the gate, so never run it yourself
 ```bash
 git switch -c "$ATOMIC_BRANCH" "$DEFAULT_BRANCH"
 git add $ATOMIC_FILES
@@ -78,10 +88,11 @@ gh pr create --base "$DEFAULT_BRANCH" --fill
 gh pr merge --auto --rebase
 git switch "$DEFAULT_BRANCH"
 ```
-- ask: "continue or make edits? (continue/edit)"
-  - continue: execute the draft pr commands
-  - edit: execute the exact user confirmed commands
+- emit ONE copy-paste bash block, in that order, every variable already expanded
+- name what the bucket delivers above the block, and what it deliberately leaves out
+- ask: "paste this into your terminal, then tell me when it lands"
+- a commit message naming a destructive command trips `pretooluse.sh`, so reword rather than quote
 
-5. check conditions before continuing:
+6. check conditions before continuing:
 - IF `--first` → STOP here and report completion
-- ELSE repeat from step 2 until workspace is clean
+- ELSE wait for the user, re-read `git status -s`, and repeat from step 2 until the tree is clean

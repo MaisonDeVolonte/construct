@@ -5,6 +5,8 @@
 # @description
 # - sidecar for `@gitdeliver` — preflight before the atomic-bucket delivery loop
 # - github auth preflights through curl + bearer since gh cannot verify tls in the sandbox
+# - the loop never delivers; each bucket is handed over as a block the user pastes and runs
+# - github's git endpoints take only basic auth, which base64s past the proxy, so push needs a tty
 # - a delivered .claude/settings.json strands its checkout; the pull after needs a hatch restore
 # @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitdeliver.md, README.md
 
