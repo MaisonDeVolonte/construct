@@ -1,0 +1,128 @@
+{
+  "sandbox": {
+    "enabled": true,
+    "failIfUnavailable": true,
+    "allowUnsandboxedCommands": true,
+
+    "excludedCommands": [],
+
+    "network": {
+      "allowedDomains": [
+        "code.claude.com", "docs.claude.com",
+        "github.com", "api.github.com",
+        "registry.npmjs.org"
+      ]
+    }
+  },
+
+  "permissions": {
+    "allow": [
+      "Read", "Write", "Edit", "WebSearch",
+      "Bash(AGENTS/**/*.sh*)"
+    ],
+
+    "ask": [
+      "Bash(dangerouslyDisableSandbox:true)",
+
+      "Edit(AGENTS/**/*.sh)", "Write(AGENTS/**/*.sh)",
+
+      "Bash(npx*)",
+      "Bash(bunx*)", "Bash(uvx*)",
+      "Bash(pnpm dlx*)", "Bash(pnpm -* dlx*)",
+      "Bash(yarn dlx*)", "Bash(yarn -* dlx*)",
+      "Bash(bun x*)", "Bash(bun -* x*)",
+      "Bash(pipx run*)", "Bash(pipx -* run*)",
+      "Bash(uv tool run*)", "Bash(uv -* tool run*)",
+      "Bash(deno run*)", "Bash(deno -* run*)",
+      "Bash(go run*)", "Bash(go -* run*)",
+
+      "Bash(find * -exec *)"
+    ],
+
+    "deny": [
+      "Write(~/.claude/**)", "Edit(~/.claude/**)",
+      "Write(.claude/**)", "Edit(.claude/**)",
+
+      "Write(AGENTS/hooks/**)", "Edit(AGENTS/hooks/**)",
+      "Write(AGENTS/settings/**)", "Edit(AGENTS/settings/**)",
+
+      "Bash(sudo *)",
+      "Bash(mkfs*)", "Bash(dd *)",
+      "Bash(rm -rf *)", "Bash(rm -fr *)", "Bash(rm -R *)", "Bash(rm -r *)",
+      "Bash(chmod -R *)", "Bash(chown -R *)",
+      "Bash(shred *)", "Bash(find * -delete*)",
+
+      "Bash(eval *)",
+      "Bash(node -e *)", "Bash(node --eval *)",
+      "Bash(python -c *)", "Bash(python3 -c *)",
+      "Bash(perl -e *)", "Bash(ruby -e *)",
+      "Bash(curl * | bash)", "Bash(curl * | sh)", "Bash(curl * | python*)",
+      "Bash(wget * | bash)", "Bash(wget * | sh)", "Bash(wget * | python*)",
+      "Bash(*fs.rm*)", "Bash(*fs.unlink*)", "Bash(*fs.rmdir*)", "Bash(*rimraf*)",
+
+      "Bash(gh repo delete*)", "Bash(gh repo archive*)", "Bash(gh release delete*)",
+      "Bash(gh auth *)", "Bash(gh ssh-key *)", "Bash(gh gpg-key *)",
+      "Bash(gh secret *)", "Bash(gh variable *)",
+      "Bash(git push --mirror*)", "Bash(git push * --mirror*)",
+      "Bash(git push --prune*)", "Bash(git push * --prune*)",
+      "Bash(git push --delete*)", "Bash(git push * --delete*)",
+      "Bash(git push --force*)", "Bash(git push -f*)",
+      "Bash(git push * --force*)", "Bash(git push * -f*)",
+      "Bash(git push origin main*)", "Bash(git push origin master*)",
+
+      "Bash(dropdb *)", "Bash(db:drop*)", "Bash(prisma migrate reset*)",
+
+      "Bash(git filter-branch*)", "Bash(git reflog expire*)",
+      "Bash(git update-ref -d*)", "Bash(git gc --prune*)",
+      "Bash(git branch -D*)", "Bash(git branch * -D*)",
+      "Bash(git branch -f*)", "Bash(git branch * -f*)",
+      "Bash(git branch --force*)", "Bash(git branch --delete --force*)",
+      "Bash(git reset --hard*)",
+      "Bash(git checkout -f*)", "Bash(git checkout --force*)",
+      "Bash(git clean -f*)", "Bash(git clean -d*)", "Bash(git clean -x*)", "Bash(git clean * -f*)",
+      "Bash(git stash clear*)", "Bash(git stash drop*)",
+
+      "Read(//**/.env*)", "Write(//**/.env*)", "Edit(//**/.env*)",
+      "Read(~/**/*.pem)", "Write(~/**/*.pem)", "Edit(~/**/*.pem)",
+      "Read(~/**/*.crt)", "Write(~/**/*.crt)", "Edit(~/**/*.crt)",
+      "Read(//**/*.key)", "Write(//**/*.key)", "Edit(//**/*.key)",
+      "Read(//**/*.p12)", "Write(//**/*.p12)", "Edit(//**/*.p12)",
+      "Read(~/.ssh/**)", "Write(~/.ssh/**)", "Edit(~/.ssh/**)",
+      "Read(~/.aws/**)", "Write(~/.aws/**)", "Edit(~/.aws/**)",
+      "Read(~/.config/gcloud/**)", "Write(~/.config/gcloud/**)", "Edit(~/.config/gcloud/**)",
+      "Read(~/.kube/**)", "Write(~/.kube/**)", "Edit(~/.kube/**)",
+      "Read(~/.gnupg/**)", "Write(~/.gnupg/**)", "Edit(~/.gnupg/**)",
+      "Read(~/.netrc)", "Write(~/.netrc)", "Edit(~/.netrc)",
+      "Read(~/.npmrc)", "Write(~/.npmrc)", "Edit(~/.npmrc)",
+      "Read(~/.bash_history)", "Write(~/.bash_history)", "Edit(~/.bash_history)",
+      "Read(~/.zsh_history)", "Write(~/.zsh_history)", "Edit(~/.zsh_history)",
+      "Read(~/Library/Keychains/**)", "Write(~/Library/Keychains/**)", "Edit(~/Library/Keychains/**)",
+
+      "Read(~/.zshrc)", "Write(~/.zshrc)", "Edit(~/.zshrc)",
+      "Read(~/.zshenv)", "Write(~/.zshenv)", "Edit(~/.zshenv)",
+      "Read(~/.zprofile)", "Write(~/.zprofile)", "Edit(~/.zprofile)",
+      "Read(~/.bashrc)", "Write(~/.bashrc)", "Edit(~/.bashrc)",
+      "Read(~/.bash_profile)", "Write(~/.bash_profile)", "Edit(~/.bash_profile)",
+      "Read(~/.profile)", "Write(~/.profile)", "Edit(~/.profile)",
+
+      "Bash(launchctl *)", "Bash(osascript *)", "Bash(defaults write *)",
+      "Bash(git config *core.hooksPath*)", "Bash(git config *alias.*)",
+
+      "Bash(security *)",
+
+      "Bash(nc *)", "Bash(ncat *)", "Bash(socat *)", "Bash(scp *)",
+
+      "Bash(npm publish*)", "Bash(npm -* publish*)",
+      "Bash(pnpm publish*)", "Bash(pnpm -* publish*)",
+      "Bash(yarn publish*)", "Bash(yarn -* publish*)",
+      "Bash(docker push*)", "Bash(docker -* push*)",
+
+      "Bash(aws s3 rm *)", "Bash(aws -* s3 rm *)",
+      "Bash(kubectl delete *)", "Bash(kubectl -* delete *)",
+      "Bash(terraform destroy*)", "Bash(terraform -* destroy*)",
+
+      "Edit(**/.git/**)", "Write(**/.git/**)",
+      "Edit(webflow/**)", "Write(webflow/**)"
+    ]
+  }
+}

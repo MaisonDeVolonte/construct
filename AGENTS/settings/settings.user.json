@@ -1,53 +1,3 @@
-/**
- * ===========================================================
- * @file settings.user.jsonc - the working floor for all repos
- * ===========================================================
- * @description
- * - copy to ~/.claude/settings.json
- * - holds the floor while the config is unproven
- * - a fix here needs an editor, not sudo
- * - mechanics live in README.md
- * - this block covers only why these values
- * - BOOLEANS
- *   - `enabled` restated so non-repo directories stay sandboxed without managed
- *   - `failIfUnavailable` sits here so a lockout stays editable
- *   - `allowUnsandboxedCommands` stays open for attended work
- *   - the ask below is what instruments it
- *   - set it false in project for any repo running unattended
- *   - `enableWeakerNetworkIsolation` re-permits the trustd lookup go needs for tls
- *   - verify egress still refuses an unlisted host after enabling it
- * - FILESYSTEM
- *   - `disabled` is stated because no managed credentials block pins it
- *   - `allowWrite` is this machine's package-manager scribble
- *   - it misses the cache Zed exports as npm_config_cache
- *   - `denyRead` is the odd extras only
- *   - `denyWrite` is empty because writes outside `allowWrite` already fail
- * - NETWORK
- *   - `strictAllowlist` denies unlisted hosts; without it the list only suppresses prompts
- *   - `tlsTerminate` lets the proxy swap masked credentials in, and mask fails closed without it
- *   - `allowedDomains` covers git, gh's api, and the npm registry
- *   - named hosts only, since a github wildcard pulls in gist
- *   - every repo on this disk inherits them, read or unread
- * - CREDENTIALS
- *   - `files` blocks the token stores
- *   - gh is absent from both layers on purpose, so nothing of ours blocks it
- *   - `IGCLI_SERP_KEY` came from probing the environment, not from a list
- *   - NPM_TOKEN is publish-only, so installs are unaffected
- *   - `GH_TOKEN` uses `mask`, so the sandbox sees a sentinel and the proxy swaps the real one
- *   - a masked name must never also be denied, since `deny` wins in every scope
- *   - `GITHUB_TOKEN` stays denied, since it holds the unrelated gitascms token
- *   - `~/.operator/.env` sources GH_TOKEN, and is listed here as well as caught by the
- *     `.env*` deny, so a regression in either rule still covers the token
- *   - that directory must be chmod 700 on creation, since umask gives a new home dir 755
- * - PERMISSIONS
- *   - `ask` on dangerouslyDisableSandbox makes each escape visible
- *   - `deny` repeats the credential paths for the tool layer
- *   - `allow` stays tiny so the floor is never inert
- *   - `Read(~/Developer/**)` is machine detail, not policy
- * - promote a block to managed only once it has run clean
- * @see AGENTS.md, README.md, AGENTS/settings/
- */
-
 {
   "sandbox": {
     "enabled": true,
@@ -67,16 +17,6 @@
         "~/Library/Keychains"
       ],
       "denyWrite": []
-    },
-
-    "network": {
-      "strictAllowlist": true,
-      "tlsTerminate": {},
-      "allowedDomains": [
-        "github.com",
-        "api.github.com",
-        "registry.npmjs.org"
-      ]
     },
 
     "credentials": {
@@ -107,20 +47,55 @@
 
         { "name": "GH_TOKEN", "mode": "mask", "injectHosts": ["api.github.com", "github.com"] }
       ]
+    },
+
+    "network": {
+      "strictAllowlist": true,
+      "tlsTerminate": {},
+      "allowedDomains": [
+        "code.claude.com", "docs.claude.com",
+        "github.com", "api.github.com",
+        "registry.npmjs.org"
+      ]
     }
   },
 
   "permissions": {
-    "ask": [ "Bash(dangerouslyDisableSandbox:true)" ],
+    "allow": [
+      "Read", "Write", "Edit", "WebSearch",
+      "Bash(AGENTS/**/*.sh*)"
+    ],
+
+    "ask": [
+      "Bash(dangerouslyDisableSandbox:true)",
+
+      "Edit(AGENTS/**/*.sh)", "Write(AGENTS/**/*.sh)",
+
+      "Bash(npx*)",
+      "Bash(bunx*)", "Bash(uvx*)",
+      "Bash(pnpm dlx*)", "Bash(pnpm -* dlx*)",
+      "Bash(yarn dlx*)", "Bash(yarn -* dlx*)",
+      "Bash(bun x*)", "Bash(bun -* x*)",
+      "Bash(pipx run*)", "Bash(pipx -* run*)",
+      "Bash(uv tool run*)", "Bash(uv -* tool run*)",
+      "Bash(deno run*)", "Bash(deno -* run*)",
+      "Bash(go run*)", "Bash(go -* run*)",
+
+      "Bash(find * -exec *)"
+    ],
 
     "deny": [
       "Write(~/.claude/**)", "Edit(~/.claude/**)",
       "Write(.claude/**)", "Edit(.claude/**)",
 
+      "Write(AGENTS/hooks/**)", "Edit(AGENTS/hooks/**)",
+      "Write(AGENTS/settings/**)", "Edit(AGENTS/settings/**)",
+
       "Bash(sudo *)",
       "Bash(mkfs*)", "Bash(dd *)",
       "Bash(rm -rf *)", "Bash(rm -fr *)", "Bash(rm -R *)", "Bash(rm -r *)",
       "Bash(chmod -R *)", "Bash(chown -R *)",
+      "Bash(shred *)", "Bash(find * -delete*)",
 
       "Bash(eval *)",
       "Bash(node -e *)", "Bash(node --eval *)",
@@ -153,16 +128,43 @@
       "Bash(git stash clear*)", "Bash(git stash drop*)",
 
       "Read(//**/.env*)", "Write(//**/.env*)", "Edit(//**/.env*)",
-      "Read(~/**/*.pem)", "Read(~/**/*.crt)", "Read(//**/*.key)", "Read(//**/*.p12)",
-      "Read(~/.ssh/**)", "Read(~/.aws/**)", "Read(~/.config/gcloud/**)", "Read(~/.kube/**)",
-      "Read(~/.gnupg/**)", "Read(~/.netrc)", "Read(~/.npmrc)",
-      "Read(~/.bash_history)", "Read(~/.zsh_history)",
-      "Read(~/Library/Keychains/**)"
-    ],
+      "Read(~/**/*.pem)", "Write(~/**/*.pem)", "Edit(~/**/*.pem)",
+      "Read(~/**/*.crt)", "Write(~/**/*.crt)", "Edit(~/**/*.crt)",
+      "Read(//**/*.key)", "Write(//**/*.key)", "Edit(//**/*.key)",
+      "Read(//**/*.p12)", "Write(//**/*.p12)", "Edit(//**/*.p12)",
+      "Read(~/.ssh/**)", "Write(~/.ssh/**)", "Edit(~/.ssh/**)",
+      "Read(~/.aws/**)", "Write(~/.aws/**)", "Edit(~/.aws/**)",
+      "Read(~/.config/gcloud/**)", "Write(~/.config/gcloud/**)", "Edit(~/.config/gcloud/**)",
+      "Read(~/.kube/**)", "Write(~/.kube/**)", "Edit(~/.kube/**)",
+      "Read(~/.gnupg/**)", "Write(~/.gnupg/**)", "Edit(~/.gnupg/**)",
+      "Read(~/.netrc)", "Write(~/.netrc)", "Edit(~/.netrc)",
+      "Read(~/.npmrc)", "Write(~/.npmrc)", "Edit(~/.npmrc)",
+      "Read(~/.bash_history)", "Write(~/.bash_history)", "Edit(~/.bash_history)",
+      "Read(~/.zsh_history)", "Write(~/.zsh_history)", "Edit(~/.zsh_history)",
+      "Read(~/Library/Keychains/**)", "Write(~/Library/Keychains/**)", "Edit(~/Library/Keychains/**)",
 
-    "allow": [
-      "Read(~/Developer/**)",
-      "WebSearch"
+      "Read(~/.zshrc)", "Write(~/.zshrc)", "Edit(~/.zshrc)",
+      "Read(~/.zshenv)", "Write(~/.zshenv)", "Edit(~/.zshenv)",
+      "Read(~/.zprofile)", "Write(~/.zprofile)", "Edit(~/.zprofile)",
+      "Read(~/.bashrc)", "Write(~/.bashrc)", "Edit(~/.bashrc)",
+      "Read(~/.bash_profile)", "Write(~/.bash_profile)", "Edit(~/.bash_profile)",
+      "Read(~/.profile)", "Write(~/.profile)", "Edit(~/.profile)",
+
+      "Bash(launchctl *)", "Bash(osascript *)", "Bash(defaults write *)",
+      "Bash(git config *core.hooksPath*)", "Bash(git config *alias.*)",
+
+      "Bash(security *)",
+
+      "Bash(nc *)", "Bash(ncat *)", "Bash(socat *)", "Bash(scp *)",
+
+      "Bash(npm publish*)", "Bash(npm -* publish*)",
+      "Bash(pnpm publish*)", "Bash(pnpm -* publish*)",
+      "Bash(yarn publish*)", "Bash(yarn -* publish*)",
+      "Bash(docker push*)", "Bash(docker -* push*)",
+
+      "Bash(aws s3 rm *)", "Bash(aws -* s3 rm *)",
+      "Bash(kubectl delete *)", "Bash(kubectl -* delete *)",
+      "Bash(terraform destroy*)", "Bash(terraform -* destroy*)"
     ]
   }
 }

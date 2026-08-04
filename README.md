@@ -1,22 +1,53 @@
-# Agents
+# AGENTS
+**secure agentic coding infra: sandboxed automations, workflows, and conventions**
+
+- **deterministic automations:** workflows are markdown prompts; bash sidecars do exact work 
+- **machine-checked templates:** conventions are markdown guides; bash sidecars verify conformance
+- **chat-native triggers:** @triggers work in any project; bash sidecars are project agnostic
+- **cross-session memory:** context is seeded with docs and logs; bash hooks enforce compliance
+- **built-in security suite:** auditable security and settings; diagnostics run across scopes
+- **gated by default:** destructive commands are blocked entirely; permissions force prompts
+- **centralized configuration:** improvements are fast and easy; symlinks sync across projects
+- **zero dependencies:** bash, git, and jq only; nothing to build or install
+- **easy opt-out:** symlinks are easy to delete; nothing to revert or uninstall
+> *requires: claude code, bash, git, jq; [MIT License](LICENSE)*
+
+## Installation (MacOS)
+
+### 1. basic setup (5 mins)
+- [ ] clone the repo (somewhere permanent):
+  - [ ] `git clone https://github.com/MaisonDeVolonte/operator.git ~/Developer/operator`
+- [ ] symlink from project (gitignored):
+  - [ ] `ln -s ~/Developer/operator/README.md AGENTS.md`
+  - [ ] `ln -s ~/Developer/operator/AGENTS AGENTS`
+
+### 2. sandbox setup and testing (optional, highly recommended, ~30 mins)
+- [ ] copy settings.user.json to `~/.claude/settings.json`
+  - [ ] run `/sandbox`, and make sure sandbox is enabled
+  - [ ] add package-manager caches to `sandbox.filesystem.allowWrite`
+  - [ ] add deny rules for each `env | grep -iE 'key|token|secret'` to `sandbox.credentials.envVars`
+  - [ ] make a secure directory for your keys: `mkdir -p ~/.operator && chmod 700 ~/.operator`
+  - [ ] add non-exposed credentials to `~/.operator/.env` (e.g. `export GH_TOKEN="github_pat_123abc"`)
+  - [ ] add deny rule for `~/.operator/.env` to `sandbox.credentials.files`
+  - [ ] add mask and injectHosts rules for each `~/.operator/.env` export to `sandbox.credentials.envVars`
+  - [ ] add each injectHosts host to `sandbox.network.allowedDomains`
+  - [ ] append `[ -r ~/.operator/.env ] && source ~/.operator/.env` to `~/.zshrc`
+  - [ ] restart editor and ask claude to run `echo $GH_TOKEN` and confirm a sentinel (never the token)
+- [ ] copy settings.project.json to your project's `.claude/settings.json`
+- [ ] copy settings.local.json to your project's `.claude/settings.local.json` (gitignore it)
+- [ ] run `@settingsaudit`
+
+### 3. managed sandbox and lockdown (optional, requires sudo, 5 mins)
+- [ ] make the managed claude code directory `sudo mkdir -p '/Library/Application Support/ClaudeCode'`
+- [ ] sudo copy settings.managed.json to `/Library/Application Support/ClaudeCode/managed-settings.json`
+- [ ] run `@settingsaudit`
 
 ## Workflows
-- DEFAULT posture is READ-ONLY e.g. chat, brainstorm, evaluate, and plan
+- DEFAULT posture is READ-ONLY
 - DO NOT write code, edit files, or run commands without explicit approval
 
-### Git (see `AGENTS/git/`)
-each pairs with a matching `.sh` sidecar that runs the automation
-- [@gitaudit](AGENTS/git/gitaudit.md): READ-ONLY; diagnostics, triage, report, summary, tasks (saved to file)
-- [@gitbrutal](AGENTS/git/gitbrutal.md): READ-ONLY; brutally honest code review, progress report (saved to file)
-- [@gitcontinue](AGENTS/git/gitcontinue.md): SAFE; stash, sync, and pop
-- [@gitdeliver](AGENTS/git/gitdeliver.md): GATED; branch, atomically stage, commit, push, pr, watch
-- [@gitempty](AGENTS/git/gitempty.md): GATED; prune, stash, fast-forward, restore, and hands over delete commands
-- [@gitfresh](AGENTS/git/gitfresh.md): GATED; stash, hard reset, purges local changes, and syncs fresh main
-- [@gitgud](AGENTS/git/gitgud.md): SAFE; query branch delta, merge remote main into it, and run fresh CI
-- [@githappy](AGENTS/git/githappy.md): RELEASE; bumps version, adds tag, merges to production, and release notes
-- [@gitinsights](AGENTS/git/gitinsights.md): READ-ONLY; verifies references, scans logs and codebase (saved to file)
-
-### Hooks (see `AGENTS/hooks/`)
+### Hooks
+> each hook script can be customized to your workflow (see `AGENTS/hooks/`)
 - [sessionstart](AGENTS/hooks/sessionstart.sh): injects the README and the two most recent log files into context
 - [pretooluse](AGENTS/hooks/pretooluse.sh): failover for the committed deny list, reading the whole command string
 - [posttooluse](AGENTS/hooks/posttooluse.sh): lints, then reports comment and wayfinder findings, never blocking
@@ -24,20 +55,32 @@ each pairs with a matching `.sh` sidecar that runs the automation
 - [taskcompleted](AGENTS/hooks/taskcompleted.sh): blocks the turn to make the agent note the day's log
 - [stop](AGENTS/hooks/stop.sh): every hour, saves notes and prompts, then synthesizes the day's log
 
-### Templates (see `AGENTS/templates/`)
-each pairs with a matching `.sh` sidecar that verifies conformance
-- [audits](AGENTS/templates/audits.md): `@gitaudit` appends findings and resolutions
-- [brutal](AGENTS/templates/brutal.md): `@gitbrutal` adversarial graded scorecards
-- [comments](AGENTS/templates/comments.md): inline comment shape in every source file
-- [git](AGENTS/templates/git.md): `@git*` triggers and sidecars follow this shape
-- [graphs](AGENTS/templates/graphs.md): `@graphspec` writes graph spec prompt files
-- [insights](AGENTS/templates/insights.md): `@gitinsights` searches repo for opportunities
-- [logs](AGENTS/templates/logs.md): `@logthread`, `@lognote` and `@logsynth` maintain agent logs
-- [plans](AGENTS/templates/plans.md): `@graphspec --execute` detailed fanout plan generation
-- [study](AGENTS/templates/study.md): `@studyguide` writes detailed retrospective with graded quiz
-- [wayfinders](AGENTS/templates/wayfinders.md): the header every source file opens with
+### Git
+> each pairs with a matching `.sh` sidecar that runs the automation (see `AGENTS/git/`)
+- [@gitaudit](AGENTS/git/gitaudit.md): READ-ONLY; diagnostics, triage, report, summary, tasks (saved to file)
+- [@gitbrutal](AGENTS/git/gitbrutal.md): READ-ONLY; brutally honest code review, progress report (saved to file)
+- [@gitcontinue](AGENTS/git/gitcontinue.md): SAFE; stash, sync, and pop
+- [@gitdeliver](AGENTS/git/gitdeliver.md): GATED; branch, atomically stage, commit, push, pr, watch
+- [@gitempty](AGENTS/git/gitempty.md): GATED; prune, stash, fast-forward, restore, and hand over branch deletes
+- [@gitfresh](AGENTS/git/gitfresh.md): GATED; stash, fetch, and hand over hard reset and branch deletes
+- [@gitgud](AGENTS/git/gitgud.md): SAFE; query branch delta, merge remote main into it, and run fresh CI
+- [@githappy](AGENTS/git/githappy.md): RELEASE; bumps version, adds tag, merges to production, and release notes
+- [@gitinsights](AGENTS/git/gitinsights.md): READ-ONLY; verifies references, scans logs and codebase (saved to file)
 
-### Verifying
+### Templates
+> each pairs with a matching `.sh` sidecar that verifies conformance (see `AGENTS/templates/`)
+- [audits](AGENTS/templates/audits.md): via @gitaudit; appends findings and resolutions
+- [brutal](AGENTS/templates/brutal.md): via @gitbrutal; adversarial graded scorecards
+- [comments](AGENTS/templates/comments.md): via posttooluse.sh; inline comment shape
+- [git](AGENTS/templates/git.md): via @git*; standardized trigger and sidecar shapes
+- [graphs](AGENTS/templates/graphs.md): via @graphspec; writes graph spec prompt files
+- [insights](AGENTS/templates/insights.md): via @gitinsights; searches repo for opportunities
+- [logs](AGENTS/templates/logs.md): via @logthread, @lognote and @logsynth; maintains agent logs
+- [plans](AGENTS/templates/plans.md): via @graphspec --execute; detailed fanout plan generation
+- [study](AGENTS/templates/study.md): via @studyguide; writes detailed retrospective with graded quiz
+- [wayfinders](AGENTS/templates/wayfinders.md): via posttooluse.sh; file header shape
+
+### Tests
 - `test what you deploy`: a passing local run is not a shipped artifact
 - `run the build first`: a dev build ships debug data that the production build strips
 - `kill the port`: a process still bound to it serves the build it started with
@@ -46,7 +89,7 @@ each pairs with a matching `.sh` sidecar that verifies conformance
 - `look at the bytes`: encrypted stores, binary files, and truncated reads all grep as empty
 
 ## Conventions
-`@retardify` applies all conventions in this section to target files or code:
+> `@retardify` applies all conventions in this section to target files or code:
 - rename the file if its casing/extension violates `Files`
 - resync the `Wayfinders` @description/@see with the file as it now stands
 - reorder imports/exports per `Modules` order
@@ -202,43 +245,56 @@ export function writeCode(requirements: Requirement[], request: string) {
 }
 ```
 
-## Settings (see `AGENTS/settings/`)
-inspired by: 
-- [Hardening Cheatsheet](https://dev.to/riotaro/hardening-cheatsheet-for-claude-codes-settingsjson-20lk)
-- [Settings Reference](https://claudeguide.io/claude-code-settings-json-reference)
-- [Permissions Guide](https://www.claudedirectory.org/blog/claude-code-permissions-guide)
-
-### Tools
-- [corpus](AGENTS/settings/corpus.tsv): labeled command corpus for audits; never executed
-- [permissions.sh](AGENTS/settings/permissions.sh): replays the corpus then audits the settings rules
-- [secrets.sh](AGENTS/settings/secrets.sh): shared credential patterns, used in every template sidecar
+## Settings
+> inspired by: 
+> [Hardening Cheatsheet](https://dev.to/riotaro/hardening-cheatsheet-for-claude-codes-settingsjson-20lk),
+> [Settings Reference](https://claudeguide.io/claude-code-settings-json-reference),
+> [Permissions Guide](https://www.claudedirectory.org/blog/claude-code-permissions-guide)
+> (see `AGENTS/settings/`)
 
 ### Authoring
-- write lists most-destructive-first (for human readers)
-- one broad allow with narrow denies beats enumerating every safe subcommand
-- rule match exactly: wildcard every position a flag could occupy
+> rules match strings, not commands (see `AGENTS/settings/settings.authoring.md`)
 - spaces are load-bearing: `Bash(ls *)` matches `ls -la` but not `lsof`; `Bash(ls*)` matches both
-- ask is for what the sandbox cannot contain, since it prompts even when auto-allow would not
+- a trailing `*` is what matches arguments: `Bash(x.sh)` misses `x.sh --flag`, `Bash(x.sh*)` holds
+- a `//` comment in a settings file voids every rule in it, silently
 
 ### Scopes
-- [managed](AGENTS/settings/settings.managed.jsonc): 
-  - copy to → `/Library/Application Support/ClaudeCode/managed-settings.json`
-  - used for policy nothing below may override (booleans and the deny floor)
-  - "does this protect me long term and is it worth a sudo edit?"
-- [user](AGENTS/settings/settings.user.jsonc): 
-  - copy to → `~/.claude/settings.json`
-  - used for machine detail, since this laptop's paths differ from the next one
-  - "does this help me across all projects in my user profile?"
-- [project](AGENTS/settings/settings.project.jsonc): 
-  - copy to → `.claude/settings.json`
-  - used for repo truths that survive a clone, including a portable deny copy
-  - "does this help everyone working in this project?"
-- [local](AGENTS/settings/settings.local.jsonc): 
-  - copy to → `.claude/settings.local.json`
-  - used for custom hooks, temporary grants, and every 'Always Allow' you have clicked
-  - "does this help only me, only in this project, and for specific reasons?"
-- cli: `--settings`, session only, no file
-  - used for trying a rule before it lands in a file (nothing here persists)
+> each pairs with a matching `.json` file with all baseline settings (see `AGENTS/settings/`)
+- [settings.cli.md](AGENTS/settings/settings.cli.md): one session, no file
+- [settings.local.md](AGENTS/settings/settings.local.md): this repo, just you
+- [settings.project.md](AGENTS/settings/settings.project.md): this repo, committed
+- [settings.user.md](AGENTS/settings/settings.user.md): every repo, just you
+- [settings.managed.md](AGENTS/settings/settings.managed.md): this machine, sudo
+```
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ ┌────────────────────────────────────────────────────────────────────┐ ┃
+┃ │ ┌────────────────────────────────────────────────────────────────┐ │ ┃
+┃ │ │ ┌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌┐ │ │ ┃
+┃ │ │ ┆ ┌┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┐ ┆ │ │ ┃
+┃ │ │ ┆ ┊ cli: claude --settings                                 ┊ ┆ │ │ ┃
+┃ │ │ ┆ ┊ "does this help me, in this session only?"             ┊ ┆ │ │ ┃
+┃ │ │ ┆ └┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┘ ┆ │ │ ┃
+┃ │ │ ┆ local: .claude/settings.local.json                         ┆ │ │ ┃
+┃ │ │ ┆ "does this help only me, only in this project?"            ┆ │ │ ┃
+┃ │ │ └╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌┘ │ │ ┃
+┃ │ │ project: .claude/settings.json                                 │ │ ┃
+┃ │ │ "does this help everyone working in this project?"             │ │ ┃
+┃ │ └────────────────────────────────────────────────────────────────┘ │ ┃
+┃ │ user: ~/.claude/settings.json                                      │ ┃
+┃ │ "does this help me across all projects in my user profile?"        │ ┃
+┃ └────────────────────────────────────────────────────────────────────┘ ┃
+┃ managed: /Library/Application Support/ClaudeCode/managed-settings.json ┃
+┃ "does this protect everyone on this machine, long term?"               ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+```
+
+### Auditing
+> policy and its verification share one folder (see `AGENTS/settings/`)
+- [@settingsaudit](AGENTS/settings/settingsaudit.md): READ-ONLY; audits the stack, probes it live (saved to file)
+- [corpus](AGENTS/settings/corpus.tsv): labeled command corpus for audits; never executed
+- [permissions.sh](AGENTS/settings/permissions.sh): replays the corpus then audits the settings rules
+- [scopes.sh](AGENTS/settings/scopes.sh): tests a workflow against the merged scope stack
+- [secrets.sh](AGENTS/settings/secrets.sh): shared credential patterns, used in every template sidecar
 
 ### Sandboxing
 ```
@@ -264,49 +320,42 @@ false  ○───●  STRICT MODE: commands that fail are not retried at all
   - `ls`, `cat`, `echo`, `pwd`, `head`, `tail`, `grep`, `find`, `wc`, `which`, `diff`, `stat`, `du`, `cd`, and read-only forms of `git`
 
 ### Tool Denies
-one bullet per block in the `deny` array; any scope may add a deny, none may remove another's
-- managed: `/Library/Application Support/ClaudeCode/managed-settings.json`
-  - `policy`: the files that decide what an agent may do
-  - `system`: root, disk formatting, recursive delete, ownership rewrite
-  - `execution`: eval, inline interpreters, curl-to-shell, node filesystem deletes
-  - `remote`: repo or release deletes, identity or secret changes, force or ref deletes
-  - `data`: database drops, migration resets
-  - `history`: filter-branch, force branch ops, hard reset, clean, stash drops
-  - `credentials`: env files, keys, certs, credential stores, shell history
-- project: `.claude/settings.json`
-  - everything in managed, verbatim, so a clone carries its own floor
-  - `generated`: exported output, infrastructure state
+> any scope may add a deny, none may remove another's (see settings.user.json)
+- `policy`: the settings, and the hooks and sidecars that enforce them
+- `system`: root, disk formatting, recursive delete, ownership rewrite
+- `execution`: eval, inline interpreters, curl-to-shell, node filesystem deletes
+- `remote`: repo or release deletes, identity or secret changes, force or ref deletes
+- `data`: database drops, migration resets
+- `history`: filter-branch, force branch ops, hard reset, clean, stash drops
+- `credentials`: env files, keys, certs, credential stores, shell history — every verb, not just read
+- `persistence`: hooksPath, git aliases, launchctl, osascript, defaults write, shell rc files
+- `keychain`: the `security` cli, which reaches keychaind rather than the files denyRead covers
+- `exfiltration`: nc, ncat, socat, scp
+- `publish`: npm/pnpm/yarn publish, docker push
+- `infrastructure`: s3 deletes, kubectl deletes, terraform destroy
+- `generated`: project scope only, being repo-shaped; a clone prunes what it does not have
+
+### Tool Asks
+> ask beats allow from any scope, so user scope alone is enough (see `AGENTS/settings/settings.user.md`)
+- `escape`, `sidecars`, `runners`, `execution` — one-shot runners and anything the sandbox cannot contain
 
 ### Domain Allows
-one bullet per host in `allowedDomains`; an unlisted host prompts, a denied host refuses (see #17)
-- managed: no host list, since the ceiling carries booleans and denies rather than egress
-- user: `~/.claude/settings.json`
-  - `github.com`: git over https, since every repo on this disk has a github remote
-  - `api.github.com`: gh, a sandboxed child in each sidecar the top-level exclusion never reaches
-  - `registry.npmjs.org`: npm and pnpm installs, matching the caches already in allowWrite
-- project: `.claude/settings.json`
-  - everything in user, verbatim, so a clone carries its own egress
-  - `code.claude.com`, `docs.claude.com`: WebFetch allows that seed the bash allowlist (see #21)
+> unlisted hosts prompt, denied hosts refuse, and `strictAllowlist` turns prompts into refusals (see #17)
+- five named hosts: github, the npm registry, and the claude docs (see `AGENTS/settings/settings.user.md`)
+- project repeats user verbatim, so the egress travels with a clone
 
 ### Credentials
-`sandbox.credentials` hides secrets from sandboxed bash only; Read/Edit/Write need a permission rule
-- `files`: paths refused for reads, and `deny` is the only mode they accept
-- `envVars`: names unset before each sandboxed command, surviving `filesystem.disabled` (see #16)
-- `mask`: substitutes a sentinel instead of unsetting, so the tool still authenticates
-  - needs `network.tlsTerminate`, or it fails closed
-  - every `injectHosts` entry must also sit in `allowedDomains`
-  - honored from user, managed, and cli only; `deny` beats it in any scope
-- an entry with an empty path or name is stripped with a warning at startup
+> `sandbox.credentials` hides secrets from sandboxed bash only; Read/Edit/Write need a permission rule
+- `files` refuses reads, `envVars` unsets, `mask` swaps in a sentinel the proxy substitutes back
+- `mask` stops a token persisting, never stops it being spent (see `AGENTS/settings/settings.user.md`)
 
 ### Keys
-one token per machine, named for the machine, so revoking it tells you exactly what breaks
+> one token per machine, named for the machine, so revoking it tells you exactly what breaks
 - a fine-grained pat, held in `~/.operator/.env`, one `export` per service
 - a lost laptop then revokes one credential instead of every project's access
 - user-owned throughout, so no sudo to read, edit, or rotate
 - `mask` stops the token leaving, never stops it being used, so the pat's scope is the real limit
 - adding a service is one more `export`, plus a matching `mask` or `deny` entry
-
-every token in the file inherits the same layers, so the axis is the layer, never the token
 
 | layer                | what it stops                       |
 |----------------------|-------------------------------------|
@@ -316,20 +365,17 @@ every token in the file inherits the same layers, so the axis is the layer, neve
 | `pretooluse.sh`      | any command naming a denied path    |
 | `mask`               | the real value entering the sandbox |
 
-- how to install a personal access token
-  - `mkdir -p ~/.operator && chmod 700 ~/.operator`
-  - add one `export PAT_NAME="name_pat_token"` line per service to `~/.operator/.env`
-  - `nano ~/.zshrc`
-  - paste at the bottom `[ -r ~/.operator/.env ] && source ~/.operator/.env`
-  - save with ctrl+o, enter, ctrl+x
-  - configure user scope settings.json
-    - add credentials.files deny for `~/.operator/.env`
-    - add credentials.envVars mask for `PAT_NAME`, injectHosts `api.domain.com`
-  - quit and reopen the editor, not just the shell
+> how to install a personal access token:
+- [ ] make a secure directory for your keys: `mkdir -p ~/.operator && chmod 700 ~/.operator`
+- [ ] add non-exposed credentials to `~/.operator/.env` (e.g. `export GH_TOKEN="github_pat_123abc"`)
+- [ ] add deny rule for `~/.operator/.env` to `sandbox.credentials.files`
+- [ ] add mask and injectHosts rules for each `~/.operator/.env` export to `sandbox.credentials.envVars`
+- [ ] add each injectHosts host to `sandbox.network.allowedDomains`
+- [ ] append `[ -r ~/.operator/.env ] && source ~/.operator/.env` to `~/.zshrc`
+- [ ] restart editor and ask claude to run `echo $GH_TOKEN` and confirm a sentinel (never the token)
 
 #### GitHub
-`GH_TOKEN` is masked to `api.github.com` and `github.com`; `GITHUB_TOKEN` stays denied, being a
-different credential entirely
+> `GH_TOKEN` is masked to `api.github.com` and `github.com` (`GITHUB_TOKEN` stays denied)
 
 | operation           | sandboxed | why                                            |
 |---------------------|-----------|------------------------------------------------|
@@ -400,6 +446,8 @@ different credential entirely
 | rules see inside scripts   | permissions see one string per call |
 | an allow makes it work     | the sandbox is a second gate        |
 | excludedCommands is narrow | it unsandboxes the whole call       |
+| a masked token is safe     | unreadable, still spendable         |
+| a stray comment is cosmetic| it voids every rule in the file     |
 
 ### Diagnostics
 - [permissions.sh](AGENTS/settings/permissions.sh) replays a corpus through the real hook and audits the live rules
@@ -416,19 +464,21 @@ different credential entirely
 | tool missing from context    | permissions, bare deny | add tool specifier (see #7)          |
 | runs by hand but .sh fails   | sandbox filesystem     | grant child commands (see #14)       |
 | a setting that looks ignored | scope merge            | diff `/sandbox` config (see #4, #15) |
+| a whole scope looks ignored  | invalid json           | `jq empty` the file; a comment voids it |
+| sidecar prompts with a flag  | permissions, no match  | add the `*` tail so args match (see #6) |
 | pull aborts on settings.json | sandbox filesystem     | confirm it matches origin, then restore and pull via the hatch |
 
 ### Sources
 
-#### [hooks](https://code.claude.com/docs/en/hooks):
+#### [Hooks (code.claude.com/docs/en/hooks)](https://code.claude.com/docs/en/hooks)
 1. a PreToolUse hook can block a tool call, and no allow rule can override that block
 2. it blocks by exiting 2, or by printing `permissionDecision: deny` and exiting 0
 3. exit 1 does not block; a hook that crashes lets the call through
 
-#### [settings](https://code.claude.com/docs/en/settings):
+#### [Settings (code.claude.com/docs/en/settings)](https://code.claude.com/docs/en/settings)
 4. managed wins outright; every array below merges across all scopes
 
-#### [permissions](https://code.claude.com/docs/en/permissions):
+#### [Permissions (code.claude.com/docs/en/permissions)](https://code.claude.com/docs/en/permissions)
 5. a hook allow only skips the prompt; deny and ask still apply
 6. specificity never reorders: `Bash(aws *)` deny beats `Bash(aws s3 ls)` allow
 7. a bare tool deny (e.g. `Bash`) removes the tool from context entirely
@@ -437,7 +487,7 @@ different credential entirely
 10. bash grants persist per repo and command; edit grants only last the session
 11. approving a compound command saves one rule per subcommand, up to five
 
-#### [sandboxing](https://code.claude.com/docs/en/sandboxing):
+#### [Sandboxing (code.claude.com/docs/en/sandboxing)](https://code.claude.com/docs/en/sandboxing)
 12. `filesystem.disabled` voids denyRead, credentials.files, and settings.json protection
 13. `gh` commands successfully reached the api despite anthropic's sandbox warnings
 14. both layers bind only sandboxed commands; excludedCommands escapes them
