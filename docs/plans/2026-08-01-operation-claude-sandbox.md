@@ -168,8 +168,23 @@ one folder holding policy and its verification, reached by a trigger that report
 - [x] repoint every @see tag and readme reference away from AGENTS/security/
 - [x] rerun git.sh and confirm its three unpaired errors clear
 
+### 10. Stop denying the paths git has to write
+a deny reaches the os sandbox, so four policy paths were blocking version control, not the agent
+- [x] move the four tracked policy paths from deny to ask in the live project scope (see #47)
+- [x] mirror the move in settings.user.json and settings.project.json, so a clone inherits the fix
+- [x] record the rule in settings.authoring.md, since the symptom names a file rather than a rule
+- [x] keep **/.git/** on deny, and say why: git config executes shell (see #48)
+- [x] rewrite gitdeliver to hand its block over rather than take the retry hatch itself (see #49)
+- [x] teach gitdeliver to resolve references against HEAD rather than the working copy (see #50)
+- [ ] fix pretooluse reading a commit message that names a destructive command as the command
+- [x] keep ~/.claude/** on deny, since git never touches the user scope (see #47)
+- [ ] split gitcontinue's ff failure into behind and diverged, before it names @gitfresh (see #51)
+- [ ] audit every sidecar that names a cause it never measured, since #51 is unlikely to be alone
+- [ ] re-run the #36 verification snapshot, since every row predates the deny-to-ask move
+
 ### Deferred Work
 - [ ] fix wayfinders.sh crashing when a path holds no eligible files
+- [ ] reclassify stage 7's 30 items, since the agents row sums to 29 and has since it was written
 - [ ] gate npm/pip/gem/cargo installs with --ignore-scripts rather than a prompt each (see #41)
 - [ ] retest the keychain cli after any managed promotion, since denyRead never covered it (see #41)
 - [ ] decide whether the node deletes belong in system rather than execution
@@ -200,6 +215,7 @@ how each stage's checklist items are split by who can run them:
 | 7. install the user-first stack | 12 | 16 | 1 | see #7 |
 | 8. onboarding and promotion | 4 | 6 | — | see #21 |
 | 9. merge security into settings | 7 | 13 | 6 | see #42 |
+| 10. stop denying git's paths | 8 | 2 | 1 | see #47 |
 
 ### Permissions
 suggested rules to set in order for agents to work reliably:
@@ -432,3 +448,36 @@ suggested rules to set in order for agents to work reliably:
     subscripting under zsh and trips SC1087 under bash, and a grep matching nothing under
     `set -euo pipefail` aborts the run with no output whatsoever, which is how the coverage check
     first appeared to do nothing rather than to fail
+47. measured 2026-08-04 across four separate failures: a permissions `deny` is projected into the
+    macos sandbox as a filesystem write deny, so it stops every process rather than the agent's
+    Write and Edit tools, and git is a process; the consequence is that denying a path git tracks
+    makes that path unmanageable, since a branch switch must unlink and rewrite files and cannot,
+    leaving a half-applied checkout that only an unsandboxed terminal can repair; it cost four
+    stranded files under AGENTS/settings, three dead @gitempty runs each banking a stash, and a
+    blocked trunk fast-forward; proved by probe rather than inference, `touch` on an ask-listed
+    path succeeding and on a deny-listed path returning EPERM in the same command; `ask` is the
+    fix because it gates the tools without reaching the sandbox at all, and `pretooluse.sh` still
+    refuses any command naming the path, so the guard keeps two layers rather than one
+48. `**/.git/**` is the exception that proves #47, and it stays on deny: `.git/` is generated
+    rather than tracked, so git rewrites it through paths the sandbox permits, while the deny does
+    refuse `git config` — which is the point, since `credential.helper` and `core.fsmonitor` hold
+    shell that git executes, making a writable `.git/config` a code-execution vector
+49. `@gitdeliver` now hands its whole block to the user rather than taking the retry hatch itself,
+    which #33 and #37 had already proved was the only path push can take; the reasoning was always
+    the automation worth keeping, and the confirmation step at old-step-4 was standing in for a
+    gate the paste already provides, so removing it cost nothing and removed a round trip
+50. measured 2026-08-04 after two red pipelines on the same cause: a reference must be resolved
+    against `git show HEAD:<file>`, never the working copy, because a path the working tree has
+    already fixed still reads broken to CI until its own bucket lands; it fired three times in one
+    day, twice caught by CI and once caught by the new rule before a PR existed; the related trap
+    is that `git ls-remote` succeeds with no credential at all against a public repo, so a read
+    test proves nothing about auth and only a push verifies it
+51. measured 2026-08-04 running @gitcontinue on a trunk one commit behind: gitcontinue.sh:67 reads
+    a non-zero `git merge --ff-only` as divergence and tells the user to recover with @gitfresh,
+    which is the destructive path, when `rev-list --left-right --count` read 0 ahead and 1 behind;
+    ff-only fails for several causes and divergence is only one, so the check names a cause it
+    never measured; the real cause here was the #47 deny again, and the loop had closed on itself:
+    the commit that moves the .claude denies to ask could not install, because the deny it removes
+    blocked the checkout that would install it; nothing was lost since the failed ff was atomic and
+    @gitfresh hands its commands over rather than running them, but the advice was still wrong, and
+    a sidecar that recommends a destructive recovery has to measure before it names
