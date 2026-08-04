@@ -9,6 +9,7 @@
 # - LIVE probes exercise the boundary, because a config can be perfect while the gate is dead
 # - a latent fault is the failure this exists for: protection that stopped working in silence
 # - wraps permissions.sh and scopes.sh rather than replacing them, surfacing their error counts
+# - a tracked path reads as guarded at `ask`, since `deny` reaches the sandbox and blocks git itself
 # - `--static` skips the probes, `--quick` skips the wrapped sidecars, `--strict` fails on warnings
 # @see AGENTS.md, AGENTS/templates/audits.md, AGENTS/templates/git.md,
 #      AGENTS/settings/permissions.sh, AGENTS/settings/scopes.sh, docs/audits/
@@ -261,13 +262,21 @@ check_coverage() {
 #   this file audits the boundary, so an agent that can rewrite it can make it report clean
 # ==============
 check_guard() {
-  local project="$ROOT/.claude/settings.json" guarded
+  local project="$ROOT/.claude/settings.json" guarded hooked
   if [ ! -f "$project" ] || ! jq empty "$project" >/dev/null 2>&1; then return; fi
-  guarded=$(jq -r '[.permissions.deny[]? | select(test("AGENTS/(settings|hooks)"))] | length' "$project")
-  if [ "$guarded" -eq 0 ]; then
-    warn guard project "nothing denies writes to AGENTS/settings or hooks; this auditor is editable"
+  guarded=$(jq -r '[(.permissions.deny[]?, .permissions.ask[]?)
+    | select(test("AGENTS/(settings|hooks)"))] | length' "$project")
+  # the hook is the layer a settings edit cannot switch off, so report it as its own finding
+  hooked=0
+  if grep -q 'AGENTS/settings\|AGENTS/hooks' "$ROOT/AGENTS/hooks/pretooluse.sh" 2>/dev/null; then
+    hooked=1
+  fi
+  if [ "$guarded" -eq 0 ] && [ "$hooked" -eq 0 ]; then
+    warn guard project "nothing gates writes to AGENTS/settings or hooks; this auditor is editable"
+  elif [ "$guarded" -eq 0 ]; then
+    warn guard project "only pretooluse gates the policy directories; no settings rule backs it"
   else
-    pass guard project "$guarded rules protect the policy directories"
+    pass guard project "$guarded rules gate the policy directories"
   fi
 }
 

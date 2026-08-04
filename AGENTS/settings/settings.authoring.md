@@ -37,6 +37,16 @@ so every habit below exists because the obvious phrasing missed something.
 - a `Read` deny is not a deny: the missing verbs only look safe, so add the Write and Edit twins
 - deny beats ask beats allow, from any scope, so the strictest rule anywhere is the one that wins
 
+`never deny a path git tracks`
+- a deny is projected into the macos sandbox, so it stops every process rather than the agent alone
+- git is a process: it cannot unlink through a deny, so a branch switch half-completes and strands
+  the files it could not write, leaving a tree that only an unsandboxed terminal can repair
+- the symptom is `unable to unlink old '<path>': Operation not permitted`, which reads as a
+  filesystem fault rather than a rule you wrote
+- use ask for tracked paths, which gates the agent's Write and Edit without reaching the sandbox
+- keep deny for what git never touches: credentials, key material, history files, `.env`
+- `pretooluse.sh` still refuses a command naming a protected path, so ask is not the only guard
+
 ## verifying
 
 - `AGENTS/settings/permissions.sh` replays the labeled corpus against the live rules

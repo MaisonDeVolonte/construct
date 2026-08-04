@@ -41,6 +41,9 @@ two have diverged while this file still claims they have not.
 ### generated — repo paths no agent should write
 `Edit(**/.git/**)` `Write(**/.git/**)`
 - the object store and refs; a bad write corrupts history rather than editing it
+- this one stays deny despite the tracked-path rule, since `.git/` is generated rather than tracked
+- it does refuse `git config`, which is the point: `credential.helper` and `core.fsmonitor` execute
+  shell, so a writable `.git/config` is a code-execution vector wearing a config file's clothes
 
 `Edit(webflow/**)` `Write(webflow/**)`
 - exported output, owned by the design tool and overwritten on the next export

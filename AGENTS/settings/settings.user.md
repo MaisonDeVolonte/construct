@@ -106,14 +106,26 @@ is why unproven values live here until they have run clean long enough to promot
 `Bash(find * -exec *)`
 - arbitrary execution, but `find . -name '*.ts' -exec grep -l foo {} +` is ordinary work
 
-## permissions.deny
-
-### policy — the files that decide what an agent may do
-`Write(~/.claude/**)` `Edit(~/.claude/**)` `Write(.claude/**)` `Edit(.claude/**)`
+`Write(.claude/**)` `Edit(.claude/**)`
 `Write(AGENTS/hooks/**)` `Edit(AGENTS/hooks/**)` `Write(AGENTS/settings/**)` `Edit(AGENTS/settings/**)`
 - hand-edited only: an agent that can rewrite these can grant itself anything
 - the settings and the code that enforces them, since denying one without the other leaves the
   rules protected and the enforcement editable
+- these were deny until 2026-08-04, and deny broke git rather than the agent: a deny reaches the
+  macos sandbox, which refuses the unlink a branch switch needs, stranding files mid-checkout
+- all three are tracked, so git has to rewrite them on any checkout that changes them
+- ask is the honest trade here, since the threat is an agent rewriting policy on its own initiative
+  and a prompt stops exactly that, while the sandbox block stopped ordinary version control
+- `pretooluse.sh` refuses any command naming these paths regardless, so the prompt is the second
+  layer rather than the only one
+
+## permissions.deny
+
+### policy — the scope git never touches
+`Write(~/.claude/**)` `Edit(~/.claude/**)`
+- stays deny while its tracked siblings moved to ask, since nothing here is under version control
+- no git operation reaches the user scope, so the hard block costs nothing and the relaxation
+  would buy nothing; this is the file carrying the credential config, so it keeps the stricter rule
 
 ### system — root, disk, recursive delete
 `Bash(sudo *)` `Bash(mkfs*)` `Bash(dd *)`
