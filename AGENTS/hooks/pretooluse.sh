@@ -12,6 +12,8 @@
 # - blocks force pushes and force branch deletes, silent (exit 0) for everything else
 # @see AGENTS.md, .claude/settings.json, .claude/settings.local.json
 
+command -v jq >/dev/null 2>&1 || { echo "pretooluse: jq missing, refusing to run unguarded" >&2; exit 2; }
+
 CMD=$(jq -r '.tool_input.command // .toolInput.command // empty')
 
 # nothing to inspect

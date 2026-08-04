@@ -3,71 +3,51 @@
     "enabled": true,
     "failIfUnavailable": true,
     "allowUnsandboxedCommands": true,
-    "enableWeakerNetworkIsolation": true,
 
-    "filesystem": {
-      "allowWrite": [
-        "~/.npm",
-        "~/.cache",
-        "~/Library/pnpm",
-        "~/Library/Caches/pnpm"
-      ],
-      "denyRead": [
-        "/Volumes",
-        "~/Library/Keychains"
-      ],
-      "denyWrite": []
-    },
+    "excludedCommands": [],
 
     "network": {
-      "strictAllowlist": true,
-      "tlsTerminate": {},
       "allowedDomains": [
-        "github.com",
-        "api.github.com",
+        "code.claude.com", "docs.claude.com",
+        "github.com", "api.github.com",
         "registry.npmjs.org"
-      ]
-    },
-
-    "credentials": {
-      "files": [
-        { "path": "~/.aws",                   "mode": "deny" },
-        { "path": "~/.bash_history",          "mode": "deny" },
-        { "path": "~/.config/gcloud",         "mode": "deny" },
-        { "path": "~/.gnupg",                 "mode": "deny" },
-        { "path": "~/.kube",                  "mode": "deny" },
-        { "path": "~/.netrc",                 "mode": "deny" },
-        { "path": "~/.npmrc",                 "mode": "deny" },
-        { "path": "~/.operator/.env",         "mode": "deny" },
-        { "path": "~/.ssh",                   "mode": "deny" },
-        { "path": "~/.zsh_history",           "mode": "deny" }
-      ],
-      "envVars": [
-        { "name": "ANTHROPIC_API_KEY",        "mode": "deny" },
-        { "name": "AWS_ACCESS_KEY_ID",        "mode": "deny" },
-        { "name": "AWS_SECRET_ACCESS_KEY",    "mode": "deny" },
-        { "name": "GITHUB_TOKEN",             "mode": "deny" },
-        { "name": "IGCLI_SERP_KEY",           "mode": "deny" },
-        { "name": "NPM_TOKEN",                "mode": "deny" },
-        { "name": "npm_config_cache",         "mode": "deny" },
-        { "name": "npm_config_global_prefix", "mode": "deny" },
-        { "name": "npm_config_globalconfig",  "mode": "deny" },
-        { "name": "npm_config_local_prefix",  "mode": "deny" },
-        { "name": "npm_config_prefix",        "mode": "deny" },
-
-        { "name": "GH_TOKEN", "mode": "mask", "injectHosts": ["api.github.com"] }
       ]
     }
   },
 
   "permissions": {
-    "ask": [ "Bash(dangerouslyDisableSandbox:true)" ],
+    "allow": [
+      "Read", "Write", "Edit", "WebSearch",
+      "Bash(AGENTS/**/*.sh*)"
+    ],
+
+    "ask": [
+      "Bash(dangerouslyDisableSandbox:true)",
+
+      "Edit(AGENTS/**/*.sh)", "Write(AGENTS/**/*.sh)",
+
+      "Bash(npx*)",
+      "Bash(bunx*)", "Bash(uvx*)",
+      "Bash(pnpm dlx*)", "Bash(pnpm -* dlx*)",
+      "Bash(yarn dlx*)", "Bash(yarn -* dlx*)",
+      "Bash(bun x*)", "Bash(bun -* x*)",
+      "Bash(pipx run*)", "Bash(pipx -* run*)",
+      "Bash(uv tool run*)", "Bash(uv -* tool run*)",
+      "Bash(deno run*)", "Bash(deno -* run*)",
+      "Bash(go run*)", "Bash(go -* run*)",
+
+      "Bash(find * -exec *)"
+    ],
 
     "deny": [
       "Write(~/.claude/**)", "Edit(~/.claude/**)",
       "Write(.claude/**)", "Edit(.claude/**)",
 
+      "Edit(AGENTS/hooks/**)", "Write(AGENTS/hooks/**)",
+      "Edit(AGENTS/settings/**)", "Write(AGENTS/settings/**)",
+
       "Bash(sudo *)",
+
       "Bash(mkfs*)", "Bash(dd *)",
       "Bash(rm -rf *)", "Bash(rm -fr *)", "Bash(rm -R *)", "Bash(rm -r *)",
       "Bash(chmod -R *)", "Bash(chown -R *)",
@@ -103,16 +83,48 @@
       "Bash(git stash clear*)", "Bash(git stash drop*)",
 
       "Read(//**/.env*)", "Write(//**/.env*)", "Edit(//**/.env*)",
-      "Read(~/**/*.pem)", "Read(~/**/*.crt)", "Read(//**/*.key)", "Read(//**/*.p12)",
-      "Read(~/.ssh/**)", "Read(~/.aws/**)", "Read(~/.config/gcloud/**)", "Read(~/.kube/**)",
-      "Read(~/.gnupg/**)", "Read(~/.netrc)", "Read(~/.npmrc)",
-      "Read(~/.bash_history)", "Read(~/.zsh_history)",
-      "Read(~/Library/Keychains/**)"
-    ],
+      "Read(~/**/*.pem)", "Write(~/**/*.pem)", "Edit(~/**/*.pem)",
+      "Read(~/**/*.crt)", "Write(~/**/*.crt)", "Edit(~/**/*.crt)",
+      "Read(//**/*.key)", "Write(//**/*.key)", "Edit(//**/*.key)",
+      "Read(//**/*.p12)", "Write(//**/*.p12)", "Edit(//**/*.p12)",
+      "Read(~/.ssh/**)", "Write(~/.ssh/**)", "Edit(~/.ssh/**)",
+      "Read(~/.aws/**)", "Write(~/.aws/**)", "Edit(~/.aws/**)",
+      "Read(~/.config/gcloud/**)", "Write(~/.config/gcloud/**)", "Edit(~/.config/gcloud/**)",
+      "Read(~/.kube/**)", "Write(~/.kube/**)", "Edit(~/.kube/**)",
+      "Read(~/.gnupg/**)", "Write(~/.gnupg/**)", "Edit(~/.gnupg/**)",
+      "Read(~/.netrc)", "Write(~/.netrc)", "Edit(~/.netrc)",
+      "Read(~/.npmrc)", "Write(~/.npmrc)", "Edit(~/.npmrc)",
+      "Read(~/.bash_history)", "Write(~/.bash_history)", "Edit(~/.bash_history)",
+      "Read(~/.zsh_history)", "Write(~/.zsh_history)", "Edit(~/.zsh_history)",
+      "Read(~/Library/Keychains/**)", "Write(~/Library/Keychains/**)", "Edit(~/Library/Keychains/**)",
 
-    "allow": [
-      "Read(~/Developer/**)",
-      "WebSearch"
+      "Read(~/.zshrc)", "Write(~/.zshrc)", "Edit(~/.zshrc)",
+      "Read(~/.zshenv)", "Write(~/.zshenv)", "Edit(~/.zshenv)",
+      "Read(~/.zprofile)", "Write(~/.zprofile)", "Edit(~/.zprofile)",
+      "Read(~/.bashrc)", "Write(~/.bashrc)", "Edit(~/.bashrc)",
+      "Read(~/.bash_profile)", "Write(~/.bash_profile)", "Edit(~/.bash_profile)",
+      "Read(~/.profile)", "Write(~/.profile)", "Edit(~/.profile)",
+
+      "Bash(launchctl *)", "Bash(osascript *)", "Bash(defaults write *)",
+      "Bash(git config *core.hooksPath*)", "Bash(git config *alias.*)",
+
+      "Bash(security *)",
+
+      "Bash(nc *)", "Bash(ncat *)", "Bash(socat *)", "Bash(scp *)",
+
+      "Bash(npm publish*)", "Bash(npm -* publish*)",
+      "Bash(pnpm publish*)", "Bash(pnpm -* publish*)",
+      "Bash(yarn publish*)", "Bash(yarn -* publish*)",
+      "Bash(docker push*)", "Bash(docker -* push*)",
+
+      "Bash(aws s3 rm *)", "Bash(aws -* s3 rm *)",
+      "Bash(kubectl delete *)", "Bash(kubectl -* delete *)",
+      "Bash(terraform destroy*)", "Bash(terraform -* destroy*)",
+
+      "Bash(shred *)", "Bash(find * -delete*)",
+
+      "Edit(**/.git/**)", "Write(**/.git/**)",
+      "Edit(webflow/**)", "Write(webflow/**)"
     ]
   }
 }
