@@ -219,6 +219,10 @@ inspired by:
 - rule match exactly: wildcard every position a flag could occupy
 - spaces are load-bearing: `Bash(ls *)` matches `ls -la` but not `lsof`; `Bash(ls*)` matches both
 - ask is for what the sandbox cannot contain, since it prompts even when auto-allow would not
+- never deny a path git tracks: deny reaches the macos sandbox and blocks git itself, not the agent
+  - the symptom is `unable to unlink old '<path>': Operation not permitted` mid-checkout
+  - a branch switch half-completes, stranding files only an unsandboxed terminal can clean up
+  - use ask for tracked paths; keep deny for credentials, keys, history, and `.env`
 
 ### Scopes
 - [managed](AGENTS/settings/settings.managed.json): 
@@ -344,6 +348,12 @@ different credential entirely
   unsandboxes the entire command string rather than just gh
 - push stays on the retry hatch by choice, since dropping `mask` to gain it would put the real
   token in every sandboxed command for a capability `@gitdeliver` is gated against anyway
+- `@gitdeliver` hands its whole block to the user rather than taking the hatch itself, so the
+  reasoning stays automated and the credential never needs to reach an agent-run command
+- a read proves nothing about auth on a public repo: `ls-remote` succeeds with no credential at
+  all, so verify the push, never the fetch
+- a dummy `credential.helper` makes git issue the request but supplies only the sentinel, so it
+  turns a clean prompt into a 401 and breaks the hatch's keychain path; do not add one
 - revisit only if anthropic ships a non-cgo gh, or the proxy learns to substitute inside base64
 - an unlisted github host is refused, and `*.github.com` is avoided on purpose since it reaches gist
 - upstream issues to watch, since a shipped fix moves rows in the table above (checked 2026-08-03):
@@ -400,6 +410,8 @@ different credential entirely
 | rules see inside scripts   | permissions see one string per call |
 | an allow makes it work     | the sandbox is a second gate        |
 | excludedCommands is narrow | it unsandboxes the whole call       |
+| deny only stops the agent  | it stops git and every process too  |
+| a masked token can push    | git basic-auth hides it from inject |
 
 ### Diagnostics
 - [permissions.sh](AGENTS/settings/permissions.sh) replays a corpus through the real hook and audits the live rules
