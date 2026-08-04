@@ -25,6 +25,8 @@
       "Bash(dangerouslyDisableSandbox:true)",
 
       "Edit(AGENTS/**/*.sh)", "Write(AGENTS/**/*.sh)",
+      "Edit(AGENTS/hooks/**)", "Write(AGENTS/hooks/**)",
+      "Edit(AGENTS/settings/**)", "Write(AGENTS/settings/**)",
 
       "Bash(npx*)",
       "Bash(bunx*)", "Bash(uvx*)",
@@ -42,9 +44,6 @@
     "deny": [
       "Write(~/.claude/**)", "Edit(~/.claude/**)",
       "Write(.claude/**)", "Edit(.claude/**)",
-
-      "Edit(AGENTS/hooks/**)", "Write(AGENTS/hooks/**)",
-      "Edit(AGENTS/settings/**)", "Write(AGENTS/settings/**)",
 
       "Bash(sudo *)",
 
