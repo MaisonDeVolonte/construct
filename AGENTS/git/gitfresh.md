@@ -6,10 +6,10 @@
  * @description
  * - ran only on explicit `@gitfresh` command; for a broken, conflicted, or desynced workspace
  * - runs `AGENTS/git/gitaudit.sh` telemetry first, then requires an exact confirmation
- *   phrase before nuking anything
- * - backs up all changes to an emergency stash, then hard-resets trunk and deletes local
- *   branches to match origin
+ *   phrase before touching anything
+ * - backs up all changes to an emergency stash, switches to trunk, and fetches from origin
  * - runs `AGENTS/git/gitfresh.sh --confirmed` only after explicit user confirmation
+ * - gated: never cleans, resets, or deletes; it prints every command for the user to run by hand
  * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitfresh.sh, AGENTS/git/gitaudit.sh
  */
 ```
@@ -17,8 +17,8 @@
 **@gitfresh:** Run ONLY on explicit `@gitfresh` command
 - typically ran when local workspace is broken, conflicted, or severely desynced
 - backs up all tracked modifications (staged/unstaged) and untracked files into an emergency stash
-- aborts active operations, purges untracked files, and hard-resets trunk to upstream
-- drops all local branches and forces a perfectly pristine matching layout with origin
+- aborts active operations, switches to trunk, and fetches pristine state from origin
+- never cleans, resets, or deletes a branch; each one is handed over for you to run yourself
 
 1. run the native shell command exactly as specified
   ```bash
@@ -30,9 +30,9 @@
     - @gitaudit telemetry data
     
     - @gitfresh will:
-      - BACKUP then DISCARD [SUM staged_files + unstaged_files + untracked_files] uncommitted/untracked changes
-      - RESET [default_branch] to exactly match origin
-      - DELETE the following local branches:
+      - BACKUP [SUM staged_files + unstaged_files + untracked_files] uncommitted/untracked changes
+      - HAND OVER the commands that RESET [default_branch] to exactly match origin
+      - HAND OVER the commands that DELETE the following local branches:
           - [local_branches]
 
     - to continue, type exactly: `Yes, nuke everything and start fresh!`
@@ -45,4 +45,11 @@
   AGENTS/git/gitfresh.sh --confirmed
   ```
   - fail (exit code > 0) → abort and report: "<raw terminal error>"
-  - success (exit code = 0) → continue and report: "@gitfresh telemetry"
+  - success (exit code = 0) → report "@gitfresh telemetry", print the handover, then STOP
+
+    NEVER run a clean, reset, or branch delete, and never offer to; handing the commands
+    over IS the deliverable
+
+    - close with one copy-paste bash block holding every handover command, in that same order
+    - the deny list and `pretooluse.sh` both block these commands, which is the design, not
+      an obstacle to work around: they are the user's to run, never the agent's
