@@ -9,7 +9,7 @@
 # - tier 2 is structural fact: drift, dead rules, and which allow rule covers an unnamed command
 # - it deliberately does NOT model the permission matcher, so it never reports a rule as covering
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
-# @see AGENTS.md, AGENTS/security/corpus.tsv, AGENTS/hooks/pretooluse.sh, .claude/settings.json
+# @see AGENTS.md, AGENTS/settings/corpus.tsv, AGENTS/hooks/pretooluse.sh, .claude/settings.json
 
 set -euo pipefail
 

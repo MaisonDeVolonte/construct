@@ -10,7 +10,7 @@
 # - CONTRACT: the caller defines `err SEV file line category detail` and `warn` the same way
 # - an unambiguous provider token is an ERROR, so the run stops and a human decides what happens
 # - a merely credential-shaped string is a WARN, since most of them here are commit shas
-# @see AGENTS.md, AGENTS/templates/, AGENTS/security/, .github/workflows/ci.yml
+# @see AGENTS.md, AGENTS/templates/, AGENTS/settings/, .github/workflows/ci.yml
 
 # sourcing is the only supported use: run directly and it would define functions into a shell that
 # exits immediately afterwards, which looks like it worked and does nothing

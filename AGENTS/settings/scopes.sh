@@ -11,7 +11,7 @@
 # - a `deny` an internal would have tripped is reported as a bypass, not as a block
 # - `--repo <name>` resolves a bare name under ~/Developer to that repo's own settings stack
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
-# @see AGENTS.md, AGENTS/security/permissions.sh, AGENTS/security/corpus.tsv,
+# @see AGENTS.md, AGENTS/settings/permissions.sh, AGENTS/settings/corpus.tsv,
 #      AGENTS/hooks/pretooluse.sh, AGENTS/settings/
 
 set -euo pipefail

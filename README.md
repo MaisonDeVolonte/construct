@@ -209,9 +209,9 @@ inspired by:
 - [Permissions Guide](https://www.claudedirectory.org/blog/claude-code-permissions-guide)
 
 ### Tools
-- [corpus](AGENTS/security/corpus.tsv): labeled command corpus for audits; never executed
-- [permissions.sh](AGENTS/security/permissions.sh): replays the corpus then audits the settings rules
-- [secrets.sh](AGENTS/security/secrets.sh): shared credential patterns, used in every template sidecar
+- [corpus](AGENTS/settings/corpus.tsv): labeled command corpus for audits; never executed
+- [permissions.sh](AGENTS/settings/permissions.sh): replays the corpus then audits the settings rules
+- [secrets.sh](AGENTS/settings/secrets.sh): shared credential patterns, used in every template sidecar
 
 ### Authoring
 - write lists most-destructive-first (for human readers)
@@ -402,7 +402,7 @@ different credential entirely
 | excludedCommands is narrow | it unsandboxes the whole call       |
 
 ### Diagnostics
-- [permissions.sh](AGENTS/security/permissions.sh) replays a corpus through the real hook and audits the live rules
+- [permissions.sh](AGENTS/settings/permissions.sh) replays a corpus through the real hook and audits the live rules
 - `/sandbox` prints the merged settings (source of truth)
 - start from the symptom, since the layer that blocked a call is rarely the one you were watching
 
