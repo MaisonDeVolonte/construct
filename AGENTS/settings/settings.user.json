@@ -69,7 +69,11 @@
     "ask": [
       "Bash(dangerouslyDisableSandbox:true)",
 
+      "Write(.claude/**)", "Edit(.claude/**)",
+
       "Edit(AGENTS/**/*.sh)", "Write(AGENTS/**/*.sh)",
+      "Write(AGENTS/hooks/**)", "Edit(AGENTS/hooks/**)",
+      "Write(AGENTS/settings/**)", "Edit(AGENTS/settings/**)",
 
       "Bash(npx*)",
       "Bash(bunx*)", "Bash(uvx*)",
@@ -86,10 +90,6 @@
 
     "deny": [
       "Write(~/.claude/**)", "Edit(~/.claude/**)",
-      "Write(.claude/**)", "Edit(.claude/**)",
-
-      "Write(AGENTS/hooks/**)", "Edit(AGENTS/hooks/**)",
-      "Write(AGENTS/settings/**)", "Edit(AGENTS/settings/**)",
 
       "Bash(sudo *)",
       "Bash(mkfs*)", "Bash(dd *)",
