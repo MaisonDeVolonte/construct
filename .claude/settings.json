@@ -24,6 +24,8 @@
     "ask": [
       "Bash(dangerouslyDisableSandbox:true)",
 
+      "Write(.claude/**)", "Edit(.claude/**)",
+
       "Edit(AGENTS/**/*.sh)", "Write(AGENTS/**/*.sh)",
       "Edit(AGENTS/hooks/**)", "Write(AGENTS/hooks/**)",
       "Edit(AGENTS/settings/**)", "Write(AGENTS/settings/**)",
@@ -43,7 +45,6 @@
 
     "deny": [
       "Write(~/.claude/**)", "Edit(~/.claude/**)",
-      "Write(.claude/**)", "Edit(.claude/**)",
 
       "Bash(sudo *)",
 
