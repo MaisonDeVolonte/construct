@@ -53,6 +53,9 @@
   - CREATE the file first if it does not exist, with `# <audit_file>` as its only line
     - `audit_file` is the path, `audit_time` is the heading timestamp
     - `audit_count` is how many audits the file already holds, so this one is #(audit_count + 1)
-  - append a new `## Audit #N: YYYY-MM-DD HH:MM` section, never overwrite an earlier audit
-  - write the report as delivered to the user, minus the raw telemetry dump
+  - append a new `## Git Audit #N: YYYY-MM-DD HH:MM` section, never overwrite an earlier audit
+  - write the report as delivered to the user, in the four subsections audits.md defines
+    - `state` and `findings` are hyphen bullets, one clause each
+    - `resolutions` are checkboxes, one per finding, in the same order
+    - `telemetry` closes the entry with the raw output, fenced and unedited
   ```

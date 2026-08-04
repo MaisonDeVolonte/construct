@@ -10,7 +10,7 @@
 # - skips the wayfinding header, which is `AGENTS/templates/wayfinders.sh`'s to judge
 # - defaults to every tracked source file; pass files or a directory to scope it
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
-# @see AGENTS.md, AGENTS/security/secrets.sh, AGENTS/templates/comments.md, AGENTS/templates/wayfinders.sh
+# @see AGENTS.md, AGENTS/settings/secrets.sh, AGENTS/templates/comments.md, AGENTS/templates/wayfinders.sh
 
 set -euo pipefail
 
@@ -19,10 +19,10 @@ set -euo pipefail
 # ==============
 # the shared scan sits beside this file, not beside the repo being scanned: resolve them before
 # anything cds to a repo root, since BASH_SOURCE arrives relative and would follow that cd
-SHARED=$(cd "$(dirname "${BASH_SOURCE[0]}")/../security" 2>/dev/null && pwd || true)
+SHARED=$(cd "$(dirname "${BASH_SOURCE[0]}")/../settings" 2>/dev/null && pwd || true)
 if [ ! -f "$SHARED/secrets.sh" ]; then
-  echo "fatal: no AGENTS/security/secrets.sh beside this sidecar" >&2; exit 1; fi
-# shellcheck source=../security/secrets.sh
+  echo "fatal: no AGENTS/settings/secrets.sh beside this sidecar" >&2; exit 1; fi
+# shellcheck source=../settings/secrets.sh
 . "$SHARED/secrets.sh"
 
 # character counts, not byte counts: bash's ${#var} is multibyte-aware under a utf-8 locale, and
