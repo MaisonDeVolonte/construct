@@ -1,4 +1,47 @@
-# Agents
+# AGENTS
+**secure agentic coding infra: sandboxed automations, workflows, and conventions**
+
+- **deterministic automations:** workflows are markdown prompts; bash sidecars do exact work 
+- **machine-checked templates:** conventions are markdown guides; bash sidecars verify conformance
+- **chat-native triggers:** @triggers work in any project; bash sidecars are project agnostic
+- **cross-session memory:** context is seeded with docs and logs; bash hooks enforce compliance
+- **built-in security suite:** auditable security and settings; diagnostics run across scopes
+- **gated by default:** destructive commands are blocked entirely; permissions force prompts
+- **centralized configuration:** improvements are fast and easy; symlinks sync across projects
+- **zero dependencies:** bash, git, and jq only; nothing to build or install
+- **easy opt-out:** symlinks are easy to delete; nothing to revert or uninstall
+> *requires: claude code, bash, git, jq; [MIT License](LICENSE)*
+
+## Installation (MacOS)
+
+### 1. basic setup (5 mins)
+- [ ] clone the repo (somewhere permanent):
+  - [ ] `git clone https://github.com/MaisonDeVolonte/operator.git ~/Developer/operator`
+- [ ] symlink from project (gitignored):
+  - [ ] `ln -s ~/Developer/operator/README.md AGENTS.md`
+  - [ ] `ln -s ~/Developer/operator/AGENTS AGENTS`
+
+### 2. sandbox setup and testing (optional, highly recommended, ~30 mins)
+- [ ] copy settings.user.json to `~/.claude/settings.json`
+  - [ ] run `/sandbox`, and make sure sandbox is enabled
+  - [ ] add package-manager caches to `sandbox.filesystem.allowWrite`
+  - [ ] add deny rules for each `env | grep -iE 'key|token|secret'` to `sandbox.credentials.envVars`
+  - [ ] make a secure directory for your keys: `mkdir -p ~/.operator && chmod 700 ~/.operator`
+  - [ ] add non-exposed credentials to `~/.operator/.env` (e.g. `export GH_TOKEN="github_pat_123abc"`)
+  - [ ] add deny rule for `~/.operator/.env` to `sandbox.credentials.files`
+  - [ ] add mask and injectHosts rules for each `~/.operator/.env` export to `sandbox.credentials.envVars`
+  - [ ] add each injectHosts host to `sandbox.network.allowedDomains`
+  - [ ] append `[ -r ~/.operator/.env ] && source ~/.operator/.env` to `~/.zshrc`
+  - [ ] restart editor and ask claude to run `echo $GH_TOKEN` and confirm a sentinel (never the token)
+- [ ] copy settings.project.json to your project's `.claude/settings.json`
+- [ ] copy settings.local.json to your project's `.claude/settings.local.json` (gitignore it)
+- [ ] run `@settingsaudit`
+
+### 3. managed sandbox and lockdown (optional, requires sudo, 5 mins)
+- [ ] make the managed claude code directory `sudo mkdir -p '/Library/Application Support/ClaudeCode'`
+- [ ] sudo copy settings.managed.json to `/Library/Application Support/ClaudeCode/managed-settings.json`
+- [ ] run `@settingsaudit`
+
 
 ## Workflows
 - DEFAULT posture is READ-ONLY e.g. chat, brainstorm, evaluate, and plan
@@ -225,24 +268,42 @@ inspired by:
   - use ask for tracked paths; keep deny for credentials, keys, history, and `.env`
 
 ### Scopes
-- [managed](AGENTS/settings/settings.managed.json): 
-  - copy to → `/Library/Application Support/ClaudeCode/managed-settings.json`
-  - used for policy nothing below may override (booleans and the deny floor)
-  - "does this protect me long term and is it worth a sudo edit?"
-- [user](AGENTS/settings/settings.user.json): 
-  - copy to → `~/.claude/settings.json`
-  - used for machine detail, since this laptop's paths differ from the next one
-  - "does this help me across all projects in my user profile?"
-- [project](AGENTS/settings/settings.project.json): 
-  - copy to → `.claude/settings.json`
-  - used for repo truths that survive a clone, including a portable deny copy
-  - "does this help everyone working in this project?"
-- [local](AGENTS/settings/settings.local.json): 
-  - copy to → `.claude/settings.local.json`
-  - used for custom hooks, temporary grants, and every 'Always Allow' you have clicked
-  - "does this help only me, only in this project, and for specific reasons?"
-- cli: `--settings`, session only, no file
-  - used for trying a rule before it lands in a file (nothing here persists)
+> each pairs with a matching `.json` file with all baseline settings (see `AGENTS/settings/`)
+- [settings.cli.md](AGENTS/settings/settings.cli.md): one session, no file
+- [settings.local.md](AGENTS/settings/settings.local.md): this repo, just you
+- [settings.project.md](AGENTS/settings/settings.project.md): this repo, committed
+- [settings.user.md](AGENTS/settings/settings.user.md): every repo, just you
+- [settings.managed.md](AGENTS/settings/settings.managed.md): this machine, sudo
+```
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ ┌────────────────────────────────────────────────────────────────────┐ ┃
+┃ │ ┌────────────────────────────────────────────────────────────────┐ │ ┃
+┃ │ │ ┌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌┐ │ │ ┃
+┃ │ │ ┆ ┌┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┐ ┆ │ │ ┃
+┃ │ │ ┆ ┊ cli: claude --settings                                 ┊ ┆ │ │ ┃
+┃ │ │ ┆ ┊ "does this help me, in this session only?"             ┊ ┆ │ │ ┃
+┃ │ │ ┆ └┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┘ ┆ │ │ ┃
+┃ │ │ ┆ local: .claude/settings.local.json                         ┆ │ │ ┃
+┃ │ │ ┆ "does this help only me, only in this project?"            ┆ │ │ ┃
+┃ │ │ └╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌┘ │ │ ┃
+┃ │ │ project: .claude/settings.json                                 │ │ ┃
+┃ │ │ "does this help everyone working in this project?"             │ │ ┃
+┃ │ └────────────────────────────────────────────────────────────────┘ │ ┃
+┃ │ user: ~/.claude/settings.json                                      │ ┃
+┃ │ "does this help me across all projects in my user profile?"        │ ┃
+┃ └────────────────────────────────────────────────────────────────────┘ ┃
+┃ managed: /Library/Application Support/ClaudeCode/managed-settings.json ┃
+┃ "does this protect everyone on this machine, long term?"               ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+```
+
+### Auditing
+> policy and its verification share one folder (see `AGENTS/settings/`)
+- [@settingsaudit](AGENTS/settings/settingsaudit.md): READ-ONLY; audits the stack, probes it live (saved to file)
+- [corpus](AGENTS/settings/corpus.tsv): labeled command corpus for audits; never executed
+- [permissions.sh](AGENTS/settings/permissions.sh): replays the corpus then audits the settings rules
+- [scopes.sh](AGENTS/settings/scopes.sh): tests a workflow against the merged scope stack
+- [secrets.sh](AGENTS/settings/secrets.sh): shared credential patterns, used in every template sidecar
 
 ### Sandboxing
 ```
