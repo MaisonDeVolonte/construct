@@ -15,10 +15,11 @@ agentic work runs promptless inside a contained boundary that is documented, tes
 ~/.claude/settings.json             machine detail: cache paths, the developer read, websearch
 .claude/settings.json               the travelling copy: floor, npx ask, gh exclusion, egress
 .claude/settings.local.json         hooks, enabled, and accumulated grants
-AGENTS/settings/*.jsonc             the four templates the live files are copied from
-AGENTS/security/permissions.sh      replays corpus strings through the live hook
-AGENTS/security/scopes.sh           maps a workflow against a stack of settings files
-AGENTS/security/corpus.tsv          command strings with expected verdicts, sidecars included
+AGENTS/settings/*.json              the four templates the live files are copied from
+AGENTS/settings/*.md                one per template, why every rule is there
+AGENTS/settings/permissions.sh      replays corpus strings through the live hook
+AGENTS/settings/scopes.sh           maps a workflow against a stack of settings files
+AGENTS/settings/corpus.tsv          command strings with expected verdicts, sidecars included
 README.md                           precedence, diagnostics, guidance, and cited sources
 ```
 
@@ -134,8 +135,43 @@ README.md                           precedence, diagnostics, guidance, and cited
 - [ ] rerun the six probes after each promotion, since every managed key changes the merge
 - [ ] rerun the verification snapshot alongside them, and record what moved (see #36)
 
+- [ ] diff each installed scope against its jsonc body, since a wrong paste reads clean (see #39)
+- [ ] jq empty every scope after any hand-edit, and re-run scopes.sh to see the floor land (see #40)
+- [ ] prune the repo-shaped deny block per project, keeping only paths that repo holds (see #39)
+
+### 9. Merge security into settings and build the audit pair
+one folder holding policy and its verification, reached by a trigger that reports and never repairs
+- [x] settle the artifact contract first, since audits.sh enforces a different one today (see #42)
+- [x] move corpus.tsv, permissions.sh, scopes.sh and secrets.sh into AGENTS/settings/
+- [x] repoint the ten sidecars sourcing secrets.sh, three references in each (see #43)
+- [ ] collapse the two AGENTS denies into one AGENTS/settings/** across both scopes and templates
+- [ ] add the merged path to the PROTECTED regex in pretooluse.sh
+- [ ] clear the five drift warnings naming paths the hook guards and no deny lists
+- [x] rewrite check_filename and the entry heading rule in audits.sh for the settled contract
+- [x] repoint gitaudit.sh at the new artifact name and its audit_count probe
+- [x] restate the artifact shape in audits.md so template and validator agree
+- [x] write settingsaudit.md as READ-ONLY, reporting findings and handing repairs back
+- [x] write settingsaudit.sh to prove every scope parses and matches its template body
+- [x] check verb symmetry, reading a Read deny without Write and Edit as an error
+- [x] check scope placement, catching machine detail in project and mask outside user
+- [ ] check duplicates and family order against the readme legend
+- [x] wrap permissions.sh and scopes.sh, surfacing their findings rather than swallowing them
+- [x] probe live for a refused credential read, a masked token and an unlisted host
+- [x] probe live for a force push, which the hook must deny rather than prompt
+- [x] seed docs/audits/ and decide whether audits are tracked or ignored
+- [ ] add corpus.tsv rows for every family added on 2026-08-03
+- [x] convert the four templates to raw json, retiring the jsonc body-strip entirely (see #44)
+- [x] write one .md per scope, every rule earning a why, mirrors asserted not assumed (see #45)
+- [x] teach audits.sh per-kind filenames, headings and label vocabularies (see #46)
+- [x] teach git.sh that a trigger can live outside AGENTS/git (see #46)
+- [ ] prune the readme's scopes and deny sections down to pointers at the four .md files
+- [x] repoint every @see tag and readme reference away from AGENTS/security/
+- [x] rerun git.sh and confirm its three unpaired errors clear
+
 ### Deferred Work
 - [ ] fix wayfinders.sh crashing when a path holds no eligible files
+- [ ] gate npm/pip/gem/cargo installs with --ignore-scripts rather than a prompt each (see #41)
+- [ ] retest the keychain cli after any managed promotion, since denyRead never covered it (see #41)
 - [ ] decide whether the node deletes belong in system rather than execution
 - [ ] build the tier 3 dynamic harness on sandbox-runtime with a scratch remote
 - [ ] add an add-to-ask action to the plans.sh vocabulary
@@ -162,7 +198,8 @@ how each stage's checklist items are split by who can run them:
 | 5. settings templates | 9 | — | — | see #3 |
 | 6. scope tester | 3 | 1 | 9 | see #5 |
 | 7. install the user-first stack | 12 | 16 | 1 | see #7 |
-| 8. onboarding and promotion | 2 | 5 | — | see #21 |
+| 8. onboarding and promotion | 4 | 6 | — | see #21 |
+| 9. merge security into settings | 7 | 13 | 6 | see #42 |
 
 ### Permissions
 suggested rules to set in order for agents to work reliably:
@@ -333,3 +370,65 @@ suggested rules to set in order for agents to work reliably:
     and the pat regrant landed, with a draft release created and deleted through the mask, which
     clears the release path #37 found closed while update-branch stays unmeasured until an open
     pr exists to try it on
+39. measured 2026-08-03 while answering why a log write needed approval: `.claude/settings.json`
+    held the settings.user.jsonc body rather than the project one, one line stale since it
+    predated github.com joining injectHosts, and it was committed, so every clone inherited the
+    wrong floor; the visible cost was a prompt on every docs write and every sidecar run, and the
+    invisible cost was the repo-shaped deny block existing in no scope at all; an approval is
+    invisible to the agent, which is why it read as normal for a full day, and edit grants expire
+    with the session, so the friction recurred daily instead of once
+40. measured 2026-08-03 after repairing the scope: a `//` comment inside the pasted body voids
+    the entire file, and the harness ignores an unparseable settings file in silence rather than
+    warning, so the whole project scope went inert while looking installed; `scopes.sh` reported
+    28 invocations prompting and 0 allowed, which is the symptom to watch for, and `jq empty` on
+    each scope is the one-command check; separately `Bash(AGENTS/**/*.sh)` consolidated four globs
+    but dropped the `*` tail, and a bare `.sh` matches only a bare invocation, so every sidecar
+    taking a flag would have prompted even once the json parsed, confirming the tail lesson the
+    project wayfinder had already recorded and the edit then contradicted
+41. measured 2026-08-03 while sorting a new deny and ask family: `security list-keychains`
+    answered normally under the sandbox, so the keychain cli reaches keychaind rather than the
+    files `denyRead ~/Library/Keychains` covers, making it the same class of gap as gh and cgo;
+    `crontab -l` by contrast was refused outright by seatbelt, so cron persistence is already
+    contained and needs no rule; the sharper finding is that mask protects a token from being
+    read and never from being spent, so any auto-approved runner inside the box can act as the
+    pat allows, which #38's regrant widened rather than narrowed; the interposed wildcard twin
+    must be `-*` and never a bare `*`, since `go * run*` also matches `go build ./cmd/runner`
+42. measured 2026-08-03 while scoping the merge: audits.sh hard-enforces one file per day named
+    YYYY-MM-DD.md with entries reading '## Audit #N: YYYY-MM-DD HH:MM', so a timestamped
+    file-per-run name fails the validator on every file and replaces the contract rather than
+    extending it; three shapes are open, keeping the daily append and tagging each entry by kind,
+    namespacing per day and kind as YYYY-MM-DD_settings.md so the append survives, or one file per
+    run, which diffs posture cleanly across a claude code upgrade at the cost of multiplying
+    tracked files; the choice decides whether audits.sh, gitaudit.sh and audits.md change at all,
+    which is why it leads the stage; note also that the artifact needs its .md extension, absent
+    from the sketch, or neither the validator nor gitinsights will read it as an audit
+43. measured 2026-08-03 counting the merge: ten sidecars hard-code AGENTS/security/secrets.sh
+    across three references each, the @see tag, the fatal preflight message and the shellcheck
+    source directive, making the move roughly thirty mechanical edits; it buys one deny rule
+    instead of two and removes a drift source the audit already reports, while hooks stay put
+    since every hook path is wired by name in settings.local.jsonc; the stage is mostly human-only
+    by construction, because AGENTS/settings/** is denied for write and the pair being built lives
+    inside it, so an agent can draft every file but land none of them
+44. measured 2026-08-03 converting the templates: dropping jsonc for raw json deleted a bug class
+    rather than documenting it, since the body-strip step disappears from every consumer and a
+    stray `//` can no longer void a file at all; the instruction that caused the day-long outage,
+    copy from the first brace down, becomes copy the file; zed validates json natively too, which
+    would have caught both the duplicate block and a trailing comma in the editor rather than in
+    an audit hours later
+45. measured 2026-08-03 writing the scope docs: the four files are two heavy and two nearly empty,
+    191 and 195 rules against 0 and 1, and project's allow and ask are byte-identical to user's
+    while its deny is a strict superset by four repo-shaped rules; that shape makes "mirrors user"
+    worth more than a shorthand, because the claim is testable, and settingsaudit now diffs the
+    named section and fails when the two diverge while the doc still claims they have not; a
+    per-rule index also inverts the drift objection, since every rule appearing as a code span
+    lets the doc be diffed against the json in both directions rather than trusted; the check
+    earned itself immediately by finding AGENTS/security/** still denied in both scopes, dead
+    rules for a folder that no longer exists, surfaced only because the doc had nothing to say
+46. measured 2026-08-03 generalising the validators: audits.sh and git.sh both hard-coded a single
+    kind, the first assuming one file per day named YYYY-MM-DD.md with git-only labels, the second
+    assuming every trigger lives in AGENTS/git across four separate checks; each now resolves from
+    the file it is handed, so a second kind costs a case arm rather than a rewrite; two shell traps
+    cost real time here, both worth remembering: `$var[]` inside a jq filter parses as array
+    subscripting under zsh and trips SC1087 under bash, and a grep matching nothing under
+    `set -euo pipefail` aborts the run with no output whatsoever, which is how the coverage check
+    first appeared to do nothing rather than to fail
