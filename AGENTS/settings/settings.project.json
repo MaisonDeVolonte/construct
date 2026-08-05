@@ -57,7 +57,10 @@
       "Bash(git remote)", "Bash(git remote -v*)", "Bash(git remote show*)", "Bash(git remote get-url*)",
       "Bash(git stash list*)", "Bash(git stash show*)",
       "Bash(git reflog)", "Bash(git reflog show*)",
-      "Bash(git fetch*)", "Bash(git version*)"
+      "Bash(git fetch*)", "Bash(git version*)",
+
+      "Bash(git stash push -u -m 'auto-stash: @gitcontinue')", "Bash(git stash pop)",
+      "Bash(git merge --ff-only origin/*)", "Bash(git switch *)"
     ],
 
     "ask": [
@@ -113,13 +116,13 @@
       "Bash(git rebase*)", "Bash(git cherry-pick*)", "Bash(git revert*)", "Bash(git replace*)",
       "Bash(git am*)", "Bash(git apply*)", "Bash(git quiltimport*)",
       "Bash(git commit)", "Bash(git commit *)", "Bash(git commit-tree*)",
-      "Bash(git merge)", "Bash(git merge *)", "Bash(git merge-file*)", "Bash(git pull*)",
-      "Bash(git reset*)", "Bash(git restore*)", "Bash(git checkout*)", "Bash(git switch*)",
+      "Bash(git merge)", "Bash(git merge-file*)", "Bash(git pull*)",
+      "Bash(git reset*)", "Bash(git restore*)", "Bash(git checkout*)",
       "Bash(git clean*)", "Bash(git rm*)", "Bash(git mv*)", "Bash(git add*)",
       "Bash(git bisect*)", "Bash(git sparse-checkout*)", "Bash(git worktree*)",
       "Bash(git submodule*)", "Bash(git rerere*)",
-      "Bash(git stash)", "Bash(git stash push*)", "Bash(git stash save*)",
-      "Bash(git stash pop*)", "Bash(git stash apply*)", "Bash(git stash drop*)",
+      "Bash(git stash)", "Bash(git stash save*)",
+      "Bash(git stash apply*)", "Bash(git stash drop*)",
       "Bash(git stash clear*)", "Bash(git stash branch*)", "Bash(git stash create*)",
       "Bash(git stash store*)",
       "Bash(git branch -d*)", "Bash(git branch -D*)", "Bash(git branch -f*)",
