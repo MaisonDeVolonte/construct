@@ -24,7 +24,7 @@ if [ ! -f "$SHARED/secrets.sh" ]; then
 . "$SHARED/secrets.sh"
 
 # character counts, not byte counts: bash's ${#var} is multibyte-aware under a utf-8 locale, and
-# every em dash in a report is 3 bytes — a byte count would flag lines that are legally under the cap
+# every em dash in a report is 3 bytes — a byte count would flag lines legally under the cap
 UTF8_LOCALE=$(locale -a 2>/dev/null | grep -iE '^(C|en_US)\.(utf-?8)$' | head -n 1 || true)
 if [ -n "$UTF8_LOCALE" ]; then export LC_ALL="$UTF8_LOCALE"; fi
 
