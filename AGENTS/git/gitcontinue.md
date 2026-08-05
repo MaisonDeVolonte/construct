@@ -1,26 +1,36 @@
 ```javascript
 /**
- * ====================================================
- * @file gitcontinue.md - safe pause-and-resume trigger
- * ====================================================
+ * ======================================================
+ * @file gitcontinue.md - trunk sync handover trigger
+ * ======================================================
  * @description
  * - ran only on explicit `@gitcontinue` command
- * - stashes, fetches, fast-forwards, and pops to safely pause/resume work
- * - strictly enforces trunk-based dev: always ends back on `main`, never a feature branch
- * - runs `AGENTS/git/gitcontinue.sh`; a conflict (exit 1) hands resolution to the user
- * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitcontinue.sh
+ * - READ-ONLY: measures the trunk delta and hands the sync commands back
+ * - runs `AGENTS/git/gitcontinue.sh`, whose only write is a fetch of remote-tracking refs
+ * - stash, switch and merge are denied as tool calls, so the user runs them
+ * - separates ahead from behind, since a behind trunk fast-forwards and never needs @gitfresh
+ * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitcontinue.sh, AGENTS/git/handover.sh
  */
 ```
 
 **@gitcontinue:** Run ONLY on explicit `@gitcontinue` command
-- run to safely pause work, sync the trunk, and resume where you left off
-- strictly enforces trunk-based development: always drops you back onto the trunk (`main`), never a feature branch
-- gracefully handles stashing, fetching, fast-forwarding, and stash popping
+- run to pause work, sync the trunk, and resume where you left off
+- enforces trunk-based development: the handover always ends on the trunk, never a feature branch
+- the sidecar measures and reports; every command that moves the tree is the user's to run
 
-1. run the native shell command exactly as specified:
+1. run the native shell command exactly as specified
   ```bash
   AGENTS/git/gitcontinue.sh
   ```
-  - fail (exit code > 1) → abort and report: "<raw terminal error>"
-  - conflict (exit code = 1) → report "@gitcontinue telemetry" and tell user to resolve conflicts in editor
-  - success (exit code = 0) → continue and report: "@gitcontinue telemetry"
+  - fail (exit code > 0) → abort and report: "<raw terminal error>"
+  - success (exit code = 0) → continue to step 2
+
+2. report the telemetry, then the handover, then STOP
+    - read `sync state` first, since it decides which of the three shapes below applies
+      - `up to date` → say so; there is nothing to paste
+      - `behind, fast-forwards cleanly` → the handover is safe to run as printed
+      - `diverged` → the trunk holds local commits origin lacks, so name them before anything else
+    - close with one copy-paste bash block holding every handover command, in that same order
+
+    NEVER run a stash, switch or merge, and never offer to; handing the commands over IS the
+    deliverable, and the deny floor refuses all three as tool calls anyway

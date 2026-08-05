@@ -10,16 +10,19 @@
 
 # probes: echo "key: $(git some command 2>/dev/null || echo n/a)"
 
-# check if in git repository, aborts if not
-if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-echo "FATAL ERROR: Not a git repository (or any of the parent directories)" >&2; exit 1; fi
+HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || true)
+if [ ! -f "$HERE/handover.sh" ]; then
+  echo "fatal: no AGENTS/git/handover.sh beside this sidecar" >&2; exit 1; fi
+# shellcheck source=./handover.sh
+. "$HERE/handover.sh"
+
+require_repo
 
 # setup: targets the default remote branch, falling back when origin/HEAD is missing
 # prunes stale tracking refs so the branch loop below reads the real remote state
-git remote set-head origin --auto >/dev/null 2>&1 || true
-DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
+DEFAULT_BRANCH=$(git_default_branch)
 DEFAULT_BRANCH=${DEFAULT_BRANCH:-main}
-CURRENT_BRANCH=$(git branch --show-current)
+CURRENT_BRANCH=$(git_current_branch)
 PROTECTED="$DEFAULT_BRANCH|production"
 git fetch --prune origin >/dev/null 2>&1 || true
 
@@ -46,7 +49,7 @@ echo "unstaged_files: $(git diff --name-only | wc -l | tr -d ' ')"
 echo "untracked_files: $(git ls-files --others --exclude-standard | wc -l | tr -d ' ')"
 echo "hidden_stashes: $(git stash list | wc -l | tr -d ' ')"
 echo "index_locked: $([ -f .git/index.lock ] && echo yes || echo no)"
-echo "is_detached: $(git symbolic-ref -q HEAD >/dev/null && echo no || echo yes)"
+echo "is_detached: $([ -n "$CURRENT_BRANCH" ] && echo no || echo yes)"
 echo "local_branches: $(git for-each-ref --format='%(refname:short)' refs/heads/ | grep -vx "$DEFAULT_BRANCH" | paste -sd, - | sed 's/,/, /g' || echo none)"
 
 # origin: default branch ahead/behind, unpushed/incoming commits, conflict risk files

@@ -5,13 +5,14 @@
  * ===================================================
  * @description
  * - ran only on explicit `@gitdeliver` command
- * - floats uncommitted changes onto trunk, then drains them one atomic `type(scope)`
- *   bucket at a time: branch → commit → push → pr → auto-merge on green → back to trunk
+ * - drains uncommitted work one atomic `type(scope)` bucket at a time:
+ *   branch → commit → push → pr → auto-merge on green → back to trunk
  * - `--first` flag stops after the first pr; re-runnable, `git status` drives the loop
  * - gated: never delivers; it emits one copy-paste block per bucket for the user to run
+ * - the preflight is read-only too, so even floating changes onto trunk is handed over
  * - push authenticates only outside the sandbox, so the whole bucket is the user's to run
  * - the paste IS the gate, which is why no separate confirmation step exists
- * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitdeliver.sh
+ * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitdeliver.sh, AGENTS/git/handover.sh
  */
 ```
 
@@ -33,7 +34,12 @@
   AGENTS/git/gitdeliver.sh
   ```
   - fail (exit code > 0) → abort and report: "<raw terminal error>"
-  - success (exit code = 0) → capture $DEFAULT_BRANCH from output
+  - success (exit code = 0) → capture `default branch` from the telemetry
+  - IF the handover block names any prep command, hand it over and WAIT before step 2
+    - the preflight measures only, so the tree is still wherever the user left it
+    - bucketing against an unsynced trunk drafts commits the user then has to redo
+  - IF `touches .claude/settings.json` reads `yes`, say so now: no sandboxed command can write
+    that path, so the pull after the merge needs the retry hatch
 
 2. `git status -s` and `git diff`
 - analyze changes and group into self-contained atomic `type(scope)` buckets
@@ -75,8 +81,8 @@ $ATOMIC_COMMIT # $ATOMIC_TYPE($ATOMIC_SCOPE): $ATOMIC_TITLE
 4. verify the bucket before handing it over, since a red PR costs a round trip
 - resolve every reference the bucket breaks against `git show HEAD:<file>`, NEVER the working copy
 - a path the working tree already fixed still reads broken to CI until its bucket lands
-- run the validators the bucket touches, and `AGENTS/git/gitinsights.sh` for reference integrity
-- findings under `tmp/` are gitignored and never reach CI, so exclude them before counting
+- run the validators the bucket touches, plus the two checks CI runs: `shellcheck -x` and `bash -n`
+- CI does not gate references, so a bucket that breaks one still goes green — the read above is the check
 
 5. hand over the following block, then STOP; the paste is the gate, so never run it yourself
 ```bash

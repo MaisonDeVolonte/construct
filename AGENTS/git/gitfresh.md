@@ -5,51 +5,48 @@
  * ==================================================
  * @description
  * - ran only on explicit `@gitfresh` command; for a broken, conflicted, or desynced workspace
- * - runs `AGENTS/git/gitaudit.sh` telemetry first, then requires an exact confirmation
- *   phrase before touching anything
- * - backs up all changes to an emergency stash, switches to trunk, and fetches from origin
- * - runs `AGENTS/git/gitfresh.sh --confirmed` only after explicit user confirmation
- * - gated: never cleans, resets, or deletes; it prints every command for the user to run by hand
+ * - READ-ONLY: runs `AGENTS/git/gitaudit.sh` for context, then `AGENTS/git/gitfresh.sh` to measure
+ * - the sidecar destroys nothing and backs nothing up; it prints what a reset would cost
+ * - stash, clean, reset, switch and branch deletes are all denied, so the user runs every one
+ * - the handover leads with the backup stash, so the first pasted line is the recoverable one
  * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitfresh.sh, AGENTS/git/gitaudit.sh
  */
 ```
 
 **@gitfresh:** Run ONLY on explicit `@gitfresh` command
-- typically ran when local workspace is broken, conflicted, or severely desynced
-- backs up all tracked modifications (staged/unstaged) and untracked files into an emergency stash
-- aborts active operations, switches to trunk, and fetches pristine state from origin
-- never cleans, resets, or deletes a branch; each one is handed over for you to run yourself
+- typically ran when the local workspace is broken, conflicted, or severely desynced
+- reports every commit, file and branch a reset would destroy, before the user runs anything
+- backs nothing up itself: the backup stash is the first line of the handover, not a side effect
+- never cleans, resets, or deletes; each command is handed over for the user to run
 
 1. run the native shell command exactly as specified
   ```bash
   AGENTS/git/gitaudit.sh
   ```
   - fail (exit code > 0) → abort and report: "<raw terminal error>"
-  - success (exit code = 0):
-    ```text
-    - @gitaudit telemetry data
-    
-    - @gitfresh will:
-      - BACKUP [SUM staged_files + unstaged_files + untracked_files] uncommitted/untracked changes
-      - HAND OVER the commands that RESET [default_branch] to exactly match origin
-      - HAND OVER the commands that DELETE the following local branches:
-          - [local_branches]
-
-    - to continue, type exactly: `Yes, nuke everything and start fresh!`
-    ```
-    - fail → "not exact match – @gitfresh aborted — nothing changed"
-    - success → continue to next step
+  - success (exit code = 0) → continue to step 2
 
 2. run the native shell command exactly as specified
   ```bash
-  AGENTS/git/gitfresh.sh --confirmed
+  AGENTS/git/gitfresh.sh
   ```
   - fail (exit code > 0) → abort and report: "<raw terminal error>"
-  - success (exit code = 0) → report "@gitfresh telemetry", print the handover, then STOP
+  - success (exit code = 0) → continue to step 3
 
-    NEVER run a clean, reset, or branch delete, and never offer to; handing the commands
+3. report the cost, then the handover, then STOP
+    ```text
+    - @gitfresh telemetry data
+
+    - pasting the block below will:
+      - BACKUP [untracked files at risk + modifications at risk] into a named stash
+      - DISCARD [commits the reset discards] local commit(s) on [default branch]
+      - DELETE [branches pending deletion] local branch(es): [pending branch names]
+    ```
+    - close with one copy-paste bash block holding every handover command, in that same order
+
+    NEVER run a clean, reset, stash or branch delete, and never offer to; handing the commands
     over IS the deliverable
 
-    - close with one copy-paste bash block holding every handover command, in that same order
-    - the deny list and `pretooluse.sh` both block these commands, which is the design, not
-      an obstacle to work around: they are the user's to run, never the agent's
+    - the paste is the confirmation, so no typed phrase gates a sidecar that changes nothing
+    - the deny list and `pretooluse.sh` both refuse these commands, which is the design rather
+      than an obstacle to work around: they are the user's to run, never the agent's

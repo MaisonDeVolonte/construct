@@ -1,24 +1,27 @@
 #!/bin/bash
-# =========================================================
-# @file gitdeliver.sh - atomic stage/commit/push/pr sidecar
-# =========================================================
+# =======================================================
+# @file gitdeliver.sh - atomic delivery preflight sidecar
+# =======================================================
 # @description
-# - sidecar for `@gitdeliver` — preflight before the atomic-bucket delivery loop
+# - sidecar for `@gitdeliver` — proves auth and state, then hands the prep commands over
+# - read-only: switch, merge and restore are denied, so the preflight measures rather than moves
 # - github auth preflights through curl + bearer since gh cannot verify tls in the sandbox
 # - the loop never delivers; each bucket is handed over as a block the user pastes and runs
 # - github's git endpoints take only basic auth, which base64s past the proxy, so push needs a tty
 # - a delivered .claude/settings.json strands its checkout; the pull after needs a hatch restore
-# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitdeliver.md, README.md
+# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitdeliver.md, AGENTS/git/handover.sh
 
 set -euo pipefail
 
-# check if in git repository
-if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  echo "fatal: not a git repository" >&2; exit 1; fi
+HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || true)
+if [ ! -f "$HERE/handover.sh" ]; then
+  echo "fatal: no AGENTS/git/handover.sh beside this sidecar" >&2; exit 1; fi
+# shellcheck source=./handover.sh
+. "$HERE/handover.sh"
 
-# check for curl and jq, the two tools every github api step rides on
-if ! command -v curl >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
-  echo "fatal: curl and jq are required (brew install jq)" >&2; exit 1; fi
+require_repo
+require_tools curl jq
+require_no_op_in_progress
 
 # check the github token is present; inside the sandbox it holds the masked sentinel
 # the proxy swaps for the real value — outside it holds the real token (curl takes both)
@@ -26,68 +29,74 @@ if [ -z "${GH_TOKEN:-}" ]; then
   echo "fatal: GH_TOKEN is not set (see README.md > Settings > Keys)" >&2; exit 1; fi
 
 # prove the token authenticates before the delivery loop starts; bearer auth is the one
-# shape the mask proxy can substitute (see README.md > Settings > Keys > GitHub)
+# shape the mask proxy can substitute (see AGENTS/settings/settings.user.md > github)
 AUTH_CODE=$(curl -sS --max-time 15 -o /dev/null -w '%{http_code}' \
   -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/user 2>/dev/null || echo 000)
 if [ "$AUTH_CODE" != "200" ]; then
   echo "fatal: github api auth failed (http $AUTH_CODE)" >&2; exit 1; fi
 
-# check for in-progress git operations
-if [ -d ".git/rebase-merge" ] || [ -d ".git/rebase-apply" ] || [ -f ".git/MERGE_HEAD" ] || [ -f ".git/CHERRY_PICK_HEAD" ]; then
-  echo "fatal: merge, rebase, or cherry-pick in progress" >&2; exit 1; fi
+DEFAULT_BRANCH=$(git_default_branch)
+CURRENT_BRANCH=$(git_current_branch)
 
-# query remote to ensure origin/HEAD exists locally
-git remote set-head origin --auto >/dev/null 2>&1 || true
-
-DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "")
-CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "")
-STARTING_BRANCH=$CURRENT_BRANCH
-
-# validate branch state
 if [ -z "$DEFAULT_BRANCH" ]; then
   echo "fatal: missing remote default branch" >&2; exit 1; fi
-
 if [ -z "$CURRENT_BRANCH" ]; then
   echo "fatal: detached HEAD" >&2; exit 1; fi
 
-# require uncommitted changes to exist before proceeding
-if ! git status --porcelain 2>/dev/null | grep -q .; then
+# there is nothing to bucket without uncommitted work, and the loop below assumes there is
+if ! git_is_dirty; then
   echo "fatal: working tree clean" >&2; exit 1; fi
 
-# switch to default branch (floating uncommitted changes)
-if [ "$CURRENT_BRANCH" != "$DEFAULT_BRANCH" ]; then
-  if ! git switch "$DEFAULT_BRANCH" >/dev/null 2>&1; then
-  echo "fatal: git refused to switch to $DEFAULT_BRANCH (conflicting histories)" >&2; exit 1; fi
-  CURRENT_BRANCH=$DEFAULT_BRANCH
+FETCH_ERR=""
+if ! FETCH_ERR=$(git fetch origin "$DEFAULT_BRANCH" --quiet 2>&1); then
+  echo "fatal: could not fetch origin/$DEFAULT_BRANCH" >&2
+  echo "$FETCH_ERR" >&2
+  exit 1
 fi
 
-# sync default branch with remote
-if ! git fetch origin "$DEFAULT_BRANCH" --quiet; then
-  echo "fatal: could not fetch origin/$DEFAULT_BRANCH (network or remote error)" >&2; exit 1; fi
+BEHIND=$(git rev-list --count "$DEFAULT_BRANCH..origin/$DEFAULT_BRANCH" 2>/dev/null || echo 0)
+AHEAD=$(git rev-list --count "origin/$DEFAULT_BRANCH..$DEFAULT_BRANCH" 2>/dev/null || echo 0)
+CHANGED_FILES=$(git status --porcelain 2>/dev/null | wc -l | tr -d ' ')
+STAGED_FILES=$(git diff --cached --name-only 2>/dev/null | wc -l | tr -d ' ')
 
-LOCAL_COMMIT=$(git rev-parse "$DEFAULT_BRANCH")
-REMOTE_COMMIT=$(git rev-parse "origin/$DEFAULT_BRANCH")
+# a delivery touching this path strands its own checkout, so the loop needs to know up front
+TOUCHES_SETTINGS=no
+if git status --porcelain 2>/dev/null | grep -q '\.claude/settings\.json'; then
+  TOUCHES_SETTINGS=yes
+fi
 
-if [ "$LOCAL_COMMIT" != "$REMOTE_COMMIT" ]; then
-  if ! git merge --ff-only "origin/$DEFAULT_BRANCH" >/dev/null 2>&1; then
-    if ! git diff --quiet || ! git diff --cached --quiet; then
-      echo "fatal: could not fast-forward $DEFAULT_BRANCH (uncommitted changes conflict with remote updates – stash, fast-forward, pop, and resolve conflicts locally)" >&2; exit 1;
-    else
-      echo "fatal: could not fast-forward $DEFAULT_BRANCH (committed changes conflict with remote updates – rebase and resolve conflicts locally)" >&2; exit 1;
-    fi
+telemetry_open gitdeliver
+telemetry_line "default branch" "$DEFAULT_BRANCH"
+telemetry_line "current branch" "$CURRENT_BRANCH"
+telemetry_line "github auth" "ok (http $AUTH_CODE)"
+telemetry_line "uncommitted files" "$CHANGED_FILES"
+telemetry_line "staged files" "$STAGED_FILES"
+telemetry_line "trunk behind origin" "$BEHIND"
+telemetry_line "trunk ahead of origin" "$AHEAD"
+telemetry_line "touches .claude/settings.json" "$TOUCHES_SETTINGS"
+
+handover_open gitdeliver
+if [ "$AHEAD" -gt 0 ]; then
+  handover_note "$DEFAULT_BRANCH has $AHEAD commit(s) origin does not — resolve before delivering"
+elif [ "$CURRENT_BRANCH" = "$DEFAULT_BRANCH" ] && [ "$BEHIND" -eq 0 ] && [ "$STAGED_FILES" -eq 0 ]; then
+  handover_note "state is ready — no prep needed before the atomic loop"
+else
+  handover_note "run these first; each is denied as a tool call, so they are yours"
+  if [ "$CURRENT_BRANCH" != "$DEFAULT_BRANCH" ]; then
+    handover_note "changes float across a switch, so your work follows you to $DEFAULT_BRANCH"
+    handover_cmd "git switch $DEFAULT_BRANCH"
+  fi
+  if [ "$BEHIND" -gt 0 ]; then
+    handover_cmd "git merge --ff-only origin/$DEFAULT_BRANCH"
+  fi
+  # the loop stages each bucket itself, so anything already staged would contaminate bucket one
+  if [ "$STAGED_FILES" -gt 0 ]; then
+    handover_cmd "git restore --staged :/"
   fi
 fi
-
-# unstage all files to give the agent a clean slate for atomic commits
-if ! git diff --cached --quiet; then git restore --staged :/ >/dev/null 2>&1; fi
-
-# output telemetry
-cat <<EOF
-
-=== @gitdeliver preflight status ===
-CHECKS: validated env/state, resolved trunk, floated changes, synced origin, cleared index
-DEFAULT BRANCH: $DEFAULT_BRANCH
-STARTING BRANCH: $STARTING_BRANCH
-READY FOR ATOMIC LOOP
-====================================
-EOF
+if [ "$TOUCHES_SETTINGS" = "yes" ]; then
+  handover_note "this delivery touches .claude/settings.json — no sandboxed command can write it"
+  handover_note "after merging, confirm and restore before pulling:"
+  handover_note "git diff origin/$DEFAULT_BRANCH -- .claude/settings.json"
+fi
+block_close
