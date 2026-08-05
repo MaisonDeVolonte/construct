@@ -24,7 +24,7 @@
  * - group a long `@description` under uppercase headings, the way this block does
  * VERIFY
  * - `AGENTS/templates/wayfinders.sh` validates a header against every rule above a script can judge
- * - repo-wide reference integrity stays `AGENTS/git/gitinsights.sh`'s job, and ci gates it there
+ * - repo-wide reference integrity has no gate now; `AGENTS/git/gitinsights.sh` only reports it
  * @see AGENTS.md, AGENTS/templates/wayfinders.sh, AGENTS/templates/comments.md, AGENTS/git/gitinsights.sh
  */
 ```
