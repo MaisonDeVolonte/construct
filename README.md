@@ -65,18 +65,16 @@ TABLE OF CONTENTS
 
 ### Git (see `AGENTS/git/`)
 > each pairs with a matching `.sh` sidecar that measures, then hands the commands back
-- [@gitaudit](AGENTS/git/gitaudit.md): READ-ONLY; diagnostics, triage, report, summary, tasks (saved to file)
-- [@gitbrutal](AGENTS/git/gitbrutal.md): READ-ONLY; brutally honest code review, progress report (saved to file)
-- [@gitcontinue](AGENTS/git/gitcontinue.md): READ-ONLY; measures the trunk delta, hands over the sync
-- [@gitdeliver](AGENTS/git/gitdeliver.md): READ-ONLY; buckets changes atomically, hands over each delivery block
-- [@gitempty](AGENTS/git/gitempty.md): READ-ONLY; prunes tracking refs, hands over the trunk sync and branch deletes
-- [@gitfresh](AGENTS/git/gitfresh.md): READ-ONLY; prices a hard reset, hands over backup then reset
-- [@gitgud](AGENTS/git/gitgud.md): READ-ONLY; query branch delta, merge remote main into it, and run fresh CI
-- [@githappy](AGENTS/git/githappy.md): READ-ONLY; verifies release preconditions, hands over bump/push/promote
-- [@gitinsights](AGENTS/git/gitinsights.md): READ-ONLY; points at what to work on next, from scans, docs and logs (saved to file)
+- [@gitaudit](AGENTS/git/gitaudit.md): diagnostics, triage, report, summary, tasks (saved to file)
+- [@gitbrutal](AGENTS/git/gitbrutal.md): brutally honest code review, progress report (saved to file)
+- [@gitcontinue](AGENTS/git/gitcontinue.md): measures the trunk delta, hands over the sync
+- [@gitdeliver](AGENTS/git/gitdeliver.md): buckets changes atomically, hands over each delivery block
+- [@gitempty](AGENTS/git/gitempty.md): prunes tracking refs, hands over the trunk sync and branch deletes
+- [@gitfresh](AGENTS/git/gitfresh.md): prices a hard reset, hands over backup then reset
+- [@gitgud](AGENTS/git/gitgud.md): query branch delta, merge remote main into it, and run fresh CI
+- [@githappy](AGENTS/git/githappy.md): verifies release preconditions, hands over bump/push/promote
+- [@gitinsights](AGENTS/git/gitinsights.md): points at what to work on next, from scans, docs and logs (saved to file)
 - [handover.sh](AGENTS/git/handover.sh): shared preflights, queries, and the telemetry/handover blocks
-- no sidecar stashes, switches, merges, pushes, resets or deletes; the deny floor refuses all of it
-- fetch is the one write any of them make, and it moves only remote-tracking refs
 
 ### Hooks (see `AGENTS/hooks/`)
 - [sessionstart](AGENTS/hooks/sessionstart.sh): injects the README and the two most recent log files into context
