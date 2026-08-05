@@ -67,6 +67,7 @@ rules_of() {
 }
 rules_of deny  > "$SCRATCH/deny"
 rules_of allow > "$SCRATCH/allow"
+rules_of ask   > "$SCRATCH/ask"
 
 # the hook answers in json or says nothing at all, and silence is the allow case
 hook_verdict() {
@@ -168,14 +169,19 @@ check_drift() {
     | tr '|' '\n' \
     | sed -E 's/\\//g; s/[()^$]//g; s/\[.*\]//g; s#/$##' \
     | grep -E '^[a-zA-Z.]' | sort -u > "$SCRATCH/hookpaths"
-  grep -E '^(Edit|Write)\(' "$SCRATCH/deny" \
+  # ask counts as a guard here, exactly as it does in settingsaudit.sh: a tracked path cannot be
+  # denied, since the deny reaches the macos sandbox and blocks git's own unlink mid-checkout
+  cat "$SCRATCH/deny" "$SCRATCH/ask" 2>/dev/null \
+    | grep -E '^(Edit|Write)\(' \
     | sed -E 's/^(Edit|Write)\(//; s/\)$//' \
-    | sed -E 's#^\*\*/##; s#/\*\*$##; s#\*##g' | sort -u > "$SCRATCH/denypaths"
+    | sed -E 's#^\*\*/##; s#/\*\*$##; s#\*##g' | sort -u > "$SCRATCH/guardedpaths"
   while IFS= read -r path; do
     if [ -z "$path" ]; then continue; fi
-    if ! grep -qF -- "$path" "$SCRATCH/denypaths"; then
-      warn drift "$path" "the hook guards this path, but no Edit/Write deny rule names it"
-    fi
+    # containment runs both ways: a broad `AGENTS/**` rule guards `AGENTS/settings` without
+    # naming it, so a plain substring search in one direction reports a guard that exists
+    if grep -qF -- "$path" "$SCRATCH/guardedpaths"; then continue; fi
+    if awk -v p="$path" 'NF && index(p, $0) { hit = 1 } END { exit !hit }' "$SCRATCH/guardedpaths"; then continue; fi
+    warn drift "$path" "the hook guards this path, but no Edit/Write deny or ask rule names it"
   done < "$SCRATCH/hookpaths"
   while IFS= read -r path; do
     if [ -z "$path" ]; then continue; fi
@@ -183,8 +189,8 @@ check_drift() {
     if grep -qF -- "$path" "$SCRATCH/hookpaths"; then continue; fi
     # a settings glob and a hook regex spell one path differently, so compare by containment too
     if awk -v p="$path" 'NF && index(p, $0) { hit = 1 } END { exit !hit }' "$SCRATCH/hookpaths"; then continue; fi
-    warn drift "$path" "a deny rule guards this path, but the hook would not stop bash writing it"
-  done < "$SCRATCH/denypaths"
+    warn drift "$path" "a deny or ask rule guards this path, but the hook would not stop bash writing it"
+  done < "$SCRATCH/guardedpaths"
 }
 
 # a rule whose prefix is already covered by another in the same list never matches anything

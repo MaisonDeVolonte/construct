@@ -10,7 +10,8 @@
 # - keep both: deny rules are committed, while this hook's wiring is gitignored
 # - neither layer sees inside `AGENTS/git/*.sh`, since a script's commands are not tool calls
 # - blocks force pushes and force branch deletes, silent (exit 0) for everything else
-# @see AGENTS.md, .claude/settings.json, .claude/settings.local.json
+# - also refuses bash writes into the policy dirs, which the Edit and Write rules never see
+# @see AGENTS.md, .claude/settings.json, .claude/settings.local.json, AGENTS/settings/
 
 command -v jq >/dev/null 2>&1 || { echo "pretooluse: jq missing, refusing to run unguarded" >&2; exit 2; }
 
@@ -52,6 +53,9 @@ fi
 # redirect; the same paths get a second gate here, since bash reaches what those tools cannot
 PROTECTED='\.claude/|\.git/|\.husky/|\.devin/|\.cursor/|webflow/|\.tfstate|docker-compose\.prod'
 PROTECTED="$PROTECTED"'|(^|[/[:space:]])\.env'
+# the policy directories: settings rules gate the Edit and Write tools, and this gates the bash
+# verbs those rules never see, since an agent that can rewrite either one can regrant itself
+PROTECTED="$PROTECTED"'|AGENTS/settings/|AGENTS/hooks/'
 WRITERS='(^|[[:space:]])(cp|mv|rm|tee|ln|install|rsync|truncate|shred|chmod|chown|dd|touch)([[:space:]]|$)'
 INPLACE='(sed|perl|awk|python[0-9]?|ruby)[^|;&]*[[:space:]]-i'
 

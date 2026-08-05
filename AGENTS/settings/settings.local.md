@@ -1,47 +1,58 @@
-# settings.local.json
-> copy to `.claude/settings.local.json` — mechanics live in [README.md](../../README.md), this
-> file covers only why these values, in this scope
+```javascript
+/**
+ * ===============================================
+ * @file settings.local.md - local scope reasoning
+ * ===============================================
+ * @description
+ * - pairs with settings.local.json; copy to .claude/settings.local.json, gitignored
+ * - this repo, just you; the hooks are the real payload, the rest is restatement
+ * - the drawer every 'Always Allow' click lands in
+ * @see AGENTS/settings/settings.local.json, AGENTS/settings/settings.user.md, AGENTS/hooks/, AGENTS/settings/settingsaudit.sh, AGENTS.md
+ */
+```
 
-gitignored, so nothing here survives a fresh clone. that makes it the right home for a temporary
-grant and the wrong home for anything a collaborator needs. keep it out of git everywhere at once
-with `**/.claude/settings.local.json` in `~/.config/git/ignore`, since a per-repo rule is one repo
-away from being forgotten.
+# settings.local.json
+> copy to `.claude/settings.local.json` (gitignore it)
+- gitignored, so nothing here survives a fresh clone
+- the right home for a temporary grant, the wrong home for anything a collaborator needs
+- ignore it everywhere at once: `**/.claude/settings.local.json` in `~/.config/git/ignore`
 
 ## sandbox
-
-`"enabled": true`
+```json
+"sandbox": { "enabled": true },
+```
 - restated so this checkout stays sandboxed on its own, with or without the scopes above it
 
 ## permissions.ask
-
-`Bash(dangerouslyDisableSandbox:true)`
+```json
+"permissions": { "ask": [ "Bash(dangerouslyDisableSandbox:true)" ] },
+```
 - repeated from user so the escape stays visible even in a checkout with no floor above it
 
 ## hooks
 > the real payload, and the only thing that genuinely belongs in this scope
-
-`SessionStart` → `AGENTS/hooks/sessionstart.sh`
-- injects the readme and the two most recent logs, so a session opens already briefed
-
-`PreToolUse` → `AGENTS/hooks/pretooluse.sh`, matching `Bash`
-- runs before every rule and can veto what an allow would pass
-- the failover for the committed deny list, reading the whole command string rather than a
-  parsed subcommand, since deny rules are prefix-anchored and a trailing flag walks past them
-
-`PostToolUse` → `AGENTS/hooks/posttooluse.sh`, matching `Write|Edit`, 120s timeout
-- lints and reports comment and wayfinder findings, never blocking
-
-`TaskCreated` → `AGENTS/hooks/taskcreated.sh`
-- nudges a new thread when a task is unrelated to the last, advisory only
-
-`TaskCompleted` → `AGENTS/hooks/taskcompleted.sh`
-- blocks the turn until the day's log is noted
-
-`Stop` → `AGENTS/hooks/stop.sh`
-- hourly: saves notes and prompts, then synthesizes the day's log
+```json
+"hooks": {
+  "SessionStart": [{ "hooks": [{ "type": "command", "command": "AGENTS/hooks/sessionstart.sh" }] }],
+  "PreToolUse": [{ "matcher": "Bash", "hooks": [{ "type": "command", "command": "AGENTS/hooks/pretooluse.sh" }] }],
+  "PostToolUse": [{ "matcher": "Write|Edit", "hooks": [{ "type": "command", "command": "AGENTS/hooks/posttooluse.sh", "timeout": 120 }] }],
+  "TaskCreated": [{ "hooks": [{ "type": "command", "command": "AGENTS/hooks/taskcreated.sh" }] }],
+  "TaskCompleted": [{ "hooks": [{ "type": "command", "command": "AGENTS/hooks/taskcompleted.sh" }] }],
+  "Stop": [{ "hooks": [{ "type": "command", "command": "AGENTS/hooks/stop.sh" }] }]
+}
+```
+- `SessionStart`: injects the readme and the two most recent logs, so a session opens briefed
+- `PreToolUse`: the failover for the committed deny list, reading the whole command string
+- it runs before every rule; no allow can override its block
+- it blocks by exit 2, or by printing permissionDecision deny on exit 0; exit 1 lets the call through
+- `PostToolUse`: lints, then reports comment and wayfinder findings, never blocking
+- `TaskCreated`: nudges a new thread when a task is unrelated to the last, advisory only
+- `TaskCompleted`: blocks the turn until the day's log is noted
+- `Stop`: hourly, saves notes and prompts, then synthesizes the day's log
 
 ## the always-allow drawer
-every `Always Allow` click lands here as an ordinary allow rule. that is fine — deny and ask both
-beat allow from any scope, so a click cannot erase a gate you meant to keep. note that edit grants
-expire with the session while bash grants persist per repo and command, which is why a prompt you
-thought you dismissed permanently comes back tomorrow.
+- every 'Always Allow' click lands here as an ordinary allow rule
+- deny and ask beat allow from any scope, so a click cannot erase a gate you meant to keep
+- a hook allow likewise only skips the prompt; deny and ask still apply
+- bash grants persist per repo and command; edit grants expire with the session
+- approving a compound command saves one rule per subcommand, up to five

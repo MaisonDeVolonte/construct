@@ -240,6 +240,11 @@ check_coverage() {
       | tr -d '`' >> "$SCRATCH/$scope.documented" || true
     grep -oE '`(Read|Write|Edit|WebSearch)`' "$doc" \
       | tr -d '`' >> "$SCRATCH/$scope.documented" || true
+    # the docs also quote rules inside fenced json blocks, exactly as the json files write them
+    grep -oE '"(Read|Write|Edit|Bash|WebFetch|WebSearch)\([^"]*\)"' "$doc" \
+      | tr -d '"' >> "$SCRATCH/$scope.documented" || true
+    grep -oE '"(Read|Write|Edit|WebSearch)"' "$doc" \
+      | tr -d '"' >> "$SCRATCH/$scope.documented" || true
     # a mirrored rule is already answered by the claim above, so it counts as covered
     cat "$SCRATCH/$scope.mirrored" >> "$SCRATCH/$scope.documented"
     sort -u "$SCRATCH/$scope.documented" -o "$SCRATCH/$scope.documented"
@@ -265,7 +270,7 @@ check_guard() {
   local project="$ROOT/.claude/settings.json" guarded hooked
   if [ ! -f "$project" ] || ! jq empty "$project" >/dev/null 2>&1; then return; fi
   guarded=$(jq -r '[(.permissions.deny[]?, .permissions.ask[]?)
-    | select(test("AGENTS/(settings|hooks)"))] | length' "$project")
+    | select(test("AGENTS/(settings|hooks|\\*\\*)"))] | length' "$project")
   # the hook is the layer a settings edit cannot switch off, so report it as its own finding
   hooked=0
   if grep -q 'AGENTS/settings\|AGENTS/hooks' "$ROOT/AGENTS/hooks/pretooluse.sh" 2>/dev/null; then
