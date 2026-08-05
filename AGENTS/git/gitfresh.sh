@@ -1,79 +1,84 @@
 #!/bin/bash
-# ==================================================
-# @file gitfresh.sh - hard-reset backup and handover
-# ==================================================
+# ===================================================
+# @file gitfresh.sh - hard-reset measure and handover
+# ===================================================
 # @description
-# - sidecar for `@gitfresh` — backs local state up, then hands the destructive commands over
-# - gated: never cleans, resets, or force-deletes; it prints those for the user to run by hand
-# - the deny floor refuses all three as tool calls, so a sidecar running them was a silent bypass
-# - the stash, the aborts, and the fetch stay, since each preserves state rather than drops it
-# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitfresh.md, AGENTS/git/gitempty.sh
+# - sidecar for `@gitfresh` — measures what a reset would cost, then hands every command over
+# - read-only: it now backs nothing up either, since `git stash` joined the deny floor
+# - the backup stash leads the handover, so the user's first pasted line is the recoverable one
+# - names every commit and branch the reset destroys before the user runs a thing
+# - measuring after the fetch is what makes the discarded/gained counts describe the real remote
+# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitfresh.md, AGENTS/git/handover.sh
 
-# only run if the --confirmed flag is present
-if [ "${1:-}" != "--confirmed" ]; then echo "refusing without --confirmed"; exit 1; fi
-# exit if any command fails, including unset variables and pipeline errors
 set -euo pipefail
-# use remote default branch as local default branch
-git remote set-head origin --auto >/dev/null || true
 
-# initialize variables
+HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || true)
+if [ ! -f "$HERE/handover.sh" ]; then
+  echo "fatal: no AGENTS/git/handover.sh beside this sidecar" >&2; exit 1; fi
+# shellcheck source=./handover.sh
+. "$HERE/handover.sh"
+
+require_repo
+
+DEFAULT_BRANCH=$(git_default_branch)
+STARTING_BRANCH=$(git_current_branch)
+
+if [ -z "$DEFAULT_BRANCH" ]; then
+  echo "fatal: missing remote default branch" >&2; exit 1; fi
+
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 STASH_NAME="gitfresh-$TIMESTAMP"
-DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@')
-STARTING_BRANCH=$(git branch --show-current)
 UNTRACKED_COUNT=$(git status --porcelain=v1 | grep -cE '^\?\?' || true)
 MODIFIED_COUNT=$(git status --porcelain=v1 | grep -cE '^[ MADRCU]' || true)
-SWITCH_STATUS="switched"
-PENDING_BRANCH_COUNT=0
-PENDING_BRANCH_NAMES=""
-ALL_LOCAL_BRANCHES=$(git for-each-ref --format='%(refname:short)' refs/heads/ | grep -vx "$DEFAULT_BRANCH" || true)
+ALL_LOCAL_BRANCHES=$(git for-each-ref --format='%(refname:short)' refs/heads/ \
+  | grep -vx "$DEFAULT_BRANCH" || true)
 
-# stash tracked and untracked as a backup
-if [ -n "$(git status --porcelain)" ]; then
-git stash push -a -m "$STASH_NAME" >/dev/null 2>&1
-else STASH_NAME="none"; fi
+# an in-progress operation changes which commands the handover has to open with
+OP_IN_PROGRESS=none
+if [ -d ".git/rebase-merge" ] || [ -d ".git/rebase-apply" ]; then OP_IN_PROGRESS=rebase
+elif [ -f ".git/MERGE_HEAD" ]; then OP_IN_PROGRESS=merge
+elif [ -f ".git/CHERRY_PICK_HEAD" ]; then OP_IN_PROGRESS=cherry-pick; fi
 
-# abort any broken in-progress operations
-git merge --abort >/dev/null 2>&1 || true
-git rebase --abort >/dev/null 2>&1 || true
-git cherry-pick --abort >/dev/null 2>&1 || true
+FETCH_ERR=""
+if ! FETCH_ERR=$(git fetch --prune origin --quiet 2>&1); then
+  echo "fatal: could not fetch origin" >&2
+  echo "$FETCH_ERR" >&2
+  exit 1
+fi
 
-# get onto default and fetch pristine state; a forced switch discards, so it is handed over instead
-if ! git switch "$DEFAULT_BRANCH" >/dev/null 2>&1; then SWITCH_STATUS="failed"; fi
-git fetch --prune --all >/dev/null 2>&1
-
-# measure what the handover would cost, after the fetch so origin is current
+# measured after the fetch, so these describe what the reset actually costs against origin today
 DISCARDED_COMMITS=$(git rev-list --count "origin/$DEFAULT_BRANCH..$DEFAULT_BRANCH" 2>/dev/null || echo 0)
 GAINED_COMMITS=$(git rev-list --count "$DEFAULT_BRANCH..origin/$DEFAULT_BRANCH" 2>/dev/null || echo 0)
+PENDING_BRANCH_COUNT=$(printf '%s' "$ALL_LOCAL_BRANCHES" | grep -c . || true)
 
-# name every branch the handover would delete
+telemetry_open gitfresh
+telemetry_line "default branch" "$DEFAULT_BRANCH"
+telemetry_line "current branch" "${STARTING_BRANCH:-detached}"
+telemetry_line "operation in progress" "$OP_IN_PROGRESS"
+telemetry_line "untracked files at risk" "$UNTRACKED_COUNT"
+telemetry_line "modifications at risk" "$MODIFIED_COUNT"
+telemetry_line "commits the reset discards" "$DISCARDED_COMMITS"
+telemetry_line "commits the reset gains" "$GAINED_COMMITS"
+telemetry_line "branches pending deletion" "${PENDING_BRANCH_COUNT:-0}"
+telemetry_line "pending branch names" \
+  "$(printf '%s' "$ALL_LOCAL_BRANCHES" | paste -sd, - | sed 's/,/, /g')"
+
+handover_open gitfresh
+handover_note "every line below is refused as a tool call — run them yourself, in this order"
+handover_note "the stash is first on purpose: it is the only step that can be undone"
+if git_is_dirty; then
+  handover_cmd "git stash push -a -m '$STASH_NAME'"
+fi
+if [ "$OP_IN_PROGRESS" != "none" ]; then
+  handover_cmd "git $OP_IN_PROGRESS --abort"
+fi
+handover_cmd "git switch -f $DEFAULT_BRANCH"
+handover_cmd "git clean -fd"
+handover_cmd "git reset --hard origin/$DEFAULT_BRANCH"
 for branch in $ALL_LOCAL_BRANCHES; do
-  PENDING_BRANCH_COUNT=$((PENDING_BRANCH_COUNT + 1))
-  PENDING_BRANCH_NAMES="${PENDING_BRANCH_NAMES:+$PENDING_BRANCH_NAMES, }$branch"
+  handover_cmd "git branch -D $branch"
 done
-
-# telemetry
-echo "--- @gitfresh telemetry ---"
-echo "shell command status: succeeded"
-echo "initiated script on: $STARTING_BRANCH"
-echo "default branch: $DEFAULT_BRANCH"
-echo "switched to default: $SWITCH_STATUS"
-echo "backup stash name: $STASH_NAME"
-echo "untracked files backed up: $UNTRACKED_COUNT"
-echo "modifications backed up: $MODIFIED_COUNT"
-echo "commits the reset discards: $DISCARDED_COMMITS"
-echo "commits the reset gains: $GAINED_COMMITS"
-echo "branches pending deletion: $PENDING_BRANCH_COUNT"
-echo "pending branch names: ${PENDING_BRANCH_NAMES:-none}"
-echo "---------------------------"
-
-# handover: each line below is refused as a tool call, so it is the user's to run, never the agent's
-echo "--- @gitfresh handover ---"
-echo "run these yourself, in this order:"
-if [ "$SWITCH_STATUS" = "failed" ]; then echo "git switch -f $DEFAULT_BRANCH"; fi
-echo "git clean -fd"
-echo "git reset --hard origin/$DEFAULT_BRANCH"
-for branch in $ALL_LOCAL_BRANCHES; do
-  echo "git branch -D $branch"
-done
-echo "--------------------------"
+if git_is_dirty; then
+  handover_note "recover the backup afterwards with: git stash pop"
+fi
+block_close

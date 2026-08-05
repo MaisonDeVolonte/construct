@@ -3,66 +3,87 @@
 # @file gitempty.sh - post-merge cleanup sidecar
 # ==============================================
 # @description
-# - sidecar for `@gitempty` — stash, prune dead remotes, fast-forward trunk
-# - deliberately deletes NOTHING; `git fetch --prune` only drops tracking refs, never a branch
-# - branch deletion is the trigger's job, and it hands the commands to the user to run
-# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitempty.md
+# - sidecar for `@gitempty` — finds spent branches, then hands the cleanup commands over
+# - read-only apart from `fetch --prune`, which drops tracking refs and never a branch
+# - classifies each local branch as gone, merged, or live, so the handover deletes only the spent
+# - stash, switch, merge and branch deletes are all denied, so it prints them instead
+# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitempty.md, AGENTS/git/handover.sh
 
-# exit if any command fails, including unset variables and pipeline errors
 set -euo pipefail
 
-# check if in git repository, aborts if not
-if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-echo "FATAL ERROR: Not a git repository (or any of the parent directories)" >&2; exit 1; fi
+HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || true)
+if [ ! -f "$HERE/handover.sh" ]; then
+  echo "fatal: no AGENTS/git/handover.sh beside this sidecar" >&2; exit 1; fi
+# shellcheck source=./handover.sh
+. "$HERE/handover.sh"
 
-# use remote default branch as local default branch
-git remote set-head origin --auto >/dev/null || true
+require_repo
+require_no_op_in_progress
 
-# initialize variables
-DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@')
-STARTING_BRANCH=$(git branch --show-current)
-STASHED_CHANGES=$(git status --porcelain | wc -l | tr -d ' ')
-STASH_RESTORED_STATUS="none"
+DEFAULT_BRANCH=$(git_default_branch)
+STARTING_BRANCH=$(git_current_branch)
 
-# abort if in detached HEAD state
-[ -n "$STARTING_BRANCH" ] || { echo "can't run @gitempty in detached HEAD state"; exit 1; }
+if [ -z "$DEFAULT_BRANCH" ]; then
+  echo "fatal: missing remote default branch" >&2; exit 1; fi
+if [ -z "$STARTING_BRANCH" ]; then
+  echo "fatal: detached HEAD" >&2; exit 1; fi
 
-# drop tracking refs for branches deleted on remote and mark their local upstream 'gone'
-git fetch --prune origin >/dev/null
-# check that the local default branch is an ancestor of the remote default branch
-git merge-base --is-ancestor "$DEFAULT_BRANCH" "origin/$DEFAULT_BRANCH" \
-  || { echo "can't run @gitempty with diverged $DEFAULT_BRANCH"; exit 1; }
-
-# if uncommitted changes, create a temporary stash
-STASH_CREATED=0
-if [ "$STASHED_CHANGES" -gt 0 ]; then
-  git stash push -u -m "gitempty" >/dev/null
-  STASH_CREATED=1
+# --prune drops tracking refs for branches deleted on the remote, which is what marks their local
+# counterparts 'gone' below; it deletes no local branch, so it stays inside the read-only contract
+PRUNE_ERR=""
+if ! PRUNE_ERR=$(git fetch --prune origin --quiet 2>&1); then
+  echo "fatal: could not fetch origin" >&2
+  echo "$PRUNE_ERR" >&2
+  exit 1
 fi
 
-# count how many commits local default branch is ahead of remote default branch
-FAST_FORWARDED=$(git rev-list --count "$DEFAULT_BRANCH..origin/$DEFAULT_BRANCH")
-# switch to the default branch and fast-forward it
-git switch "$DEFAULT_BRANCH" >/dev/null
-git merge --ff-only "origin/$DEFAULT_BRANCH" >/dev/null
+BEHIND=$(git rev-list --count "$DEFAULT_BRANCH..origin/$DEFAULT_BRANCH" 2>/dev/null || echo 0)
+AHEAD=$(git rev-list --count "origin/$DEFAULT_BRANCH..$DEFAULT_BRANCH" 2>/dev/null || echo 0)
 
-# return to starting branch
-git switch "$STARTING_BRANCH" >/dev/null
+# a branch is spent when its remote is gone, or when trunk already contains every commit on it;
+# anything else is live work and never reaches the handover
+GONE_BRANCHES=$(git for-each-ref --format='%(refname:short) %(upstream:track)' refs/heads/ \
+  | awk '$2 == "[gone]" { print $1 }' | grep -vx "$DEFAULT_BRANCH" || true)
+MERGED_BRANCHES=$(git branch --merged "origin/$DEFAULT_BRANCH" --format='%(refname:short)' \
+  | grep -vx "$DEFAULT_BRANCH" || true)
 
-# if this run made a stash, pop it; track it with a flag rather than searching the stash list,
-# since `git stash list | grep -q` sigpipes the producer and pipefail reads that as "no stash"
-if [ "$STASH_CREATED" -eq 1 ]; then
-  # a pop conflict is caught here instead of letting set -e crash the run
-  if git stash pop >/dev/null; then STASH_RESTORED_STATUS="successfully restored"
-  else STASH_RESTORED_STATUS="failed to restore"; fi
+SPENT_BRANCHES=$(printf '%s\n%s\n' "$GONE_BRANCHES" "$MERGED_BRANCHES" | grep -v '^$' | sort -u || true)
+SPENT_COUNT=$(printf '%s' "$SPENT_BRANCHES" | grep -c . || true)
+LIVE_COUNT=$(git for-each-ref --format='%(refname:short)' refs/heads/ \
+  | grep -vx "$DEFAULT_BRANCH" | grep -c . || true)
+LIVE_COUNT=$((LIVE_COUNT - SPENT_COUNT))
+
+telemetry_open gitempty
+telemetry_line "default branch" "$DEFAULT_BRANCH"
+telemetry_line "current branch" "$STARTING_BRANCH"
+telemetry_line "trunk behind origin" "$BEHIND"
+telemetry_line "trunk ahead of origin" "$AHEAD"
+telemetry_line "spent branches" "${SPENT_COUNT:-0}"
+telemetry_line "live branches" "${LIVE_COUNT:-0}"
+telemetry_line "spent branch names" "$(printf '%s' "$SPENT_BRANCHES" | paste -sd, - | sed 's/,/, /g')"
+
+handover_open gitempty
+if [ "$AHEAD" -gt 0 ]; then
+  handover_note "$DEFAULT_BRANCH has $AHEAD commit(s) origin does not — resolve before cleaning up"
+elif [ "$BEHIND" -eq 0 ] && [ "${SPENT_COUNT:-0}" -eq 0 ]; then
+  handover_note "nothing to clean up — trunk is current and no branch is spent"
+else
+  handover_note "run these in order; each is denied as a tool call, so they are yours"
+  if git_is_dirty; then
+    handover_note "your tree is dirty — stash first if the switch below refuses"
+  fi
+  if [ "$BEHIND" -gt 0 ]; then
+    if [ "$STARTING_BRANCH" != "$DEFAULT_BRANCH" ]; then
+      handover_cmd "git switch $DEFAULT_BRANCH"
+    fi
+    handover_cmd "git merge --ff-only origin/$DEFAULT_BRANCH"
+  fi
+  # -d refuses a branch trunk does not already contain, which is the safety this list relies on
+  for branch in $SPENT_BRANCHES; do
+    handover_cmd "git branch -d $branch"
+  done
+  if [ "$BEHIND" -gt 0 ] && [ "$STARTING_BRANCH" != "$DEFAULT_BRANCH" ]; then
+    handover_cmd "git switch $STARTING_BRANCH"
+  fi
 fi
-
-# telemetry
-echo "--- @gitempty telemetry ---"
-echo "shell command status: succeeded"
-echo "default local branch: $DEFAULT_BRANCH"
-echo "starting and ending branch: $STARTING_BRANCH"
-echo "total changes stashed: $STASHED_CHANGES"
-echo "total fast-forwarded commits: $FAST_FORWARDED"
-echo "stash restored status: $STASH_RESTORED_STATUS"
-echo "---------------------------"
+block_close

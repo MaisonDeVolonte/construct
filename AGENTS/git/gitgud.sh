@@ -9,6 +9,12 @@
 
 set -euo pipefail
 
+HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || true)
+if [ ! -f "$HERE/handover.sh" ]; then
+  echo "fatal: no AGENTS/git/handover.sh beside this sidecar" >&2; exit 1; fi
+# shellcheck source=./handover.sh
+. "$HERE/handover.sh"
+
 WATCH="false"
 for arg in "$@"; do
   case "$arg" in
@@ -19,27 +25,16 @@ done
 
 # GUARDS
 
-# check if in git repository
-if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  echo "fatal: not a git repository" >&2; exit 1; fi
-
-# check for curl and jq, the two tools every github call below rides on
-if ! command -v curl >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
-  echo "fatal: curl and jq are required (brew install jq)" >&2; exit 1; fi
+require_repo
+require_tools curl jq
+require_no_op_in_progress
 
 # check the github token is present; inside the sandbox it holds the masked sentinel
 # the proxy swaps for the real value — outside it holds the real token (curl takes both)
 if [ -z "${GH_TOKEN:-}" ]; then
   echo "fatal: GH_TOKEN is not set (see README.md > Settings > Keys)" >&2; exit 1; fi
 
-# check for in-progress git operations
-if [ -d ".git/rebase-merge" ] || [ -d ".git/rebase-apply" ] || [ -f ".git/MERGE_HEAD" ] || [ -f ".git/CHERRY_PICK_HEAD" ]; then
-  echo "fatal: merge, rebase, or cherry-pick in progress" >&2; exit 1; fi
-
-# query remote to ensure origin/HEAD exists locally
-git remote set-head origin --auto >/dev/null 2>&1 || true
-
-DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "")
+DEFAULT_BRANCH=$(git_default_branch)
 if [ -z "$DEFAULT_BRANCH" ]; then
   echo "fatal: missing remote default branch" >&2; exit 1; fi
 

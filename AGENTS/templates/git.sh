@@ -1,7 +1,7 @@
 #!/bin/bash
-# ==========================================================
+# ====================================================
 # @file git.sh - git automation pair validator sidecar
-# ==========================================================
+# ====================================================
 # @description
 # - sidecar for `git.md` — asserts every `@git*` trigger doc and its shell sidecar hold together
 # - one check per machine-checkable rule; every rule needing judgement prints as a human checklist
@@ -66,7 +66,7 @@ is_trigger_name() {
 # listing them beats guessing, since nothing in the filename says which kind a script is
 is_subtool() {
   case "$(basename "$1")" in
-    permissions.sh|scopes.sh|secrets.sh) return 0;;
+    permissions.sh|scopes.sh|secrets.sh|handover.sh) return 0;;
     *) return 1;;
   esac
 }

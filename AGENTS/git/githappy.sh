@@ -1,136 +1,111 @@
 #!/bin/bash
-# ====================================================
-# @file githappy.sh - version bump/tag/release sidecar
-# ====================================================
+# ==================================================
+# @file githappy.sh - release preflight and handover
+# ==================================================
 # @description
-# - sidecar for `@githappy` — bumps version, tags, promotes main to production
-# - publishes the release through curl + bearer since gh cannot verify tls in the sandbox
-# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/githappy.md, README.md
+# - sidecar for `@githappy` — verifies every release precondition, then hands the sequence over
+# - read-only: the bump, both pushes and the promotion merge are all denied as tool calls
+# - computes the next version from package.json rather than running `npm version` to learn it
+# - the release api call ships in the handover too, since the tag must reach origin first
+# - auth preflights through curl + bearer since gh cannot verify tls in the sandbox
+# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/githappy.md, AGENTS/git/handover.sh
 
 set -euo pipefail
 
+HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || true)
+if [ ! -f "$HERE/handover.sh" ]; then
+  echo "fatal: no AGENTS/git/handover.sh beside this sidecar" >&2; exit 1; fi
+# shellcheck source=./handover.sh
+. "$HERE/handover.sh"
+
 FLAG=${1:-}
-if [ "$FLAG" = "--major" ]; then
-  TYPE="major"
-elif [ "$FLAG" = "--minor" ] || [ -z "$FLAG" ]; then
-  TYPE="minor"
-else
-  echo "fatal: release flag must be '--minor' or '--major'" >&2
-  exit 1
-fi
+if [ "$FLAG" = "--major" ]; then TYPE="major"
+elif [ "$FLAG" = "--minor" ] || [ -z "$FLAG" ]; then TYPE="minor"
+else echo "fatal: release flag must be '--minor' or '--major'" >&2; exit 1; fi
 
-# check if in git repository
-if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  echo "fatal: not a git repository" >&2; exit 1; fi
+require_repo
+require_tools curl jq
+require_no_op_in_progress
 
-# check for curl and jq, the two tools the github release step rides on
-if ! command -v curl >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
-  echo "fatal: curl and jq are required (brew install jq)" >&2; exit 1; fi
-
-# check the github token is present; inside the sandbox it holds the masked sentinel
-# the proxy swaps for the real value — outside it holds the real token (curl takes both)
 if [ -z "${GH_TOKEN:-}" ]; then
   echo "fatal: GH_TOKEN is not set (see README.md > Settings > Keys)" >&2; exit 1; fi
+
+ROOT=$(git rev-parse --show-toplevel)
+if [ ! -f "$ROOT/package.json" ]; then
+  echo "fatal: no package.json to version" >&2; exit 1; fi
 
 # owner/repo parsed from the origin url in both its https and ssh shapes
 REMOTE_URL=$(git remote get-url origin 2>/dev/null || echo "")
 if ! echo "$REMOTE_URL" | grep -q 'github\.com'; then
   echo "fatal: origin is not a github remote" >&2; exit 1; fi
 REPO_SLUG=$(echo "$REMOTE_URL" | sed -e 's#^.*github\.com[:/]##' -e 's#\.git$##')
-GITHUB_API="https://api.github.com"
 
-# every github call goes through curl with a bearer header, the one auth shape the mask
-# proxy can substitute (see README.md > Settings > Keys > GitHub)
-github_api() {
-  curl -sS --max-time 30 \
-    -H "Authorization: Bearer $GH_TOKEN" \
-    -H "Accept: application/vnd.github+json" \
-    "$@"
-}
-
-# prove the token authenticates before anything bumps or pushes
-AUTH_CODE=$(github_api -o /dev/null -w '%{http_code}' "$GITHUB_API/user" 2>/dev/null || echo 000)
+# prove the token authenticates before handing a release sequence to anyone
+AUTH_CODE=$(curl -sS --max-time 15 -o /dev/null -w '%{http_code}' \
+  -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/user 2>/dev/null || echo 000)
 if [ "$AUTH_CODE" != "200" ]; then
   echo "fatal: github api auth failed (http $AUTH_CODE)" >&2; exit 1; fi
 
-# query remote to ensure origin/HEAD exists locally
-git remote set-head origin --auto >/dev/null 2>&1 || true
-
-# initialize variables
-DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
-CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "")
+DEFAULT_BRANCH=$(git_default_branch)
+CURRENT_BRANCH=$(git_current_branch)
 PRODUCTION_BRANCH="production"
 
-# validate branch states
 if [ -z "$CURRENT_BRANCH" ]; then
   echo "fatal: detached HEAD" >&2; exit 1; fi
-
 if [ "$CURRENT_BRANCH" != "$DEFAULT_BRANCH" ]; then
   echo "fatal: must be on default branch ($DEFAULT_BRANCH) to release" >&2; exit 1; fi
+if git_is_dirty; then
+  echo "fatal: working tree has uncommitted changes; run @gitdeliver first" >&2; exit 1; fi
 
-if ! git show-ref --verify --quiet "refs/heads/$PRODUCTION_BRANCH" && ! git ls-remote --exit-code --heads origin "$PRODUCTION_BRANCH" >/dev/null 2>&1; then
-  echo "fatal: production branch '$PRODUCTION_BRANCH' does not exist locally or on remote." >&2; exit 1; fi
+if ! git show-ref --verify --quiet "refs/heads/$PRODUCTION_BRANCH" \
+  && ! git ls-remote --exit-code --heads origin "$PRODUCTION_BRANCH" >/dev/null 2>&1; then
+  echo "fatal: production branch '$PRODUCTION_BRANCH' does not exist locally or on remote" >&2; exit 1; fi
 
-# ensure no active rebases or merges (fail fast before pushing)
-if [ -d ".git/rebase-merge" ] || [ -d ".git/rebase-apply" ] || [ -f ".git/MERGE_HEAD" ] || [ -f ".git/CHERRY_PICK_HEAD" ]; then
-  echo "fatal: merge, rebase, or cherry-pick in progress" >&2; exit 1; fi
-
-# ensure clean working tree
-if git status --porcelain 2>/dev/null | grep -q .; then
-  echo "fatal: working tree has uncommitted changes. run @gitdeliver or @gitcontinue first." >&2; exit 1; fi
-
-# sync default branch with remote
-if ! git fetch origin "$DEFAULT_BRANCH" --quiet; then
-  echo "fatal: could not fetch origin/$DEFAULT_BRANCH (network or remote error)" >&2; exit 1; fi
-
-LOCAL_COMMIT=$(git rev-parse "$DEFAULT_BRANCH")
-REMOTE_COMMIT=$(git rev-parse "origin/$DEFAULT_BRANCH")
-
-if [ "$LOCAL_COMMIT" != "$REMOTE_COMMIT" ]; then
-  echo "fatal: local $DEFAULT_BRANCH is out of sync with origin. run @gitcontinue or pull first." >&2; exit 1; fi
-
-# execute npm version bump
-echo "=== bumping version ($TYPE) ==="
-NEW_VERSION=$(npm version "$TYPE")
-
-if [ "$PRODUCTION_BRANCH" != "" ]; then
-  echo "=== merging to $PRODUCTION_BRANCH branch ==="
-  # fetch production if it only exists on remote
-  if ! git show-ref --verify --quiet "refs/heads/$PRODUCTION_BRANCH"; then
-    git fetch origin "$PRODUCTION_BRANCH:$PRODUCTION_BRANCH"
-  fi
-
-  git switch "$PRODUCTION_BRANCH"
-  git merge --ff-only "$DEFAULT_BRANCH"
-  git push origin "$PRODUCTION_BRANCH"
-  git switch "$DEFAULT_BRANCH"
+FETCH_ERR=""
+if ! FETCH_ERR=$(git fetch origin "$DEFAULT_BRANCH" --quiet 2>&1); then
+  echo "fatal: could not fetch origin/$DEFAULT_BRANCH" >&2
+  echo "$FETCH_ERR" >&2
+  exit 1
 fi
 
-echo "=== pushing $NEW_VERSION to origin ==="
-git push origin "$DEFAULT_BRANCH" --follow-tags
+BEHIND=$(git rev-list --count "$DEFAULT_BRANCH..origin/$DEFAULT_BRANCH" 2>/dev/null || echo 0)
+AHEAD=$(git rev-list --count "origin/$DEFAULT_BRANCH..$DEFAULT_BRANCH" 2>/dev/null || echo 0)
+if [ "$BEHIND" -ne 0 ] || [ "$AHEAD" -ne 0 ]; then
+  echo "fatal: $DEFAULT_BRANCH is out of sync with origin ($AHEAD ahead, $BEHIND behind)" >&2; exit 1; fi
 
-echo "=== creating github release $NEW_VERSION ==="
-# publish through the rest api; the tag already exists on origin from --follow-tags above
-RELEASE_BODY=$(jq -n --arg tag "$NEW_VERSION" --arg title "Release $NEW_VERSION" \
-  '{tag_name: $tag, name: $title, generate_release_notes: true}')
-RELEASE_JSON=$(github_api -X POST -d "$RELEASE_BODY" "$GITHUB_API/repos/$REPO_SLUG/releases" 2>/dev/null || echo '{}')
-RELEASE_URL=$(echo "$RELEASE_JSON" | jq -r '.html_url // empty' 2>/dev/null || echo "")
-if [ -z "$RELEASE_URL" ]; then
-  echo "fatal: release create failed — $(echo "$RELEASE_JSON" | jq -r '.message // "no response"')" >&2; exit 1; fi
+# the next version is computed rather than applied, since `npm version` commits and tags as it goes
+CURRENT_VERSION=$(jq -r '.version // empty' "$ROOT/package.json")
+if [ -z "$CURRENT_VERSION" ]; then
+  echo "fatal: package.json has no version field" >&2; exit 1; fi
+MAJOR=${CURRENT_VERSION%%.*}
+REST=${CURRENT_VERSION#*.}
+MINOR=${REST%%.*}
+if [ "$TYPE" = "major" ]; then NEXT_VERSION="v$((MAJOR + 1)).0.0"
+else NEXT_VERSION="v$MAJOR.$((MINOR + 1)).0"; fi
 
-cat <<EOF
+PROMOTE_COUNT=$(git rev-list --count "origin/$PRODUCTION_BRANCH..origin/$DEFAULT_BRANCH" 2>/dev/null || echo 0)
 
-=== @githappy release complete ===
-BUMPED: $NEW_VERSION
-BRANCH: $DEFAULT_BRANCH
-EOF
+telemetry_open githappy
+telemetry_line "repo" "$REPO_SLUG"
+telemetry_line "github auth" "ok (http $AUTH_CODE)"
+telemetry_line "default branch" "$DEFAULT_BRANCH"
+telemetry_line "production branch" "$PRODUCTION_BRANCH"
+telemetry_line "release type" "$TYPE"
+telemetry_line "current version" "$CURRENT_VERSION"
+telemetry_line "next version" "$NEXT_VERSION"
+telemetry_line "commits promoting to production" "$PROMOTE_COUNT"
 
-if [ "$PRODUCTION_BRANCH" != "" ]; then
-  echo "PROMOTED: merged to $PRODUCTION_BRANCH"
-fi
-
-cat <<EOF
-RELEASE: $RELEASE_URL
-STATUS: pushed and released on github
-==================================
-EOF
+handover_open githappy
+handover_note "run these in order; the bump, both pushes and the merge are denied as tool calls"
+handover_cmd "npm version $TYPE"
+handover_cmd "git push origin $DEFAULT_BRANCH --follow-tags"
+handover_cmd "git switch $PRODUCTION_BRANCH"
+handover_cmd "git merge --ff-only $DEFAULT_BRANCH"
+handover_cmd "git push origin $PRODUCTION_BRANCH"
+handover_cmd "git switch $DEFAULT_BRANCH"
+handover_note "then publish the release, once the tag is on origin"
+handover_cmd "curl -sS -X POST -H \"Authorization: Bearer \$GH_TOKEN\" \\
+  -H 'Accept: application/vnd.github+json' \\
+  https://api.github.com/repos/$REPO_SLUG/releases \\
+  -d '{\"tag_name\":\"$NEXT_VERSION\",\"name\":\"Release $NEXT_VERSION\",\"generate_release_notes\":true}'"
+block_close

@@ -1,108 +1,92 @@
 #!/bin/bash
-# ================================================
-# @file gitcontinue.sh - stash/sync/resume sidecar
-# ================================================
+# =======================================================
+# @file gitcontinue.sh - trunk sync measure and hand over
+# =======================================================
 # @description
-# - sidecar for `@gitcontinue` — stash, fetch, fast-forward, pop
-# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitcontinue.md
+# - sidecar for `@gitcontinue` — measures the trunk delta, then hands the sync commands over
+# - read-only: stash, switch and merge are all denied, so it prints them rather than running them
+# - fetch is the one write it makes, and it only moves remote-tracking refs
+# - measures ahead/behind after the fetch, so the handover names the real work
+# - the earlier version ran the sequence itself and read a behind trunk as diverged
+# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitcontinue.md, AGENTS/git/handover.sh
 
 set -euo pipefail
 
-# check if in git repository
-if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  echo "fatal: not a git repository" >&2; exit 2; fi
+HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || true)
+if [ ! -f "$HERE/handover.sh" ]; then
+  echo "fatal: no AGENTS/git/handover.sh beside this sidecar" >&2; exit 1; fi
+# shellcheck source=./handover.sh
+. "$HERE/handover.sh"
 
-# check for in-progress git operations
-if [ -d ".git/rebase-merge" ] || [ -d ".git/rebase-apply" ] || [ -f ".git/MERGE_HEAD" ] || [ -f ".git/CHERRY_PICK_HEAD" ]; then
-  echo "fatal: merge, rebase, or cherry-pick in progress" >&2; exit 2; fi
+require_repo
+require_no_op_in_progress
 
-# query remote to ensure origin/HEAD exists locally
-git remote set-head origin --auto >/dev/null 2>&1 || true
+DEFAULT_BRANCH=$(git_default_branch)
+CURRENT_BRANCH=$(git_current_branch)
 
-# initialize variables
-DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "")
-CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "")
-STARTING_BRANCH=$CURRENT_BRANCH
-
-# validate branch state
 if [ -z "$DEFAULT_BRANCH" ]; then
-  echo "fatal: missing remote default branch" >&2; exit 2; fi
-
+  echo "fatal: missing remote default branch" >&2; exit 1; fi
 if [ -z "$CURRENT_BRANCH" ]; then
-  echo "fatal: detached HEAD" >&2; exit 2; fi
+  echo "fatal: detached HEAD" >&2; exit 1; fi
 
-# state capture & stash
-DIRTY=0
-if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
-  DIRTY=1
-  git stash push -u -m "auto-stash: @gitcontinue" >/dev/null 2>&1 || {
-    echo "fatal: could not stash uncommitted changes" >&2; exit 2;
-  }
-  # fetch/switch/ff all exit 2, which would orphan the stash and leave the tree looking clean,
-  # so restore or surface it on any early exit; disarmed before the intended pop below
-  restore_stash() {
-    if [[ "$(git stash list 2>/dev/null)" == *"auto-stash: @gitcontinue"* ]]; then
-      git stash pop >/dev/null 2>&1 \
-        || echo "⚠️  @gitcontinue: your work is preserved in git stash — run 'git stash pop' to recover it" >&2
-    fi
-  }
-  trap restore_stash EXIT
-fi
-
-# trunk sync
-if ! git fetch origin "$DEFAULT_BRANCH" --quiet; then
-  echo "fatal: could not fetch origin/$DEFAULT_BRANCH (network or remote error)" >&2; exit 2; fi
-
-# switch to default branch
-if [ "$CURRENT_BRANCH" != "$DEFAULT_BRANCH" ]; then
-  if ! git switch "$DEFAULT_BRANCH" >/dev/null 2>&1; then
-  echo "fatal: git refused to switch to $DEFAULT_BRANCH" >&2; exit 2; fi
-  CURRENT_BRANCH=$DEFAULT_BRANCH
-fi
-
-LOCAL_COMMIT=$(git rev-parse "$DEFAULT_BRANCH")
-REMOTE_COMMIT=$(git rev-parse "origin/$DEFAULT_BRANCH")
-
-# fast-forward only
-if [ "$LOCAL_COMMIT" != "$REMOTE_COMMIT" ]; then
-  if ! git merge --ff-only "origin/$DEFAULT_BRANCH" >/dev/null 2>&1; then
-  echo "fatal: $DEFAULT_BRANCH diverged from origin — recover with @gitfresh" >&2; exit 2; fi
-fi
-
-# integration & replay
-CONFLICT=0
-if [ $DIRTY -eq 1 ]; then
-  trap - EXIT   # reached the deliberate pop — hand off to the success/conflict handling below
-  # a pop conflict is caught here instead of tripping set -e
-  if ! git stash pop >/dev/null 2>&1; then
-    CONFLICT=1
-  fi
-fi
-
-# output telemetry
-cat <<EOF
-
-=== @gitcontinue telemetry ===
-CHECKS: validated env/state, stashed work, synced origin, fast-forwarded trunk, and restored state
-DEFAULT BRANCH: $DEFAULT_BRANCH
-STARTING BRANCH: $STARTING_BRANCH
-EOF
-
-if [ $CONFLICT -eq 1 ]; then
-  cat <<EOF
-STATUS: STASH POP CONFLICT DETECTED
-ACTION: Trunk synced, but your uncommitted changes conflict. Resolve the conflicts in your editor, then run 'git stash drop' to clear the preserved copy.
-==============================
-EOF
-else
-  cat <<EOF
-STATUS: SUCCESS
-ACTION: Trunk synced and you are ready to continue working on $DEFAULT_BRANCH.
-==============================
-EOF
-fi
-
-# exit with code 1 ONLY if we hit a conflict, signaling to the agent that user action is required
-if [ $CONFLICT -eq 1 ]; then
+# fetch before measuring, or every count below describes a stale remote; its stderr is held back
+# because osxkeychain cannot reach a denied keychain and says so on every sandboxed fetch, which
+# is noise on a public remote and would otherwise land in the middle of the telemetry
+FETCH_ERR=""
+if ! FETCH_ERR=$(git fetch origin "$DEFAULT_BRANCH" --quiet 2>&1); then
+  echo "fatal: could not fetch origin/$DEFAULT_BRANCH" >&2
+  echo "$FETCH_ERR" >&2
   exit 1
 fi
+
+DIRTY=0
+if git_is_dirty; then DIRTY=1; fi
+CHANGED_FILES=$(git status --porcelain 2>/dev/null | wc -l | tr -d ' ')
+
+# ahead and behind are separate counts on purpose: a trunk that is only behind fast-forwards
+# cleanly, and calling that "diverged" is what sent an earlier run at the destructive path
+BEHIND=$(git rev-list --count "$DEFAULT_BRANCH..origin/$DEFAULT_BRANCH" 2>/dev/null || echo 0)
+AHEAD=$(git rev-list --count "origin/$DEFAULT_BRANCH..$DEFAULT_BRANCH" 2>/dev/null || echo 0)
+
+if [ "$AHEAD" -gt 0 ]; then SYNC_STATE="diverged"
+elif [ "$BEHIND" -gt 0 ]; then SYNC_STATE="behind, fast-forwards cleanly"
+else SYNC_STATE="up to date"; fi
+
+telemetry_open gitcontinue
+telemetry_line "default branch" "$DEFAULT_BRANCH"
+telemetry_line "current branch" "$CURRENT_BRANCH"
+telemetry_line "uncommitted files" "$CHANGED_FILES"
+telemetry_line "trunk behind origin" "$BEHIND"
+telemetry_line "trunk ahead of origin" "$AHEAD"
+telemetry_line "sync state" "$SYNC_STATE"
+
+# the stash only earns its place when something has to move underneath it; a dirty tree with
+# nothing to switch to and nothing to fast-forward would otherwise get a push/pop that is a no-op
+NEEDS_MOVE=0
+if [ "$CURRENT_BRANCH" != "$DEFAULT_BRANCH" ] || [ "$BEHIND" -gt 0 ]; then NEEDS_MOVE=1; fi
+
+handover_open gitcontinue
+if [ "$AHEAD" -gt 0 ]; then
+  handover_note "$DEFAULT_BRANCH has $AHEAD local commit(s) origin does not — resolve before syncing"
+  handover_note "inspect them first: git log --oneline origin/$DEFAULT_BRANCH..$DEFAULT_BRANCH"
+elif [ "$NEEDS_MOVE" -eq 0 ]; then
+  handover_note "nothing to do — you are on $DEFAULT_BRANCH and in sync with origin"
+  if [ "$DIRTY" -eq 1 ]; then
+    handover_note "your $CHANGED_FILES uncommitted file(s) are untouched, which is the point"
+  fi
+else
+  handover_note "run these in order; each is denied as a tool call, so they are yours"
+  if [ "$DIRTY" -eq 1 ]; then
+    handover_cmd "git stash push -u -m 'auto-stash: @gitcontinue'"
+  fi
+  if [ "$CURRENT_BRANCH" != "$DEFAULT_BRANCH" ]; then
+    handover_cmd "git switch $DEFAULT_BRANCH"
+  fi
+  if [ "$BEHIND" -gt 0 ]; then
+    handover_cmd "git merge --ff-only origin/$DEFAULT_BRANCH"
+  fi
+  if [ "$DIRTY" -eq 1 ]; then
+    handover_cmd "git stash pop"
+  fi
+fi
+block_close
