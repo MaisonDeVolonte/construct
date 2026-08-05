@@ -1,14 +1,15 @@
-# ==================================================
-# @file ci.yml - shell lint + reference-integrity gate
-# ==================================================
+# =========================================
+# @file ci.yml - shell lint and syntax gate
+# =========================================
 # @description
-# - the repo ships shell scripts and docs that point at each other, so ci gates exactly that
+# - the repo ships shell scripts that source each other, so ci gates exactly that and no more
 # - `shellcheck -x` lints every sidecar, hook, and validator at warning severity, sourced files too
 # - the shared files are linted directly as well, so a renamed variable fails the build (SC2034)
-# - `gitinsights.sh` re-runs its own broken-reference scan; any broken ref fails the build
-# - code markers (TODO/FIXME) are reported, never gated — they are opportunities, not errors
+# - references are NOT gated here: `gitinsights.sh` ranks opportunities, it never graded them
+# - a report shaped for judgement makes a poor required check, so its replacement is its own tool
+# - until that checker lands nothing gates references, and a broken `@see` reaches main unblocked
 # - this is the required check that lets `gh pr merge --auto` engage (see AGENTS/git/gitdeliver.md)
-# @see AGENTS.md, AGENTS/git/gitinsights.sh, AGENTS/git/gitdeliver.md
+# @see AGENTS.md, AGENTS/git/gitdeliver.md, AGENTS/templates/wayfinders.md
 
 name: ci
 
@@ -38,18 +39,3 @@ jobs:
       - name: syntax
         run: |
           find AGENTS -name '*.sh' -print0 | xargs -0 -n1 bash -n
-
-      # the sidecar is report-only by contract, so the gate reads its
-      # telemetry rather than its exit code
-      - name: reference integrity
-        run: |
-          set -euo pipefail
-          out=$(bash AGENTS/git/gitinsights.sh)
-          echo "$out"
-          broken=$(printf '%s\n' "$out" \
-            | awk -F': ' '/^broken_(mirror|link|see): / {sum += $2} END {print sum + 0}')
-          if [ "$broken" -gt 0 ]; then
-            echo "::error::$broken broken reference(s) — see the findings above"
-            exit 1
-          fi
-          echo "reference integrity: clean"

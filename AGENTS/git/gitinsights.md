@@ -5,6 +5,8 @@
  * =========================================================
  * @description
  * - ran only on explicit `@gitinsights` command; read-only, never mutates tracked files
+ * - answers "I've lost the thread, where is it worth working next" — a direction, not a verdict
+ * - report-only by contract: nothing downstream gates on it, so every finding is a lead
  * - runs `AGENTS/git/gitinsights.sh` for deterministic findings (broken references, code markers)
  * - reconciles `README.md`/`AGENTS.md`/trigger docs against actual repo reality
  * - reads the 5 most recent `docs/logs/` entries for unresolved observations
@@ -17,6 +19,9 @@
 **@gitinsights:** Run ONLY on explicit `@gitinsights` command
 - surfaces work opportunities from three streams: deterministic reference checks, doc-vs-reality reconciliation, and recent agent logs
 - categorizes every opportunity on an urgent/important matrix
+- it is asked when the user has lost their bearings, so the deliverable is somewhere to start
+- broken references are one signal among many, never the point; a clean scan still owes leads
+- streams 2 and 3 carry the judgement, so a run reporting only sidecar counts has skipped the work
 
 1. run the sidecar for deterministic findings
   ```bash

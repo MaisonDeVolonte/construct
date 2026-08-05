@@ -7,7 +7,7 @@
 # - one check per machine-checkable rule; every rule needing judgement prints as a human checklist
 # - ERROR breaks a rule the template states outright; WARN names a smell the template tolerates
 # - the header only; everything below it is `AGENTS/templates/comments.sh`'s to judge
-# - a broken `@see` only warns here, since ci gates references through gitinsights.sh instead
+# - a broken `@see` only warns here, and nothing gates references now, so the warn is all there is
 # - defaults to every tracked eligible file; pass files or a directory to scope it
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
 # @see AGENTS.md, AGENTS/settings/secrets.sh, AGENTS/templates/wayfinders.md, AGENTS/git/gitinsights.sh

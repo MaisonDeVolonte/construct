@@ -4,6 +4,8 @@
 # ===============================================
 # @description
 # - sidecar for `@gitinsights` — deterministic checks for broken refs and code markers
+# - one of three streams the trigger merges; reconciliation and the logs carry the judgement
+# - report-only by contract: it exits 0 on findings, since a lead is not a failure
 # - reports today's insights path and report count, and never creates the file itself
 # - `--keep` preserves the tmp/ scratch file, which a failed run preserves anyway
 # @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitinsights.md, AGENTS/templates/insights.md, docs/insights/
@@ -53,7 +55,7 @@ is_generated() {
   case "$1" in
     *tests/report*|*tests/results*|*.next*|*node_modules*) return 0;;
     # runtime artifact dirs: gitignored and written on demand, so absent from a fresh clone
-    docs/logs*|docs/plans*|docs/study*|docs/audits*|docs/brutal*|docs/insights*) return 0;;
+    docs/logs*|docs/plans*|docs/study*|docs/audits*|docs/brutal*|docs/insights*|docs/graphs*) return 0;;
     *) return 1;;
   esac
 }
@@ -148,7 +150,7 @@ check_see_paths() {
   done <<< "$hits"
 }
 
-# standing code markers (todo/fixme/hack) aren't broken references — they're logged as opportunities;
+# standing code markers (todo/fixme/hack) aren't broken references — they're logged as leads;
 # anchored to a comment opener so the pattern can't match its own definition
 check_code_markers() {
   local hits
