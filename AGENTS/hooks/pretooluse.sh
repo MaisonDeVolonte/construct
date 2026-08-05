@@ -10,6 +10,7 @@
 # - keep both: deny rules are committed, while this hook's wiring is gitignored
 # - neither layer sees inside `AGENTS/git/*.sh`, since a script's commands are not tool calls
 # - blocks force pushes and force branch deletes, silent (exit 0) for everything else
+# - also guards the narrow allows `@gitcontinue` opens: ff-only merge, plain switch, stash halves
 # - also refuses bash writes into the policy dirs, which the Edit and Write rules never see
 # @see AGENTS.md, .claude/settings.json, .claude/settings.local.json, AGENTS/settings/
 
@@ -46,6 +47,20 @@ if printf '%s' "$CMD" | grep -Eq '(^|[[:space:]])git[[:space:]]+branch([[:space:
   if printf '%s' "$CMD" | grep -Eq '(^|[[:space:]])--delete([[:space:]]|$)' \
      && printf '%s' "$CMD" | grep -Eq '(^|[[:space:]])(-f|--force)([[:space:]]|$)'; then
     deny "blocked by pretooluse hook: force branch delete (--delete --force) detected. run it yourself if you really mean to."
+  fi
+fi
+
+# merge: a fast-forward moves a pointer and can never lose work, so only that shape gets through
+if printf '%s' "$CMD" | grep -Eq '(^|[[:space:]])git[[:space:]]+merge([[:space:]]|$)'; then
+  if ! printf '%s' "$CMD" | grep -Eq '(^|[[:space:]])--ff-only([[:space:]]|$)'; then
+    deny "blocked by pretooluse hook: git merge without --ff-only. run it yourself if you really mean to."
+  fi
+fi
+
+# switch: changing branch is fine, but creating, detaching or discarding the tree stays the user's
+if printf '%s' "$CMD" | grep -Eq '(^|[[:space:]])git[[:space:]]+switch([[:space:]]|$)'; then
+  if printf '%s' "$CMD" | grep -Eq '(^|[[:space:]])(-c|-C|-f|-d|--create|--force-create|--force|--discard-changes|--orphan|--detach)([[:space:]]|$)'; then
+    deny "blocked by pretooluse hook: git switch with a create, detach or discard flag. run it yourself if you really mean to."
   fi
 fi
 

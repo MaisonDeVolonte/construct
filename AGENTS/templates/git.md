@@ -63,7 +63,10 @@ git command two
 ## the read-only contract
 - a sidecar may fetch, since that moves only remote-tracking refs, and may call the github api
 - a sidecar may NOT stash, switch, merge, push, reset, restore, clean, or delete a branch
-- the deny floor refuses all of those as tool calls, so a sidecar running them was a silent bypass
+- a sidecar's commands are not tool calls, so neither the deny floor nor the hook ever sees them
+- that is the whole reason for the rule: a sidecar running them was a silent bypass of both gates
+- where a trigger genuinely needs to mutate, the floor opens a narrow allow and the TRIGGER runs it,
+  which keeps the command in front of the gate — `@gitcontinue` and its four sync forms are the case
 - `AGENTS/git/handover.sh` carries the shared preflights, queries, and block emitters
 - default branch resolution goes through `git_default_branch`, since `symbolic-ref` is denied
 

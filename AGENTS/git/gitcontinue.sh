@@ -3,8 +3,8 @@
 # @file gitcontinue.sh - trunk sync measure and hand over
 # =======================================================
 # @description
-# - sidecar for `@gitcontinue` — measures the trunk delta, then hands the sync commands over
-# - read-only: stash, switch and merge are all denied, so it prints them rather than running them
+# - sidecar for `@gitcontinue` — measures the trunk delta, then emits the sync commands in order
+# - read-only: it plans the sequence and the trigger runs it, so the sidecar itself stays measuring
 # - fetch is the one write it makes, and it only moves remote-tracking refs
 # - measures ahead/behind after the fetch, so the handover names the real work
 # - the earlier version ran the sequence itself and read a behind trunk as diverged
@@ -75,7 +75,7 @@ elif [ "$NEEDS_MOVE" -eq 0 ]; then
     handover_note "your $CHANGED_FILES uncommitted file(s) are untouched, which is the point"
   fi
 else
-  handover_note "run these in order; each is denied as a tool call, so they are yours"
+  handover_note "the trigger runs these in order, stopping at the first non-zero exit"
   if [ "$DIRTY" -eq 1 ]; then
     handover_cmd "git stash push -u -m 'auto-stash: @gitcontinue'"
   fi
