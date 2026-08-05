@@ -1,12 +1,11 @@
 #!/bin/bash
-# ==================================================
+# ==============================================
 # @file taskcreated.sh - taskcreated hook script
-# ==================================================
+# ==============================================
 # @description
 # - fires on TaskCreated (a TaskCreate call registers a new task)
-# - decision:"block" prevents the creation itself here, unlike
-#   TaskCompleted — confirmed live, a blocked test task never got
-#   created — so this uses additionalContext instead, non-blocking
+# - decision:"block" prevents the creation itself here, unlike TaskCompleted
+# - confirmed live: a blocked test task never got created, so this uses additionalContext
 # - creates today's log file if missing
 # - nudges the agent to check thread-relatedness, not enforced
 # @see AGENTS.md, AGENTS/templates/logs.md, AGENTS/hooks/taskcompleted.sh, docs/logs/

@@ -118,7 +118,7 @@ row_cell() {
     | awk -F'|' -v n="$2" '{ cell = $(n + 1); gsub(/^[ \t]+|[ \t]+$/, "", cell); print cell }'
 }
 
-# the 1-indexed position of a named column in a header row, empty when the table lacks it.
+# the 1-indexed position of a named column in a header row, empty when the table lacks it
 # columns are looked up by name rather than position, since the order is the template's to change
 col_index() {
   printf '%s' "$1" | sed 's/\\|/~/g' | awk -F'|' -v want="$2" '
@@ -233,7 +233,7 @@ check_fences() {
   fi
 }
 
-# the body carries one clause per line, so a bare continuation line means a bullet wrapped.
+# the body carries one clause per line, so a bare continuation line means a bullet wrapped
 # the template allows a single description line under the heading, before the bullets start
 check_clauses() {
   local file=$1 name lineno text started
@@ -276,8 +276,8 @@ check_risks() {
   done < <(section "$file" Risks)
 }
 
-# stages are "### <n>. <name>" and hold "short directives, verb first, one line each".
-# one orienting line under a stage header is fine; rationale between items belongs in a note.
+# stages are "### <n>. <name>" and hold "short directives, verb first, one line each"
+# one orienting line under a stage header is fine; rationale between items belongs in a note
 # "deferred work closes the checklist", so it is the one unnumbered heading allowed here
 check_checklist() {
   local file=$1 lineno text stage previous=0 items=0 deferred=0
@@ -313,7 +313,7 @@ check_checklist() {
   done < <(section "$file" Checklist)
 }
 
-# "agents count every item in a stage as agentic, gated, or human-only, and the three sum".
+# "agents count every item in a stage as agentic, gated, or human-only, and the three sum"
 # a row that does not sum is provably wrong, which is the whole reason the counts are counts
 check_agents_row() {
   local file=$1 lineno=$2 text=$3 header=$4 stage agentic gated human total items

@@ -4,8 +4,8 @@
 # ==========================================================
 # @description
 # - sourced, never run; every template sidecar reads its credential patterns from here
-# - lives outside `AGENTS/templates/` because provider prefixes change for reasons this repo
-#   does not control, and seven copies of one regex drift the moment one of them gets edited
+# - lives outside `AGENTS/templates/` because provider prefixes change outside this repo's control
+# - one shared regex, since seven copies drift the moment one of them gets edited
 # - `scan_secrets <file>` reports every match through the caller's own `err` and `warn`
 # - CONTRACT: the caller defines `err SEV file line category detail` and `warn` the same way
 # - an unambiguous provider token is an ERROR, so the run stops and a human decides what happens

@@ -35,11 +35,11 @@ echo "first commit: $FIRST_COMMIT"
 echo "total commits: $TOTAL_COMMITS"
 
 echo "--- COMMIT TYPE DISTRIBUTION (last 100) ---"
-# Extracts conventional commit types to see if you actually follow them
+# extracts conventional commit types to see if you actually follow them
 git log -100 --format="%s" | awk -F'[(:]' '{print $1}' | sort | uniq -c | sort -nr | head -10 || echo "no commits"
 
 echo "--- LOC BALANCE (ESTIMATE) ---"
-# Rough check of App files vs Config/Infra files
+# rough check of app source files against config and infra files
 APP_FILES=$(find src -type f 2>/dev/null | wc -l | tr -d ' ' || echo 0)
 INFRA_FILES=$(find AGENTS .github webflow -maxdepth 2 -type f 2>/dev/null | wc -l | tr -d ' ' || echo 0)
 ROOT_CONFIGS=$(find . -maxdepth 1 -type f \( -name "*.js" -o -name "*.json" -o -name "*.mjs" -o -name "*.ts" \) 2>/dev/null | wc -l | tr -d ' ' || echo 0)
@@ -56,7 +56,7 @@ echo "unresolved TODOs: $TODO_COUNT"
 echo "mirror pointer files: $MIRROR_COUNT"
 
 echo "--- RISK HYGIENE ---"
-# Check if sensitive or generated files slipped in
+# check if sensitive or generated files slipped in
 if git ls-files | grep -iq -e "\.env" -e "secret" -e "\.pem"; then
   echo "WARNING: POTENTIAL SECRETS TRACKED IN GIT"
   git ls-files | grep -i -e "\.env" -e "secret" -e "\.pem"

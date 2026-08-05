@@ -1,7 +1,7 @@
 #!/bin/bash
-# ====================================================
+# =======================================================
 # @file graphs.sh - graph spec template validator sidecar
-# ====================================================
+# =======================================================
 # @description
 # - sidecar for `graphs.md` — asserts a graph spec matches the template that documents it
 # - one check per machine-checkable rule; every rule needing judgement prints as a human checklist
@@ -211,7 +211,7 @@ check_no_steps() {
   done < <(grep -nE '^[[:space:]]*- \[[ xX]\]' "$file" || true)
 }
 
-# "a numbered list runs 1..n with no gap, since renumbering by hand silently drops an entry".
+# "a numbered list runs 1..n with no gap, since renumbering by hand silently drops an entry"
 # an unnumbered field is fine; a field that starts numbering has to finish the job
 check_numbering() {
   local file=$1 name lineno text number expected
