@@ -1,18 +1,18 @@
 ---
-name: doc-study
-description: Shape of a retrospective study in docs/study/, with its graded quiz.
+name: doc-guides
+description: Shape of a retrospective guide in docs/guides/, written by /write-guide.
 metadata:
   kind: spec
 ---
-**the file:** `docs/study/<feature>.md`, kebab-case, tracked in git, one per feature or workflow
+**the file:** `docs/guides/<feature>.md`, kebab-case, one per feature or workflow
 - written on request, after a feature ships, to build a mental model of how it works
 - files are listed in ideal-build order, never alphabetical and never touched-order
 - maximally concise, roadmap-style language — a map, not a textbook
 - lines carry a single clause, capped at 100 characters, and never wrap
 - scrub client names, tokens, and other sensitive detail before it lands in a commit
 
-# STUDY: Short Title
-one line 'big idea' description of the topic/feature/concept to be studied
+# GUIDE: Short Title
+one line 'big idea' description of the topic/feature/concept the guide covers
 
 - [ ] one line per file: what it is, why it's in this spot, one clause max
 
@@ -40,7 +40,7 @@ how to build the next similar thing, using this as the reference
 
 ```text
 VERIFY - not part of the artifact
-- RUN `AGENTS/skills/doc-study/doc-study.sh` once the study is written; pass a path to scope the run
+- RUN `AGENTS/skills/doc-guides/doc-guides.sh` once the guide is written; pass a path to scope it
 - FIX every ERROR, since each one breaks a rule this spec states outright
 - STOP on a `secret` finding and ask the user before truncating it; the key needs rotating first
 - JUSTIFY or fix every WARN; the sidecar tolerates them, the next reader may not

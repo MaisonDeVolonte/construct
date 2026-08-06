@@ -1,21 +1,22 @@
 #!/bin/bash
-# ============================================
-# @file doc-study.sh - study validator sidecar
-# ============================================
+# =============================================
+# @file doc-guides.sh - guide validator sidecar
+# =============================================
 # @description
 # PAIR
-# - sidecar for `doc-study` — asserts a study matches the shape its SKILL.md documents
+# - sidecar for `doc-guides` — asserts a guide matches the shape its SKILL.md documents
 # - the doc carries the file list, the model and the pattern; this file carries what a script judges
+# - `/write-guide` produces the artifact; this half only judges what landed
 # ARTIFACT
-# - `docs/study/<feature>.md` in kebab-case, tracked in git, one file per feature or workflow
+# - `docs/guides/<feature>.md` in kebab-case, one file per feature or workflow
 # - written on request after a feature ships, to build a mental model of how it works
 # - files are listed in ideal-build order, so the list doubles as the route through the feature
 # - a map and not a textbook, so it stays roadmap-terse even where the feature is not
 # RUN
-# - defaults to every file in `docs/study/`; pass files or a directory to scope it
+# - defaults to every file in `docs/guides/`; pass files or a directory to scope it
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
 # - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
-# @see AGENTS.md, AGENTS/skills/doc-study/SKILL.md, AGENTS/skills/doc-plans/SKILL.md, docs/study/, AGENTS/settings/secrets.sh
+# @see AGENTS.md, AGENTS/skills/doc-guides/SKILL.md, AGENTS/skills/doc-plans/SKILL.md, docs/guides/, AGENTS/settings/secrets.sh
 
 set -euo pipefail
 
@@ -38,10 +39,10 @@ if [ -n "$UTF8_LOCALE" ]; then export LC_ALL="$UTF8_LOCALE"; fi
 MAX_WIDTH=100
 STRICT=0
 KEEP=0
-TEMPLATE="AGENTS/skills/doc-study/SKILL.md"
-ARTIFACTS="docs/study"
+TEMPLATE="AGENTS/skills/doc-guides/SKILL.md"
+ARTIFACTS="docs/guides"
 
-# the template's own section order, which is the one thing every study must agree on
+# the template's own section order, which is the one thing every guide must agree on
 EXPECTED_SECTIONS=$'Model\nPattern'
 
 # "the one idea to walk away with, 1-3 lines, no more"
@@ -50,36 +51,36 @@ MAX_MODEL_LINES=3
 # below this, a list is too short to have an order worth reading anything into
 MIN_ORDERED_FILES=3
 
-STUDIES=()
+GUIDES=()
 for arg in "$@"; do
   case "$arg" in
     --strict) STRICT=1;;
     --keep) KEEP=1;;
     -h|--help) sed -n '2,11p' "$0"; exit 0;;
     -*) echo "fatal: unknown flag $arg" >&2; exit 1;;
-    *) STUDIES+=("$arg");;
+    *) GUIDES+=("$arg");;
   esac
 done
 
 # no paths given: scan the whole artifact directory, anchored to the repo root so the default
 # works from any subdirectory — same posture as the @git* sidecars
-if [ ${#STUDIES[@]} -eq 0 ]; then
+if [ ${#GUIDES[@]} -eq 0 ]; then
   if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     echo "fatal: not a git repository, and no paths given" >&2; exit 1; fi
   cd "$(git rev-parse --show-toplevel)"
   if [ ! -d "$ARTIFACTS" ]; then echo "fatal: no $ARTIFACTS/ to scan" >&2; exit 1; fi
-  STUDIES=("$ARTIFACTS"/*.md)
+  GUIDES=("$ARTIFACTS"/*.md)
 fi
 
-# a directory argument expands to the studies inside it
+# a directory argument expands to the guides inside it
 EXPANDED=()
-for path in "${STUDIES[@]}"; do
+for path in "${GUIDES[@]}"; do
   if [ -d "$path" ]; then
     for nested in "$path"/*.md; do [ -f "$nested" ] && EXPANDED+=("$nested"); done
   elif [ -f "$path" ]; then EXPANDED+=("$path")
-  else echo "fatal: no such study: $path" >&2; exit 1; fi
+  else echo "fatal: no such guide: $path" >&2; exit 1; fi
 done
-STUDIES=("${EXPANDED[@]}")
+GUIDES=("${EXPANDED[@]}")
 
 # repo-local scratch: the sandbox denies writes outside cwd, and macos mktemp ignores TMPDIR
 TMPROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tmp"
@@ -114,43 +115,35 @@ filelist() {
 
 # ==============
 # CHECKS
-#   each takes a study path and appends findings; to add one, write a function and list it below
+#   each takes a guide path and appends findings; to add one, write a function and list it below
 # ==============
 
-# "one file per feature/workflow, `docs/study/`, named `<feature>.md` in kebab-case"
+# "one file per feature/workflow, `docs/guides/`, named `<feature>.md` in kebab-case"
 check_filename() {
   local file=$1 base dir
   base=$(basename "$file")
   dir=$(dirname "$file")
   if ! printf '%s' "$base" | grep -qE '^[a-z0-9]+(-[a-z0-9]+)*\.md$'; then
-    err "$file" 1 filename "one study per feature, named <feature>.md in kebab-case"
+    err "$file" 1 filename "one guide per feature, named <feature>.md in kebab-case"
   fi
   case "$dir" in
     "$ARTIFACTS"|"./$ARTIFACTS"|*"/$ARTIFACTS") ;;
-    *) warn "$file" 1 location "studies live in $ARTIFACTS/";;
+    *) warn "$file" 1 location "guides live in $ARTIFACTS/";;
   esac
 }
 
-# "tracked in git"
-check_tracked() {
-  local file=$1
-  if ! git ls-files --error-unmatch "$file" >/dev/null 2>&1; then
-    warn "$file" 1 untracked "studies are tracked in git; this one is not committed yet"
-  fi
-}
-
-# "# STUDY: Short Title" then "one line 'big idea' description of the topic"
+# "# GUIDE: Short Title" then "one line 'big idea' description of the topic"
 check_header() {
   local file=$1 title summary blank
   title=$(sed -n '1p' "$file")
   summary=$(sed -n '2p' "$file")
   blank=$(sed -n '3p' "$file")
   case "$title" in
-    "# STUDY: "*) ;;
-    *) err "$file" 1 title "line 1 must read '# STUDY: <short title>'";;
+    "# GUIDE: "*) ;;
+    *) err "$file" 1 title "line 1 must read '# GUIDE: <short title>'";;
   esac
   if [ -z "$summary" ] || [ "${summary:0:1}" = "#" ]; then
-    err "$file" 2 summary "line 2 must be the one-line big idea of what is being studied"
+    err "$file" 2 summary "line 2 must be the one-line big idea of what the guide covers"
   fi
   if [ -n "$blank" ]; then
     err "$file" 3 summary "line 3 must be blank; the big idea is one line and never wraps"
@@ -167,13 +160,13 @@ check_sections() {
 }
 
 # "one line per file: what it is, why it's in this spot, one clause max" — a checkbox, because a
-# study is read once with something ticked off at each step
+# guide is read once with something ticked off at each step
 check_files() {
   local file=$1 lineno text count=0
   while IFS=$'\t' read -r lineno text; do
     case "$text" in *[![:space:]]*) ;; *) continue;; esac
     case "$text" in
-      # a blockquote here is an annotation about the study, not one of the files it lists
+      # a blockquote here is an annotation about the guide, not one of the files it lists
       ">"*) continue;;
       "- [ ] "*|"- [x] "*) count=$((count + 1));;
       "- "*) err "$file" "$lineno" file_shape "file lines are checkboxes: '- [ ] \`path\` is ...'"
@@ -187,7 +180,7 @@ check_files() {
     fi
   done < <(filelist "$file")
   if [ "$count" -eq 0 ]; then
-    err "$file" 3 file_list "no files listed; the list in build order is the study"
+    err "$file" 3 file_list "no files listed; the list in build order is the guide"
   fi
 }
 
@@ -244,7 +237,7 @@ check_width() {
   done < "$file"
 }
 
-# a stray fence swallows the rest of the study when rendered, so it is never cosmetic
+# a stray fence swallows the rest of the guide when rendered, so it is never cosmetic
 check_fences() {
   local file=$1 count
   count=$(grep -cE '^[[:space:]]*```' "$file" || true)
@@ -266,19 +259,18 @@ check_placeholders() {
 
 
 # --- run list (add new checks here) ---
-for study in "${STUDIES[@]}"; do
-  check_filename     "$study"
-  check_tracked      "$study"
-  check_header       "$study"
-  check_sections     "$study"
-  check_files        "$study"
-  check_build_order  "$study"
-  check_model        "$study"
-  check_pattern      "$study"
-  check_width        "$study"
-  check_fences       "$study"
-  check_placeholders "$study"
-  scan_secrets       "$study"
+for guide in "${GUIDES[@]}"; do
+  check_filename     "$guide"
+  check_header       "$guide"
+  check_sections     "$guide"
+  check_files        "$guide"
+  check_build_order  "$guide"
+  check_model        "$guide"
+  check_pattern      "$guide"
+  check_width        "$guide"
+  check_fences       "$guide"
+  check_placeholders "$guide"
+  scan_secrets       "$guide"
 done
 
 # ==============
@@ -290,9 +282,9 @@ SECRETS=$(grep -c '|secret|' "$FINDINGS" || true)
 
 cat <<EOF
 
-=== study.sh sidecar ===
+=== guide.sh sidecar ===
 template: $TEMPLATE
-scanned: ${#STUDIES[@]} study file(s)
+scanned: ${#GUIDES[@]} guide file(s)
 width_cap: $MAX_WIDTH chars
 errors: $ERRORS
 warnings: $WARNINGS

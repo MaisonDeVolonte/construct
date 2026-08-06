@@ -218,11 +218,11 @@ check_branches() {
 # agent writing it has nothing to follow
 check_artifact() {
   local doc=$1 type
-  for type in audits credentials graphs honest insights logs plans study; do
+  for type in audits credentials graphs guides honest insights logs plans; do
     if ! grep -q "docs/$type/" "$doc"; then continue; fi
-    if ! grep -q "AGENTS/skills/$type\.md" "$doc"; then
+    if ! grep -q "AGENTS/skills/doc-$type/SKILL\.md" "$doc"; then
       warn "$doc" "$(where "$doc" "docs/$type/")" artifact \
-        "writes docs/$type/ without naming AGENTS/skills/$type.md"
+        "writes docs/$type/ without naming AGENTS/skills/doc-$type/SKILL.md"
     fi
   done
 }
