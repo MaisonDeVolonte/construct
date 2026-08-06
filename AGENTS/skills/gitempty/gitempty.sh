@@ -7,15 +7,16 @@
 # - read-only apart from `fetch --prune` and a trunk fast-forward, neither of which loses work
 # - classifies each local branch as gone, merged, or live, so the handover deletes only the spent
 # - stash and branch deletes are denied, so it prints them instead of running them
-# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitempty.md, AGENTS/git/handover.sh
+# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/gitempty/SKILL.md, AGENTS/shared/handover.sh
 
 set -euo pipefail
 
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || true)
-if [ ! -f "$HERE/handover.sh" ]; then
-  echo "fatal: no AGENTS/git/handover.sh beside this sidecar" >&2; exit 1; fi
-# shellcheck source=./handover.sh
-. "$HERE/handover.sh"
+SHARED=$(cd "$HERE/../../shared" 2>/dev/null && pwd || true)
+if [ ! -f "$SHARED/handover.sh" ]; then
+  echo "fatal: no AGENTS/shared/handover.sh reachable from this sidecar" >&2; exit 1; fi
+# shellcheck source=../../shared/handover.sh
+. "$SHARED/handover.sh"
 
 require_repo
 require_no_op_in_progress

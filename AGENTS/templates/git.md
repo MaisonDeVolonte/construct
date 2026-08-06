@@ -6,12 +6,12 @@
  * @description
  * - ran only on explicit `@gitautomation` commands
  * - starts with a native shell script sidecar, which measures and never mutates
- * - every sidecar sources `AGENTS/git/handover.sh`, so the whole family shares one output shape
+ * - every sidecar sources `AGENTS/shared/handover.sh`, so the whole family shares one output shape
  * - fail: outputs raw terminal errors
  * - success: reports the telemetry, then fences the handover for the user to paste
- * - the only template whose sidecar scans `AGENTS/git/`, not a `docs/` artifact directory
+ * - the only template whose sidecar scans `AGENTS/skills/`, not a `docs/` artifact directory
  * - `AGENTS/templates/git.sh` validates every trigger doc and sidecar pair against the rules above
- * @see AGENTS.md, AGENTS/templates/git.sh, AGENTS/git/handover.sh, /AGENTS/git/
+ * @see AGENTS.md, AGENTS/templates/git.sh, AGENTS/shared/handover.sh, AGENTS/skills/
  */
 ```
 
@@ -72,7 +72,7 @@ git command two
   step, and `@gitfresh`'s backup is the one line that makes the rest of its handover survivable
 - a step that SPENDS safety never earns it, however convenient — clean, reset and force-switch
   stay in the handover no matter how many times the same paste gets asked for
-- `AGENTS/git/handover.sh` carries the shared preflights, queries, and block emitters
+- `AGENTS/shared/handover.sh` carries the shared preflights, queries, and block emitters
 - default branch resolution goes through `git_default_branch`, since `symbolic-ref` is denied
 
 ```text

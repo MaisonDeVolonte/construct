@@ -1,16 +1,22 @@
+---
+name: gitfresh
+description: Price a hard reset, take the backup itself, then hand over the destructive rest.
+disallowed-tools: Write Edit
+disable-model-invocation: true
+---
 ```javascript
 /**
  * ==================================================
- * @file gitfresh.md - destructive hard-reset trigger
+ * @file SKILL.md - destructive hard-reset trigger
  * ==================================================
  * @description
  * - ran only on explicit `@gitfresh` command; for a broken, conflicted, or desynced workspace
- * - runs `AGENTS/git/gitaudit.sh` for context, then `AGENTS/git/gitfresh.sh` to measure
+ * - runs `AGENTS/skills/gitaudit/gitaudit.sh` for context, then `AGENTS/skills/gitfresh/gitfresh.sh` to measure
  * - the sidecar destroys nothing and backs nothing up; it prints what a reset would cost
  * - the trigger runs the backup stash only, since it is the one step that adds safety
  * - clean, reset, switch -f and branch deletes stay denied, so the user runs every one
  * - the backup running first is the whole point: a handover the user half-pastes still has it
- * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitfresh.sh, AGENTS/git/gitaudit.sh
+ * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/gitfresh/gitfresh.sh, AGENTS/skills/gitaudit/gitaudit.sh
  */
 ```
 
@@ -20,19 +26,23 @@
 - takes the backup itself, then hands over every command that cannot be undone
 - never cleans, resets, switches or deletes a branch; each of those is the user's to run
 
-1. run the native shell command exactly as specified
-  ```bash
-  AGENTS/git/gitaudit.sh
-  ```
-  - fail (exit code > 0) → abort and report: "<raw terminal error>"
-  - success (exit code = 0) → continue to step 2
+## telemetry
+
+```!
+"${CLAUDE_PLUGIN_ROOT}"/skills/gitaudit/gitaudit.sh
+echo "sidecar exit: $?"
+```
+
+1. read the block above; it already ran, so there is no command to issue
+  - fail (`sidecar exit` > 0) → abort and report: "<raw terminal error>"
+  - success (`sidecar exit` = 0) → continue to step 2
 
 2. run the native shell command exactly as specified
   ```bash
-  AGENTS/git/gitfresh.sh
+  AGENTS/skills/gitfresh/gitfresh.sh
   ```
-  - fail (exit code > 0) → abort and report: "<raw terminal error>"
-  - success (exit code = 0) → continue to step 3
+  - fail (`sidecar exit` > 0) → abort and report: "<raw terminal error>"
+  - success (`sidecar exit` = 0) → continue to step 3
 
 3. run the `=== @gitfresh trigger ===` block, if the sidecar emitted one
     - it appears only on a dirty tree; a clean tree has nothing to back up, so skip to step 4

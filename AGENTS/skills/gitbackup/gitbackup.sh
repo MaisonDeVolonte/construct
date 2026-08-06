@@ -11,15 +11,16 @@
 # - the destination is fixed and takes no argument, so this never becomes a copy-anywhere tool
 # - `cp` here is invisible to the deny list and the hook, since script lines are not tool calls
 # - that gap is the design: a reviewed sidecar holds a capability the loose agent never gets
-# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitbackup.md, AGENTS/git/handover.sh
+# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/gitbackup/SKILL.md, AGENTS/shared/handover.sh
 
 set -euo pipefail
 
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || true)
-if [ ! -f "$HERE/handover.sh" ]; then
-  echo "fatal: no AGENTS/git/handover.sh beside this sidecar" >&2; exit 1; fi
-# shellcheck source=./handover.sh
-. "$HERE/handover.sh"
+SHARED=$(cd "$HERE/../../shared" 2>/dev/null && pwd || true)
+if [ ! -f "$SHARED/handover.sh" ]; then
+  echo "fatal: no AGENTS/shared/handover.sh reachable from this sidecar" >&2; exit 1; fi
+# shellcheck source=../../shared/handover.sh
+. "$SHARED/handover.sh"
 
 if [ "$#" -gt 0 ]; then
   echo "fatal: gitbackup takes no arguments; the destination is fixed at tmp/backups/" >&2

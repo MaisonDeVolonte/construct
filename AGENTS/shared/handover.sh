@@ -3,13 +3,13 @@
 # @file handover.sh - shared git sidecar scaffolding
 # ==================================================
 # @description
-# - sourced by every `AGENTS/git/*.sh`, so the whole family shares one output shape
+# - sourced by every `AGENTS/skills/*/*.sh`, so the whole family shares one output shape
 # - every git call here is on the permissions allow list; nothing in it mutates a repo
 # - `git_default_branch` asks the remote directly, since symbolic-ref and set-head are denied
 # - the handover block is the deliverable: measured here, pasted and run by the user
 # - the trigger block is the narrow exception: measured here, run by the trigger as a tool call
 # - a sidecar that needs to mutate emits the command instead of running it, into either block
-# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/settings/settings.user.md, AGENTS/git/
+# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/settings/settings.user.md, AGENTS/skills/
 
 # ==============
 # PREFLIGHT

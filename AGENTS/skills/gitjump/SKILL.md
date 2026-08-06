@@ -1,15 +1,21 @@
+---
+name: gitjump
+description: Verify every release precondition, then hand over the bump, push and promote.
+disallowed-tools: Write Edit
+disable-model-invocation: true
+---
 ```javascript
 /**
  * ==================================
- * @file gitjump.md - release trigger
+ * @file SKILL.md - release trigger
  * ==================================
  * @description
  * - ran only on explicit `@gitjump` command; aborts on any failed preflight check
- * - READ-ONLY: `AGENTS/git/gitjump.sh` verifies every precondition and hands the sequence over
+ * - READ-ONLY: `AGENTS/skills/gitjump/gitjump.sh` verifies every precondition and hands the sequence over
  * - the bump, both pushes, the promotion merge and the release call are all the user's to run
  * - `--minor`/`--major` (default minor) only decides the version the handover names
  * - the release api call comes last, since the tag has to reach origin before it resolves
- * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitjump.sh, .github/workflows/deploy.yml
+ * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/gitjump/gitjump.sh, .github/workflows/deploy.yml
  */
 ```
 
@@ -25,12 +31,16 @@
 - `--minor`: used for new features or bug fixes (default)
 - `--major`: used for breaking changes or major updates
 
-1. run the native shell command exactly as specified
-  ```bash
-  AGENTS/git/gitjump.sh <flag>
-  ```
-  - fail (exit code > 0) → abort and report: "<raw terminal error>"
-  - success (exit code = 0) → continue to step 2
+## telemetry
+
+```!
+"${CLAUDE_PLUGIN_ROOT}"/skills/gitjump/gitjump.sh $ARGUMENTS
+echo "sidecar exit: $?"
+```
+
+1. read the block above; it already ran, so there is no command to issue
+  - fail (`sidecar exit` > 0) → abort and report: "<raw terminal error>"
+  - success (`sidecar exit` = 0) → continue to step 2
 
 2. report the telemetry, then the handover, then STOP
     - confirm `current version` and `next version` read the way the user expects before anything

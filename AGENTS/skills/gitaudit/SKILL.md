@@ -1,23 +1,32 @@
+---
+name: gitaudit
+description: Read-only git diagnostics: branch triage, team probes, and a dated audit saved to file.
+disable-model-invocation: true
+---
 ```javascript
 /**
  * =====================================================
- * @file gitaudit.md - read-only git diagnostics trigger
+ * @file SKILL.md - read-only git diagnostics trigger
  * =====================================================
  * @description
  * - ran only on explicit `@gitaudit` command; read-only, never mutates tracked files
- * - runs `AGENTS/git/gitaudit.sh` then evaluates telemetry for ghost branches, local
+ * - runs `AGENTS/skills/gitaudit/gitaudit.sh` then evaluates telemetry for ghost branches, local
  *   clutter, conflict risk, and a dirty trunk
  * - outputs a numbered list of issues with manual + `@agent` shortcut resolutions
  * - appends that report to `docs/audits/YYYY-MM-DD.md`, one file per day, many audits per file
- * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitaudit.sh, AGENTS/templates/audits.md, docs/audits/
+ * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/gitaudit/gitaudit.sh, AGENTS/templates/audits.md, docs/audits/
  */
 ```
 
 **@gitaudit:** Run ONLY on explicit `@gitaudit` command
-1. run the native shell command exactly as specified
-  ```bash
-  AGENTS/git/gitaudit.sh
-  ```
+## telemetry
+
+```!
+"${CLAUDE_PLUGIN_ROOT}"/skills/gitaudit/gitaudit.sh
+echo "sidecar exit: $?"
+```
+
+1. read the block above; it already ran, so there is no command to issue
 
 2. IF FAILURE (exit code > 0):
   ```text

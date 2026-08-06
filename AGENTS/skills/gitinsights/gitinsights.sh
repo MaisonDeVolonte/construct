@@ -8,7 +8,7 @@
 # - report-only by contract: it exits 0 on findings, since a lead is not a failure
 # - reports today's insights path and report count, and never creates the file itself
 # - `--keep` preserves the tmp/ scratch file, which a failed run preserves anyway
-# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitinsights.md, AGENTS/templates/insights.md, docs/insights/
+# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/gitinsights/SKILL.md, AGENTS/templates/insights.md, docs/insights/
 
 set -euo pipefail
 

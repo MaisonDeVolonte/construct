@@ -1,16 +1,22 @@
+---
+name: gitempty
+description: Prune dead tracking refs and hand over the trunk sync and every branch delete.
+disallowed-tools: Write Edit
+disable-model-invocation: true
+---
 ```javascript
 /**
  * ====================================================
- * @file gitempty.md - gated post-merge cleanup trigger
+ * @file SKILL.md - gated post-merge cleanup trigger
  * ====================================================
  * @description
  * - ran only on explicit `@gitempty` command; typically post-merge, but safe anytime
- * - READ-ONLY: `AGENTS/git/gitempty.sh` prunes tracking refs and measures, deleting nothing
- * - runs `AGENTS/git/gitaudit.sh` to classify branches (local/remote/ghost/zombie) for deletion
+ * - READ-ONLY: `AGENTS/skills/gitempty/gitempty.sh` prunes tracking refs and measures, deleting nothing
+ * - runs `AGENTS/skills/gitaudit/gitaudit.sh` to classify branches (local/remote/ghost/zombie) for deletion
  * - the sidecar classifies each spent branch itself and emits `-d` or `-D` to match
  * - a gone branch that is neither merged nor absorbed is kept, never offered for deletion
  * - every branch delete is denied, so the whole block stays the user's to run in order
- * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitempty.sh, AGENTS/git/gitaudit.sh
+ * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/gitempty/gitempty.sh, AGENTS/skills/gitaudit/gitaudit.sh
  */
 ```
 
@@ -20,19 +26,23 @@
 - preserves unmerged branches and identifies the merged ones eligible for deletion
 - never deletes anything; every deletion is handed over as a command for you to run yourself
 
-1. run the native shell command exactly as specified
-  ```bash
-  AGENTS/git/gitempty.sh
-  ```
-  - fail (exit code > 0) → abort and report: "<raw terminal error>"
-  - success (exit code = 0) → report "@gitempty telemetry" and continue to step 2
+## telemetry
+
+```!
+"${CLAUDE_PLUGIN_ROOT}"/skills/gitempty/gitempty.sh
+echo "sidecar exit: $?"
+```
+
+1. read the block above; it already ran, so there is no command to issue
+  - fail (`sidecar exit` > 0) → abort and report: "<raw terminal error>"
+  - success (`sidecar exit` = 0) → report "@gitempty telemetry" and continue to step 2
 
 2. run the native shell command exactly as specified
   ```bash
-  AGENTS/git/gitaudit.sh
+  AGENTS/skills/gitaudit/gitaudit.sh
   ```
-  - fail (exit code > 0) → abort and report: "<raw terminal error>"
-  - success (exit code = 0): merge its classification into the handover, then STOP
+  - fail (`sidecar exit` > 0) → abort and report: "<raw terminal error>"
+  - success (`sidecar exit` = 0): merge its classification into the handover, then STOP
 
     NEVER run a deletion, and never offer to; handing the commands over IS the deliverable
 

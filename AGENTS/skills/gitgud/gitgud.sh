@@ -5,15 +5,18 @@
 # @description
 # - sidecar for `@gitgud` — re-runs ci on a stale pr against the default branch
 # - talks to github through curl + bearer auth since gh cannot verify tls in the sandbox
-# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitgud.md, README.md
+# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/gitgud/SKILL.md, AGENTS/shared/handover.sh
+# - the shared file is reached by path from this skill folder, not from beside this script, since
+#   a skill owns its own directory; stage 4 moves it to `AGENTS/shared/` and this path with it
 
 set -euo pipefail
 
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || true)
-if [ ! -f "$HERE/handover.sh" ]; then
-  echo "fatal: no AGENTS/git/handover.sh beside this sidecar" >&2; exit 1; fi
-# shellcheck source=./handover.sh
-. "$HERE/handover.sh"
+SHARED=$(cd "$HERE/../../shared" 2>/dev/null && pwd || true)
+if [ ! -f "$SHARED/handover.sh" ]; then
+  echo "fatal: no AGENTS/shared/handover.sh reachable from this sidecar" >&2; exit 1; fi
+# shellcheck source=../../shared/handover.sh
+. "$SHARED/handover.sh"
 
 WATCH="false"
 for arg in "$@"; do

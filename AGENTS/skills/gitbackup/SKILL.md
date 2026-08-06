@@ -1,15 +1,21 @@
+---
+name: gitbackup
+description: Snapshot history and working tree, verify the snapshot, then hand over the restore.
+disallowed-tools: Write Edit
+disable-model-invocation: true
+---
 ```javascript
 /**
  * ==============================================
- * @file gitbackup.md - safe repo snapshot trigger
+ * @file SKILL.md - safe repo snapshot trigger
  * ==============================================
  * @description
  * - ran only on explicit `@gitbackup` command; reach for it before anything destructive
- * - runs `AGENTS/git/gitbackup.sh`, which takes the snapshot itself and verifies it
+ * - runs `AGENTS/skills/gitbackup/gitbackup.sh`, which takes the snapshot itself and verifies it
  * - the one trigger that needs no confirmation, since a copy destroys nothing it finds
  * - captures history and working tree separately, because a `.git` copy loses uncommitted work
  * - the restore is handed over, never run: putting files back overwrites what sits there now
- * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitbackup.sh, AGENTS/git/gitfresh.md
+ * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/gitbackup/gitbackup.sh, AGENTS/skills/gitfresh/SKILL.md
  */
 ```
 
@@ -19,13 +25,17 @@
 - worth typing before any reset, rebase, history rewrite or bulk delete is in play
 - never restores anything; the restore commands are handed over for the user to run
 
-1. run the native shell command exactly as specified
-  ```bash
-  AGENTS/git/gitbackup.sh
-  ```
-  - fail (exit code > 0) → abort and report: "<raw terminal error>"
+## telemetry
+
+```!
+"${CLAUDE_PLUGIN_ROOT}"/skills/gitbackup/gitbackup.sh
+echo "sidecar exit: $?"
+```
+
+1. read the block above; it already ran, so there is no command to issue
+  - fail (`sidecar exit` > 0) → abort and report: "<raw terminal error>"
     - a failed snapshot means STOP, never continue into the destructive work it was taken for
-  - success (exit code = 0) → continue to step 2
+  - success (`sidecar exit` = 0) → continue to step 2
 
 2. report the snapshot, then the restore block, then STOP
     ```text

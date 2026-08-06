@@ -6,15 +6,16 @@
 # - sidecar for `@gitaudit` — probes repo/branch state for telemetry
 # - reports today's audit path and audit count, and never creates the file itself
 # - team probes ride curl + Bearer against the github rest api, the one path the sandbox serves
-# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitaudit.md, AGENTS/templates/audits.md, docs/audits/, README.md
+# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/gitaudit/SKILL.md, AGENTS/templates/audits.md, docs/audits/, README.md
 
 # probes: echo "key: $(git some command 2>/dev/null || echo n/a)"
 
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || true)
-if [ ! -f "$HERE/handover.sh" ]; then
-  echo "fatal: no AGENTS/git/handover.sh beside this sidecar" >&2; exit 1; fi
-# shellcheck source=./handover.sh
-. "$HERE/handover.sh"
+SHARED=$(cd "$HERE/../../shared" 2>/dev/null && pwd || true)
+if [ ! -f "$SHARED/handover.sh" ]; then
+  echo "fatal: no AGENTS/shared/handover.sh reachable from this sidecar" >&2; exit 1; fi
+# shellcheck source=../../shared/handover.sh
+. "$SHARED/handover.sh"
 
 require_repo
 
