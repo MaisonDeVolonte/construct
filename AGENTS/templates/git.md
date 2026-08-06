@@ -57,7 +57,8 @@ git command two
 
 - `telemetry` is what was measured; the trigger doc branches on it
 - `handover` is what the user runs; every line is runnable as written, notes stay commented
-- a sidecar that needs to mutate emits the command instead of running it
+- `trigger` is the optional third block: what the trigger runs as a tool call, never a paste
+- a sidecar that needs to mutate emits the command instead of running it, into either block
 - close every trigger with ONE copy-paste bash block holding the handover, in that same order
 
 ## the read-only contract
@@ -66,7 +67,11 @@ git command two
 - a sidecar's commands are not tool calls, so neither the deny floor nor the hook ever sees them
 - that is the whole reason for the rule: a sidecar running them was a silent bypass of both gates
 - where a trigger genuinely needs to mutate, the floor opens a narrow allow and the TRIGGER runs it,
-  which keeps the command in front of the gate — `@gitcontinue` and its four sync forms are the case
+  which keeps the command in front of the gate; the sidecar emits it into a `trigger` block instead
+- a step earns that block only by ADDING safety: `@gitcontinue`'s sync is recoverable at every
+  step, and `@gitfresh`'s backup is the one line that makes the rest of its handover survivable
+- a step that SPENDS safety never earns it, however convenient — clean, reset and force-switch
+  stay in the handover no matter how many times the same paste gets asked for
 - `AGENTS/git/handover.sh` carries the shared preflights, queries, and block emitters
 - default branch resolution goes through `git_default_branch`, since `symbolic-ref` is denied
 

@@ -5,20 +5,21 @@
  * ===================================================
  * @description
  * - ran only on explicit `@gitdeliver` command
- * - drains uncommitted work one atomic `type(scope)` bucket at a time:
+ * - drains uncommitted work in atomic `type(scope)` buckets:
  *   branch → commit → push → pr → auto-merge on green → back to trunk
- * - `--first` flag stops after the first pr; re-runnable, `git status` drives the loop
- * - gated: never delivers; it emits one copy-paste block per bucket for the user to run
+ * - plans EVERY bucket first and gates on approval, then emits every block in one pass
+ * - the plan is the gate: bucketing errors cost nothing to fix before a branch exists
+ * - `--first` flag plans everything but emits only the first block
+ * - gated: never delivers; every block is the user's to paste, in the order given
  * - the preflight is read-only too, so even floating changes onto trunk is handed over
  * - push authenticates only outside the sandbox, so the whole bucket is the user's to run
- * - the paste IS the gate, which is why no separate confirmation step exists
  * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitdeliver.sh, AGENTS/git/handover.sh
  */
 ```
 
 **@gitdeliver:** Run ONLY on explicit `@gitdeliver` command
-- floats uncommitted changes onto the trunk, then drains them one atomic bucket at a time
-- each atomic bucket: branch → commit → push → PR → auto-merge on green, then back to the trunk for the next
+- floats uncommitted changes onto the trunk, then drains them in atomic buckets
+- each atomic bucket: branch → commit → push → PR → auto-merge on green, then back to the trunk
 - the reasoning is the automation: bucketing, ordering, and message drafting are what it does for you
 - never runs a bucket; every one is handed over as a block you paste into your own terminal
 - leaves you on the trunk, not a feature branch — the trunk is your working surface
@@ -27,7 +28,7 @@
 - recover a failed `git switch -c` with `git switch "$DEFAULT_BRANCH"`, then `git branch -D "$ATOMIC_BRANCH"` (add `git push origin --delete "$ATOMIC_BRANCH"` if pushed)
 
 **FLAGS:**
-- `--first`: stops the process immediately after the FIRST pull request
+- `--first`: plans every bucket as normal, but emits only the FIRST block
 
 1. run the native shell command exactly as specified
   ```bash
@@ -62,11 +63,9 @@
   - exceptions: 
     - `content` → any changes in `/content/` 
 
-3. prepare atomic buckets for delivery
-- sort the atomic buckets by dependency
-- prioritize foundational changes
-- choose the first atomic bucket
-- populate the following variables:
+3. plan EVERY bucket, then STOP and gate on the plan
+- sort the buckets by dependency and prioritize foundational changes
+- populate these per bucket, for all of them, before emitting anything:
 ```
 $ATOMIC_FILES # space-delimited list of files to commit
 $ATOMIC_TYPE # new, improve, fix, update, test, debug
@@ -77,14 +76,31 @@ $ATOMIC_BRANCH # atomic-type/atomic-scope/atomic-title-slug
 $ATOMIC_DESCRIPTION # multiline string of hyphen-delimited bullets
 $ATOMIC_COMMIT # $ATOMIC_TYPE($ATOMIC_SCOPE): $ATOMIC_TITLE
 ```
+- emit the plan as a table, one row per bucket, and nothing runnable yet
+  ```text
+  | # | commit | files | depends on |
+  |---|--------|-------|------------|
+  | 1 | type(scope): title | n files | — |
+  | 2 | type(scope): title | n files | 1 |
+  ```
+- name what each bucket delivers, and what it deliberately leaves to a later one
+- mark any two buckets INDEPENDENT when their files are disjoint and neither references the other
+- say plainly why a bucket cannot be split further when it looks large; a security-shaped
+  grouping (a permission and the guard that bounds it) is atomic even at six files
+- ask: "does this bucketing look right? say go and I'll emit every block"
+- STOP here and WAIT; the plan is the gate, and a wrong bucket costs nothing to fix at this point
 
-4. verify the bucket before handing it over, since a red PR costs a round trip
-- resolve every reference the bucket breaks against `git show HEAD:<file>`, NEVER the working copy
+4. verify every bucket before emitting a single block, since a red PR costs a round trip
+- resolve every reference a bucket breaks against `git show HEAD:<file>`, NEVER the working copy
 - a path the working tree already fixed still reads broken to CI until its bucket lands
-- run the validators the bucket touches, plus the two checks CI runs: `shellcheck -x` and `bash -n`
+- run the validators each bucket touches, plus the two checks CI runs: `shellcheck -x` and `bash -n`
 - CI does not gate references, so a bucket that breaks one still goes green — the read above is the check
+- bucket 1 verifies against today's HEAD; every later bucket verifies against a trunk that does not
+  exist yet, so say which buckets carry that weaker guarantee rather than implying one standard
 
-5. hand over the following block, then STOP; the paste is the gate, so never run it yourself
+5. emit every block, in dependency order, then STOP
+- ONE fenced bash block per bucket, every variable already expanded, numbered `# BUCKET n of N`
+- bucket 1 runs as written:
 ```bash
 git switch -c "$ATOMIC_BRANCH" "$DEFAULT_BRANCH"
 git add $ATOMIC_FILES
@@ -94,11 +110,18 @@ gh pr create --base "$DEFAULT_BRANCH" --fill
 gh pr merge --auto --rebase
 git switch "$DEFAULT_BRANCH"
 ```
-- emit ONE copy-paste bash block, in that order, every variable already expanded
-- name what the bucket delivers above the block, and what it deliberately leaves out
-- ask: "paste this into your terminal, then tell me when it lands"
+- every later bucket leads with the sync, since `--rebase` rewrote the trunk under it:
+```bash
+git pull --ff-only origin "$DEFAULT_BRANCH"
+git switch -c "$ATOMIC_BRANCH" "$DEFAULT_BRANCH"
+```
+- head each later block with: "only once bucket n-1 shows merged"
+- buckets marked INDEPENDENT may be pasted without waiting; say which, and never guess
+- close with: paste them in order, and tell me if any CI goes red
+- a red bucket invalidates the rest of the plan, since it was computed against a trunk that never
+  landed — say so, and re-run `@gitdeliver` rather than pasting on
 - a commit message naming a destructive command trips `pretooluse.sh`, so reword rather than quote
 
 6. check conditions before continuing:
-- IF `--first` → STOP here and report completion
+- IF `--first` → emit only bucket 1's block and report what the remaining plan holds
 - ELSE wait for the user, re-read `git status -s`, and repeat from step 2 until the tree is clean

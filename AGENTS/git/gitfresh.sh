@@ -3,9 +3,10 @@
 # @file gitfresh.sh - hard-reset measure and handover
 # ===================================================
 # @description
-# - sidecar for `@gitfresh` — measures what a reset would cost, then hands every command over
-# - read-only: it now backs nothing up either, since `git stash` joined the deny floor
-# - the backup stash leads the handover, so the user's first pasted line is the recoverable one
+# - sidecar for `@gitfresh` — measures what a reset would cost, then splits it into two blocks
+# - read-only itself: it backs nothing up, it only emits the backup for the trigger to run
+# - the backup gets its own block, so the recoverable step never rides on a full-block paste
+# - everything destructive stays in the handover, since none of it can be undone once run
 # - names every commit and branch the reset destroys before the user runs a thing
 # - measuring after the fetch is what makes the discarded/gained counts describe the real remote
 # @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitfresh.md, AGENTS/git/handover.sh
@@ -63,11 +64,19 @@ telemetry_line "branches pending deletion" "${PENDING_BRANCH_COUNT:-0}"
 telemetry_line "pending branch names" \
   "$(printf '%s' "$ALL_LOCAL_BRANCHES" | paste -sd, - | sed 's/,/, /g')"
 
+# the backup is split into its own block because it is the only step here that adds safety; the
+# trigger runs it, so the one recoverable line never depends on the user pasting the block whole
+if git_is_dirty; then
+  trigger_open gitfresh
+  handover_note "the trigger runs this itself, then proves the stash exists before handing over"
+  handover_cmd "git stash push -u -m '$STASH_NAME'"
+  block_close
+fi
+
 handover_open gitfresh
 handover_note "every line below is refused as a tool call — run them yourself, in this order"
-handover_note "the stash is first on purpose: it is the only step that can be undone"
 if git_is_dirty; then
-  handover_cmd "git stash push -a -m '$STASH_NAME'"
+  handover_note "do NOT run these until the backup above reports a stash entry named $STASH_NAME"
 fi
 if [ "$OP_IN_PROGRESS" != "none" ]; then
   handover_cmd "git $OP_IN_PROGRESS --abort"
