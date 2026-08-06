@@ -1,14 +1,14 @@
 #!/bin/bash
-# ==================================================
-# @file githappy.sh - release preflight and handover
-# ==================================================
+# =================================================
+# @file gitjump.sh - release preflight and handover
+# =================================================
 # @description
-# - sidecar for `@githappy` — verifies every release precondition, then hands the sequence over
+# - sidecar for `@gitjump` — verifies every release precondition, then hands the sequence over
 # - read-only: the bump, both pushes and the promotion merge are all denied as tool calls
 # - computes the next version from package.json rather than running `npm version` to learn it
 # - the release api call ships in the handover too, since the tag must reach origin first
 # - auth preflights through curl + bearer since gh cannot verify tls in the sandbox
-# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/githappy.md, AGENTS/git/handover.sh
+# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitjump.md, AGENTS/git/handover.sh
 
 set -euo pipefail
 
@@ -85,7 +85,7 @@ else NEXT_VERSION="v$MAJOR.$((MINOR + 1)).0"; fi
 
 PROMOTE_COUNT=$(git rev-list --count "origin/$PRODUCTION_BRANCH..origin/$DEFAULT_BRANCH" 2>/dev/null || echo 0)
 
-telemetry_open githappy
+telemetry_open gitjump
 telemetry_line "repo" "$REPO_SLUG"
 telemetry_line "github auth" "ok (http $AUTH_CODE)"
 telemetry_line "default branch" "$DEFAULT_BRANCH"
@@ -95,7 +95,7 @@ telemetry_line "current version" "$CURRENT_VERSION"
 telemetry_line "next version" "$NEXT_VERSION"
 telemetry_line "commits promoting to production" "$PROMOTE_COUNT"
 
-handover_open githappy
+handover_open gitjump
 handover_note "run these in order; the bump, both pushes and the merge are denied as tool calls"
 handover_cmd "npm version $TYPE"
 handover_cmd "git push origin $DEFAULT_BRANCH --follow-tags"

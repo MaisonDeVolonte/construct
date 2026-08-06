@@ -1,6 +1,6 @@
 # AGENTS
 **"secure agentic coding infra: sandboxed automations, workflows, and conventions"**
-- **bounded autonomy:** danger denied, destruction gated, work unattended; bash hooks fill gaps
+- **bounded autonomy:** agents work unattended but with strict guardrails; bash hooks act as failsafes
 - **masked credentials:** agents use tokens but can't see them; @settingsaudit catches leaks
 - **self-protecting policy:** agents can't secretly change their rules; @settingsaudit verifies guards
 - **built-in security suite:** auditable permissions and settings; @settingsaudit probes live gate
@@ -22,7 +22,7 @@ TABLE OF CONTENTS
 ├─ Workflows ───── git · hooks · templates · verifying
 ├─ Conventions ─── files · wayfinders · modules · comments · code
 ├─ Conversations ─ responses · verification · errors · modes
-└─ Settings ────── sandbox · scopes · keys · rules · audits · diagnostics
+└─ Settings ────── sandbox · scopes · keys · rules · clients · audits · diagnostics
 ```
 
 &nbsp;
@@ -124,16 +124,18 @@ TABLE OF CONTENTS
 
 ### Git (see `AGENTS/git/`)
 > each pairs with a matching `.sh` sidecar that measures, then hands the commands back
-> the exception is `@gitcontinue`, whose sync runs against four narrow allows in the deny floor
+> two triggers run part of their own block against narrow allows: `@gitcontinue`'s sync, which is
+> recoverable throughout, and `@gitfresh`'s backup stash, which is what makes its reset survivable
 - [@gitaudit](AGENTS/git/gitaudit.md): diagnostics, triage, report, summary, tasks (saved to file)
-- [@gitbrutal](AGENTS/git/gitbrutal.md): brutally honest code review, progress report (saved to file)
+- [@gitbackup](AGENTS/git/gitbackup.md): snapshots history and tree, verifies it, hands over the restore
 - [@gitcontinue](AGENTS/git/gitcontinue.md): measures the trunk delta, then runs the sync it planned
-- [@gitdeliver](AGENTS/git/gitdeliver.md): buckets changes atomically, hands over each delivery block
+- [@gitdeliver](AGENTS/git/gitdeliver.md): buckets changes atomically, gates the plan, hands over every block
 - [@gitempty](AGENTS/git/gitempty.md): prunes tracking refs, hands over the trunk sync and branch deletes
-- [@gitfresh](AGENTS/git/gitfresh.md): prices a hard reset, hands over backup then reset
+- [@gitfresh](AGENTS/git/gitfresh.md): prices a hard reset, takes the backup, hands over the reset
 - [@gitgud](AGENTS/git/gitgud.md): query branch delta, merge remote main into it, and run fresh CI
-- [@githappy](AGENTS/git/githappy.md): verifies release preconditions, hands over bump/push/promote
+- [@githonest](AGENTS/git/githonest.md): brutally honest code review, progress report (saved to file)
 - [@gitinsights](AGENTS/git/gitinsights.md): points at what to work on next, from scans, docs and logs (saved to file)
+- [@gitjump](AGENTS/git/gitjump.md): verifies release preconditions, hands over bump/push/promote
 - [handover.sh](AGENTS/git/handover.sh): shared preflights, queries, and the telemetry/handover blocks
 
 ### Hooks (see `AGENTS/hooks/`)
@@ -147,10 +149,10 @@ TABLE OF CONTENTS
 ### Templates (see `AGENTS/templates/`)
 > each pairs with a matching `.sh` sidecar that verifies conformance
 - [audits](AGENTS/templates/audits.md): `@gitaudit` appends findings and resolutions
-- [brutal](AGENTS/templates/brutal.md): `@gitbrutal` adversarial graded scorecards
 - [comments](AGENTS/templates/comments.md): inline comment shape in every source file
 - [git](AGENTS/templates/git.md): `@git*` triggers and sidecars follow this shape
 - [graphs](AGENTS/templates/graphs.md): `@graphspec` writes graph spec prompt files
+- [honest](AGENTS/templates/honest.md): `@githonest` adversarial graded scorecards
 - [insights](AGENTS/templates/insights.md): `@gitinsights` searches repo for opportunities
 - [logs](AGENTS/templates/logs.md): `@logthread`, `@lognote` and `@logsynth` maintain agent logs
 - [plans](AGENTS/templates/plans.md): `@graphspec --execute` detailed fanout plan generation
@@ -324,7 +326,7 @@ export function writeCode(requirements: Requirement[], request: string) {
 
 ## Conversations
 - your primary function is to deliver dense, objective, and actionable technical truths
-- your primary aim is to train up a user who needs you less each session
+- your primary aim is to empower users who need you less and less each session
 
 ### Responses
 - assume: user retains high-perception despite blunt tone
@@ -468,8 +470,33 @@ managed → cli → local → project → user (scalars override, arrays merge)
   - `spaces` are load-bearing: `Bash(ls *)` skips `lsof`, `Bash(ls*)` catches it
 - `comments` void settings json files silently (run `jq empty` after edits)
 
+### Clients
+> see [claude permission modes](https://code.claude.com/docs/en/permission-modes),
+> [acp session modes](https://agentclientprotocol.com/protocol/session-modes),
+> and [zed external agents](https://zed.dev/docs/ai/external-agents)
+
+- editors reach claude code over `ACP`, so an agent dropdown sets the mode the cli would take
+- ACP standardises no mode ids, so each name in that dropdown is claude code's, not the protocol's
+- the mode decides which calls PROMPT; it never decides which calls are DENIED
+  - `default` prompts on first use of each tool (labeled Manual in newer clients)
+  - `plan` reads and runs read-only shell, never edits source
+  - `acceptEdits` auto-accepts edits plus `mkdir`, `touch`, `mv`, `cp` inside the working dir
+  - `auto` auto-approves with background checks that the call matches your request
+  - `dontAsk` auto-DENIES anything no allow rule already names
+  - `bypassPermissions` drops the no-match prompt, which is the only gate an unlisted call ever met
+    - measured 2026-08-05: a denied `git mv` was still refused under bypass, so deny survives it
+    - explicit `ask` rules are documented to still prompt, but that one is unverified here
+    - `rm -rf /` and `rm -rf ~` still prompt as a circuit breaker, command substitution included
+    - it also drops the built-in guards on `.git`, `.claude`, `.husky`, `.vscode`, `.idea`, `.cargo`
+    - anthropic scopes it to containers and vms; treat it as a two-hour mode, never a default
+- `hooks` are unaffected by modes
+- modes are recorded per prompt in the session transcript (can be audited)
+- `disableBypassPermissionsMode` and `disableAutoMode` lock both modes out from any scope
+  - managed settings is where they bite, since no user scope can override them
+
 ### Audits
-> `/sandbox` prints the merged config, the source of truth
+> `/sandbox`: claude command that prints the merged config (the 'source of truth')
+- `/fewer-permission-prompts`: claude skill that proposes new allow entries from real transcript usage
 - [@settingsaudit](AGENTS/settings/settingsaudit.md): READ-ONLY; audits every scope, probes the boundary live (saved to file)
 - [permissions.sh](AGENTS/settings/permissions.sh): replays the corpus through the real hook, then audits the live rules
 - [scopes.sh](AGENTS/settings/scopes.sh): maps every sidecar against the merged scope stack
@@ -479,16 +506,19 @@ managed → cli → local → project → user (scalars override, arrays merge)
 ### Diagnostics
 > start from the symptom: the layer that blocked a call is rarely the one you were watching
 
-| symptom                         | layer                  | fix                                               |
-|---------------------------------|------------------------|---------------------------------------------------|
-| 'Operation not permitted'       | sandbox filesystem     | allowWrite or allowRead the path                  |
-| tool suggests `sudo chown`      | sandbox filesystem     | allowWrite the named path                         |
-| runs by hand but the .sh fails  | sandbox filesystem     | grant the child commands                          |
-| checkout strands, cannot unlink | sandbox filesystem     | a deny names a tracked path; move it to ask       |
-| pull aborts on settings.json    | sandbox filesystem     | confirm it matches origin, restore, use the hatch |
-| prompt names an unlisted host   | sandbox domain         | add it to allowedDomains, or refuse               |
-| prompt for an ordinary command  | permissions, no match  | add a project allow                               |
-| blocked despite an allow        | permissions or hook    | grep every scope for the deny                     |
-| tool missing from context       | permissions, bare deny | deny the specifier, not the tool                  |
-| a setting that looks ignored    | scope merge            | diff `/sandbox` against the file                  |
-| a whole scope looks ignored     | invalid json           | `jq empty` the file; one comment voids it         |
+| symptom                         | layer                  | fix                                        |
+|---------------------------------|------------------------|--------------------------------------------|
+| 'Operation not permitted'       | sandbox filesystem     | allowWrite or allowRead the path           |
+| tool suggests `sudo chown`      | sandbox filesystem     | allowWrite the named path                  |
+| runs by hand but the .sh fails  | sandbox filesystem     | grant the child commands                   |
+| checkout strands, cannot unlink | sandbox filesystem     | denies name tracked paths; move to ask     |
+| pull aborts on settings.json    | sandbox filesystem     | confirm matches origin, restore, use hatch |
+| prompt names an unlisted host   | sandbox domain         | add it to allowedDomains, or refuse        |
+| prompt for an ordinary command  | permissions, no match  | add a project allow                        |
+| prompt despite subcommands      | permissions, anchored  | allow matches whole string, not each cmd   |
+| blocked despite an allow        | permissions or hook    | grep every scope for the deny              |
+| tool missing from context       | permissions, bare deny | deny the specifier, not the tool           |
+| no prompt for a new command     | client mode, bypass    | check the editor dropdown, not the rules   |
+| every call denied, no prompt    | client mode, dontAsk   | add a project allow; the mode never asks   |
+| a setting that looks ignored    | scope merge            | diff `/sandbox` against the file           |
+| a whole scope looks ignored     | invalid json           | `jq empty` the file; one comment voids it  |

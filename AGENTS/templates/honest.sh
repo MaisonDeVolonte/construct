@@ -1,14 +1,14 @@
 #!/bin/bash
 # ====================================================
-# @file brutal.sh - brutal scorecard validator sidecar
+# @file honest.sh - honest scorecard validator sidecar
 # ====================================================
 # @description
-# - sidecar for `brutal.md` — asserts a scorecard archive matches the template that documents it
+# - sidecar for `honest.md` — asserts a scorecard archive matches the template that documents it
 # - one check per machine-checkable rule; every rule needing judgement prints as a human checklist
 # - ERROR breaks a rule the template states outright; WARN names a smell the template tolerates
-# - defaults to every file in `docs/brutal/`; pass files or a directory to scope it
+# - defaults to every file in `docs/honest/`; pass files or a directory to scope it
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
-# @see AGENTS.md, AGENTS/settings/secrets.sh, AGENTS/templates/brutal.md, AGENTS/git/gitbrutal.md, AGENTS/templates/plans.sh, docs/brutal/
+# @see AGENTS.md, AGENTS/settings/secrets.sh, AGENTS/templates/honest.md, AGENTS/git/githonest.md, AGENTS/templates/plans.sh, docs/honest/
 
 set -euo pipefail
 
@@ -31,8 +31,8 @@ if [ -n "$UTF8_LOCALE" ]; then export LC_ALL="$UTF8_LOCALE"; fi
 MAX_WIDTH=100
 STRICT=0
 KEEP=0
-TEMPLATE="AGENTS/templates/brutal.md"
-ARTIFACTS="docs/brutal"
+TEMPLATE="AGENTS/templates/honest.md"
+ARTIFACTS="docs/honest"
 
 # the subsections every scorecard carries, which is the one thing every entry must agree on
 EXPECTED_SECTIONS=$'reality check\neffort vs output\nrisk & maintenance traps\ngrades'
@@ -43,36 +43,36 @@ EXPECTED_LANES=$'infra/tooling\napp/features\ntests/reality'
 # "where the time actually went, in one or two lines"
 MAX_EFFORT_LINES=2
 
-BRUTALS=()
+HONESTS=()
 for arg in "$@"; do
   case "$arg" in
     --strict) STRICT=1;;
     --keep) KEEP=1;;
     -h|--help) sed -n '2,11p' "$0"; exit 0;;
     -*) echo "fatal: unknown flag $arg" >&2; exit 1;;
-    *) BRUTALS+=("$arg");;
+    *) HONESTS+=("$arg");;
   esac
 done
 
 # no paths given: scan the whole artifact directory, anchored to the repo root so the default
 # works from any subdirectory — same posture as the @git* sidecars
-if [ ${#BRUTALS[@]} -eq 0 ]; then
+if [ ${#HONESTS[@]} -eq 0 ]; then
   if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     echo "fatal: not a git repository, and no paths given" >&2; exit 1; fi
   cd "$(git rev-parse --show-toplevel)"
   if [ ! -d "$ARTIFACTS" ]; then echo "fatal: no $ARTIFACTS/ to scan" >&2; exit 1; fi
-  BRUTALS=("$ARTIFACTS"/*.md)
+  HONESTS=("$ARTIFACTS"/*.md)
 fi
 
 # a directory argument expands to the scorecard files inside it
 EXPANDED=()
-for path in "${BRUTALS[@]}"; do
+for path in "${HONESTS[@]}"; do
   if [ -d "$path" ]; then
     for nested in "$path"/*.md; do [ -f "$nested" ] && EXPANDED+=("$nested"); done
   elif [ -f "$path" ]; then EXPANDED+=("$path")
   else echo "fatal: no such scorecard file: $path" >&2; exit 1; fi
 done
-BRUTALS=("${EXPANDED[@]}")
+HONESTS=("${EXPANDED[@]}")
 
 # repo-local scratch: the sandbox denies writes outside cwd, and macos mktemp ignores TMPDIR
 TMPROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tmp"
@@ -113,13 +113,13 @@ subsection() {
 #   each takes a scorecard path and appends findings; to add one, write a function and list it below
 # ==============
 
-# "one brutal file per day" — the date in the name is what makes grade drift readable
+# "one honest file per day" — the date in the name is what makes grade drift readable
 check_filename() {
   local file=$1 base dir
   base=$(basename "$file")
   dir=$(dirname "$file")
   if ! printf '%s' "$base" | grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2}\.md$'; then
-    err "$file" 1 filename "one brutal file per day, named YYYY-MM-DD.md"
+    err "$file" 1 filename "one honest file per day, named YYYY-MM-DD.md"
   fi
   case "$dir" in
     "$ARTIFACTS"|"./$ARTIFACTS"|*"/$ARTIFACTS") ;;
@@ -153,12 +153,12 @@ check_entries() {
   while IFS=$'\t' read -r start end heading; do
     count=$((count + 1))
     if ! printf '%s' "$heading" \
-      | grep -qE '^Brutal #[0-9]+: [0-9]{4}-[0-9]{2}-[0-9]{2} ([01][0-9]|2[0-3]):[0-5][0-9]$'; then
-      err "$file" "$start" entry_heading "entries read '## Brutal #N: YYYY-MM-DD HH:MM'"
+      | grep -qE '^Honest #[0-9]+: [0-9]{4}-[0-9]{2}-[0-9]{2} ([01][0-9]|2[0-3]):[0-5][0-9]$'; then
+      err "$file" "$start" entry_heading "entries read '## Honest #N: YYYY-MM-DD HH:MM'"
       continue
     fi
-    number=$(printf '%s' "$heading" | sed -n 's/^Brutal #\([0-9]\{1,\}\):.*/\1/p')
-    stamp=$(printf '%s' "$heading" | sed -n 's/^Brutal #[0-9]\{1,\}: \(.*\)$/\1/p')
+    number=$(printf '%s' "$heading" | sed -n 's/^Honest #\([0-9]\{1,\}\):.*/\1/p')
+    stamp=$(printf '%s' "$heading" | sed -n 's/^Honest #[0-9]\{1,\}: \(.*\)$/\1/p')
     if [ "$number" -ne "$expected" ]; then
       err "$file" "$start" entry_numbering "scorecard $number where $expected was expected"
     fi
@@ -337,21 +337,21 @@ check_placeholders() {
 
 
 # --- run list (add new checks here) ---
-for brutal in "${BRUTALS[@]}"; do
-  check_filename    "$brutal"
-  check_tracked     "$brutal"
-  check_header      "$brutal"
-  check_entries     "$brutal"
-  check_subsections "$brutal"
-  check_reality     "$brutal"
-  check_effort      "$brutal"
-  check_traps       "$brutal"
-  check_grades      "$brutal"
-  check_verdict     "$brutal"
-  check_width       "$brutal"
-  check_fences      "$brutal"
-  check_placeholders "$brutal"
-  scan_secrets      "$brutal"
+for honest in "${HONESTS[@]}"; do
+  check_filename    "$honest"
+  check_tracked     "$honest"
+  check_header      "$honest"
+  check_entries     "$honest"
+  check_subsections "$honest"
+  check_reality     "$honest"
+  check_effort      "$honest"
+  check_traps       "$honest"
+  check_grades      "$honest"
+  check_verdict     "$honest"
+  check_width       "$honest"
+  check_fences      "$honest"
+  check_placeholders "$honest"
+  scan_secrets      "$honest"
 done
 
 # ==============
@@ -363,9 +363,9 @@ SECRETS=$(grep -c '|secret|' "$FINDINGS" || true)
 
 cat <<EOF
 
-=== brutal.sh sidecar ===
+=== honest.sh sidecar ===
 template: $TEMPLATE
-scanned: ${#BRUTALS[@]} scorecard file(s)
+scanned: ${#HONESTS[@]} scorecard file(s)
 width_cap: $MAX_WIDTH chars
 errors: $ERRORS
 warnings: $WARNINGS
