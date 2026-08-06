@@ -256,7 +256,7 @@ every token inherits the same layers; the axis is the layer, never the token
 - `git branch`, `git tag`, `git remote` and `git reflog` are bare-only, so the mutating forms miss
 - `git merge-base` and `git merge-tree` survive because the merge deny requires a bare form or a space
 - `git fetch` is the one non-read here: it moves remote-tracking refs, which the atomic loop needs
-- `AGENTS/git/handover.sh` is written against this list, so a sidecar cannot drift out of it
+- `AGENTS/shared/handover.sh` is written against this list, so a sidecar cannot drift out of it
 - the second block is the mutating exception, and every rule in it is a literal or a message glob
 - literals rather than `git switch *`, so the floor refuses a create or a discard without the hook
 - `git stash push` is allowed only under the two messages the triggers write, never a bare form

@@ -266,7 +266,7 @@ cat <<'EOF'
 --- what this audit cannot tell you ---
 - it never models the permission matcher, so "no deny rule names it" is not "it is allowed"
 - a rule may still fail to match for a reason only the harness knows; test the ones that matter
-- neither layer sees inside AGENTS/git/*.sh, so an allow-listed script bypasses both by design
+- neither layer sees inside AGENTS/skills/*/*.sh, so an allow-listed script bypasses both by design
 - the hook matches command strings, not intent, so it over-blocks a string that merely names a path
 - settings load at session start, so an edited file changes nothing until the session restarts
 - a corpus is only as good as its spellings; add one every time a new bypass turns up
