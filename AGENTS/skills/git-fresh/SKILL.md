@@ -1,7 +1,6 @@
 ---
 name: git-fresh
 description: Price a hard reset, take the backup itself, then hand over the destructive rest.
-disallowed-tools: Write Edit
 disable-model-invocation: true
 metadata:
   kind: trigger
