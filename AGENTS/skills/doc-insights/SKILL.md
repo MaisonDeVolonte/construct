@@ -5,7 +5,7 @@ metadata:
   kind: spec
 ---
 # docs/insights/YYYY-MM-DD.md
-tracked in git, one file per day, appended to by `@git-insights` and nothing else:
+one file per day, appended to by `@git-insights` and nothing else:
 
 - a report captures the opportunity surface at a moment in time, never edited after the fact
 - `observations` are what the three streams found; `opportunities` are what to do about it

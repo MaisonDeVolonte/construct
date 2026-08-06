@@ -4,7 +4,7 @@ description: Shape of a plan in docs/plans/: context, goal, solution, risks, che
 metadata:
   kind: spec
 ---
-**the file:** `docs/plans/YYYY-MM-DD-operation-<title>.md`, tracked in git, one per plan
+**the file:** `docs/plans/YYYY-MM-DD-operation-<title>.md`, one per plan
 - written before complex or architectural work, never after it
 - sections run in this order: context, goal, solution, risks, checklist, readiness, notes
 - a completed plan closes with a summary in `notes`; a `## Summary` section breaks that order

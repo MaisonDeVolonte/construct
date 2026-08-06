@@ -8,7 +8,7 @@
 # - the doc carries the four subsections an entry holds; this file carries what a script can judge
 # - the pair owns the archive shape; each writing trigger owns the fields inside its own entry
 # ARTIFACT
-# - `docs/audits/YYYY-MM-DD-<kind>.md`, tracked in git, one file per day and per kind
+# - `docs/audits/YYYY-MM-DD-<kind>.md`, one file per day and per kind
 # - written by any auditing trigger, appended each run, so one file holds many audits
 # - the kind in the filename and the kind in each heading match, so one archive reads as one
 # - an audit captures repo state at a moment in time, so it is never edited after the fact
@@ -140,13 +140,6 @@ check_filename() {
   esac
 }
 
-# "tracked in git"
-check_tracked() {
-  local file=$1
-  if ! git ls-files --error-unmatch "$file" >/dev/null 2>&1; then
-    warn "$file" 1 untracked "audits are tracked in git; this one is not committed yet"
-  fi
-}
 
 # the agent opens the file with its own path as the h1, so a mismatch means the file was
 # copied from another day — and a copied header is how two days of audits end up in one file
@@ -315,7 +308,6 @@ check_placeholders() {
 # --- run list (add new checks here) ---
 for audit in "${AUDITS[@]}"; do
   check_filename    "$audit"
-  check_tracked     "$audit"
   check_header      "$audit"
   check_entries     "$audit"
   check_subsections "$audit"

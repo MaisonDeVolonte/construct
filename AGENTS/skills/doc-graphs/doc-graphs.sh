@@ -7,7 +7,7 @@
 # - sidecar for `doc-graphs` — asserts a graph spec matches the shape its SKILL.md documents
 # - the doc carries the seven fields and a worked example; this file carries what a script can judge
 # ARTIFACT
-# - `docs/graphs/YYYY-MM-DD-operation-<title>.md`, tracked in git, one file per spec
+# - `docs/graphs/YYYY-MM-DD-operation-<title>.md`, one file per spec
 # - written on explicit `@graphspec --<artifact> <goal>`, where the flag defaults to `--plan`
 # - the flag names what executing the spec must produce, so `--plan` yields a plan file
 # - fields run in order: goal, context, done when, fan out, rules, verify, output
@@ -133,13 +133,6 @@ check_filename() {
   esac
 }
 
-# "tracked in git"
-check_tracked() {
-  local file=$1
-  if ! git ls-files --error-unmatch "$file" >/dev/null 2>&1; then
-    warn "$file" 1 untracked "specs are tracked in git; this one is not committed yet"
-  fi
-}
 
 # every spec opens with the banner, so a half-written file is never mistaken for a spec
 check_banner() {
@@ -276,7 +269,6 @@ check_output() {
 # --- run list (add new checks here) ---
 for spec in "${SPECS[@]}"; do
   check_filename     "$spec"
-  check_tracked      "$spec"
   check_banner       "$spec"
   check_fields       "$spec"
   check_alignment    "$spec"

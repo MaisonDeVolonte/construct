@@ -7,7 +7,7 @@
 # - sidecar for `doc-plans` — asserts a plan matches the shape its SKILL.md documents
 # - the doc carries seven sections and three tables; this file carries what a script can judge
 # ARTIFACT
-# - `docs/plans/YYYY-MM-DD-operation-<title>.md`, tracked in git, one file per plan
+# - `docs/plans/YYYY-MM-DD-operation-<title>.md`, one file per plan
 # - written before complex or architectural work, and closed out in `notes` rather than a summary
 # - sections run in order: context, goal, solution, risks, checklist, readiness, notes
 # - `checklist` holds the stages, each numbered, run in sequence, and each shipping as its own pr
@@ -186,13 +186,6 @@ check_filename() {
   esac
 }
 
-# "tracked in git"
-check_tracked() {
-  local file=$1
-  if ! git ls-files --error-unmatch "$file" >/dev/null 2>&1; then
-    warn "$file" 1 untracked "plans are tracked in git; this one is not committed yet"
-  fi
-}
 
 # "# AGENT PLAN: Operation [title]" then "one plain-english line: what this plan does"
 check_header() {
@@ -473,7 +466,6 @@ check_notes() {
 # --- run list (add new checks here) ---
 for plan in "${PLANS[@]}"; do
   check_filename "$plan"
-  check_tracked  "$plan"
   check_header   "$plan"
   check_sections "$plan"
   check_width    "$plan"
