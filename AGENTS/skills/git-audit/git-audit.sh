@@ -16,6 +16,8 @@
 # - the sidecar names today's audit path and count, and never creates the file itself
 # @see AGENTS.md, AGENTS/skills/git-audit/SKILL.md, AGENTS/skills/doc-audits/SKILL.md, AGENTS/shared/handover.sh, AGENTS/skills/check-skills/SKILL.md, docs/audits/
 
+set -euo pipefail
+
 # probes: echo "key: $(git some command 2>/dev/null || echo n/a)"
 
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || true)
