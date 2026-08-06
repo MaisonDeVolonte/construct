@@ -8,7 +8,7 @@
 # - ERROR breaks a rule the template states outright; WARN names a smell the template tolerates
 # - defaults to every file in `docs/plans/`; pass files or a directory to scope it
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
-# @see AGENTS.md, AGENTS/settings/secrets.sh, AGENTS/templates/plans.md, AGENTS/git/gitinsights.sh, docs/plans/
+# @see AGENTS.md, AGENTS/settings/secrets.sh, AGENTS/templates/plans.md, AGENTS/skills/gitinsights/gitinsights.sh, docs/plans/
 
 set -euo pipefail
 

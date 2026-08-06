@@ -15,7 +15,7 @@
  * - an opportunity that recurs across dated files is a finding; restate it, never edit the older report
  * - a Q1 entry that survives three reports has stopped being urgent in practice, say so
  * - `AGENTS/templates/insights.sh` validates a report against every rule above a script can judge
- * @see AGENTS.md, AGENTS/templates/insights.sh, AGENTS/git/gitinsights.md, docs/insights/
+ * @see AGENTS.md, AGENTS/templates/insights.sh, AGENTS/skills/gitinsights/SKILL.md, docs/insights/
  */
 ```
 

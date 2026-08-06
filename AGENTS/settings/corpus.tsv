@@ -32,10 +32,10 @@ write-protected-path	hook	chmod 777 .env
 write-protected-path	hook	rsync -a payload/ webflow/
 write-protected-path	hook	truncate -s 0 .husky/pre-commit
 move-out-of-repo	ask	mv docs/honest /tmp/stash
-move-out-of-repo	ask	mv AGENTS/git/gitjump.sh $TMPDIR/gitjump.sh
+move-out-of-repo	ask	mv AGENTS/skills/gitjump/gitjump.sh $TMPDIR/gitjump.sh
 move-out-of-repo	ask	mv README.md ~/README.md
 move-out-of-repo	ask	mv src ../src
-move-out-of-repo	none	mv AGENTS/git/gitjump.sh AGENTS/git/gitrelease.sh
+move-out-of-repo	none	mv AGENTS/skills/gitjump/gitjump.sh AGENTS/skills/gitjump/gitrelease.sh
 move-out-of-repo	none	mv docs/honest/2026-08-05.md docs/honest/2026-08-06.md
 delete-remote-ref	deny	git push origin --delete main
 delete-remote-ref	deny	git push --mirror origin

@@ -16,7 +16,7 @@
  * - carry unresolved findings forward by restating them, never by editing the older audit
  * - err on the side of brevity, not completeness
  * - `AGENTS/templates/audits.sh` validates an audit file against every rule above a script can judge
- * @see AGENTS.md, AGENTS/templates/audits.sh, AGENTS/git/gitaudit.md,
+ * @see AGENTS.md, AGENTS/templates/audits.sh, AGENTS/skills/gitaudit/SKILL.md,
  *      AGENTS/settings/settingsaudit.md, docs/audits/
  */
 ```

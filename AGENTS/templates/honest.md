@@ -15,7 +15,7 @@
  * - never soften a written scorecard, and never re-grade an older one to match a newer mood
  * - grade drift across dated files is the point; a lane stuck at D is the signal
  * - `AGENTS/templates/honest.sh` validates a scorecard against every rule above a script can judge
- * @see AGENTS.md, AGENTS/templates/honest.sh, AGENTS/git/githonest.md, docs/honest/
+ * @see AGENTS.md, AGENTS/templates/honest.sh, AGENTS/skills/githonest/SKILL.md, docs/honest/
  */
 ```
 

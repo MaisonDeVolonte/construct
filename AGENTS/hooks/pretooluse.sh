@@ -8,7 +8,7 @@
 # - deny rules are prefix anchored, so a trailing `--force` walks straight past them
 # - this reads the FULL command string, so the flag gets caught wherever it sits
 # - keep both: deny rules are committed, while this hook's wiring is gitignored
-# - neither layer sees inside `AGENTS/git/*.sh`, since a script's commands are not tool calls
+# - neither layer sees inside `AGENTS/skills/*/*.sh`, since a script's commands are not tool calls
 # - blocks force pushes and force branch deletes, silent (exit 0) for everything else
 # - also guards the narrow allows `@gitcontinue` opens: ff-only merge, plain switch, stash halves
 # - also refuses bash writes into the policy dirs, which the Edit and Write rules never see
