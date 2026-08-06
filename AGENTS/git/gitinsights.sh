@@ -55,7 +55,7 @@ is_generated() {
   case "$1" in
     *tests/report*|*tests/results*|*.next*|*node_modules*) return 0;;
     # runtime artifact dirs: gitignored and written on demand, so absent from a fresh clone
-    docs/logs*|docs/plans*|docs/study*|docs/audits*|docs/brutal*|docs/insights*|docs/graphs*) return 0;;
+    docs/logs*|docs/plans*|docs/study*|docs/audits*|docs/honest*|docs/insights*|docs/graphs*) return 0;;
     *) return 1;;
   esac
 }

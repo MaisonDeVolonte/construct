@@ -34,7 +34,7 @@ what the three streams actually surfaced:
 - hyphen-delimited list of bullets
 
 *example:*
-> `gitbrutal.sh` greps `content/**`, a path that no longer exists in this repo
+> `githonest.sh` greps `content/**`, a path that no longer exists in this repo
 > README documents a `.gitkeep` scaffold that `.gitignore` no longer preserves
 > logs mention the same hook-testing gap on 3 separate days
 

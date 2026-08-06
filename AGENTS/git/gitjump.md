@@ -1,19 +1,19 @@
 ```javascript
 /**
- * ===================================
- * @file githappy.md - release trigger
- * ===================================
+ * ==================================
+ * @file gitjump.md - release trigger
+ * ==================================
  * @description
- * - ran only on explicit `@githappy` command; aborts on any failed preflight check
- * - READ-ONLY: `AGENTS/git/githappy.sh` verifies every precondition and hands the sequence over
+ * - ran only on explicit `@gitjump` command; aborts on any failed preflight check
+ * - READ-ONLY: `AGENTS/git/gitjump.sh` verifies every precondition and hands the sequence over
  * - the bump, both pushes, the promotion merge and the release call are all the user's to run
  * - `--minor`/`--major` (default minor) only decides the version the handover names
  * - the release api call comes last, since the tag has to reach origin before it resolves
- * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/githappy.sh, .github/workflows/deploy.yml
+ * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitjump.sh, .github/workflows/deploy.yml
  */
 ```
 
-**@githappy:** Run ONLY on explicit `@githappy` command
+**@gitjump:** Run ONLY on explicit `@gitjump` command
 - run when you want to release a new minor or major version
 - aborts if any preflight fails: dirty tree, detached HEAD, out-of-sync trunk, missing production
 - computes the next version from `package.json` rather than applying it, since `npm version` commits
@@ -27,7 +27,7 @@
 
 1. run the native shell command exactly as specified
   ```bash
-  AGENTS/git/githappy.sh <flag>
+  AGENTS/git/gitjump.sh <flag>
   ```
   - fail (exit code > 0) → abort and report: "<raw terminal error>"
   - success (exit code = 0) → continue to step 2

@@ -1,11 +1,11 @@
 #!/bin/bash
 # =============================================================
-# @file gitbrutal.sh - adversarial doc-vs-reality audit sidecar
+# @file githonest.sh - adversarial doc-vs-reality audit sidecar
 # =============================================================
 # @description
-# - sidecar for `@gitbrutal` — gathers telemetry for the brutal-honesty scorecard
-# - reports today's brutal path and scorecard count, and never creates the file itself
-# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitbrutal.md, AGENTS/templates/brutal.md, docs/brutal/
+# - sidecar for `@githonest` — gathers telemetry for the honest scorecard
+# - reports today's honest path and scorecard count, and never creates the file itself
+# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/githonest.md, AGENTS/templates/honest.md, docs/honest/
 
 set -euo pipefail
 
@@ -13,20 +13,20 @@ set -euo pipefail
 if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   echo "fatal: not a git repository" >&2; exit 1; fi
 
-echo "=== @gitbrutal telemetry ==="
+echo "=== @githonest telemetry ==="
 
 # one file per day, many scorecards per file — reported never created, so a run that produces
 # no scorecard leaves nothing; paths anchor to the repo root, not the caller's dir
-echo "--- BRUTAL ARCHIVE ---"
+echo "--- HONEST ARCHIVE ---"
 ROOT=$(git rev-parse --show-toplevel)
-TODAYS_BRUTAL="docs/brutal/$(date +%Y-%m-%d).md"
+TODAYS_HONEST="docs/honest/$(date +%Y-%m-%d).md"
 # no file yet means no scorecards yet, which is the count the agent numbers its first one from
-if [ -f "$ROOT/$TODAYS_BRUTAL" ];
-then BRUTAL_COUNT=$(grep -c '^## Brutal #' "$ROOT/$TODAYS_BRUTAL" || true)
-else BRUTAL_COUNT=0; fi
-echo "brutal_file: $TODAYS_BRUTAL"
-echo "brutal_time: $(date '+%Y-%m-%d %H:%M')"
-echo "brutal_count: $BRUTAL_COUNT"
+if [ -f "$ROOT/$TODAYS_HONEST" ];
+then HONEST_COUNT=$(grep -c '^## Honest #' "$ROOT/$TODAYS_HONEST" || true)
+else HONEST_COUNT=0; fi
+echo "honest_file: $TODAYS_HONEST"
+echo "honest_time: $(date '+%Y-%m-%d %H:%M')"
+echo "honest_count: $HONEST_COUNT"
 
 echo "--- REPO AGE & EFFORT ---"
 FIRST_COMMIT=$(git log --reverse --format="%ad" --date=short | head -1 || echo "unknown")
