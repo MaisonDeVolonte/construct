@@ -2,6 +2,8 @@
 name: git-insights
 description: Scan repo, docs and logs for what to work on next, saved to file.
 disable-model-invocation: true
+metadata:
+  kind: trigger
 ---
 ```javascript
 /**
@@ -17,7 +19,7 @@ disable-model-invocation: true
  * - reads the 5 most recent `docs/logs/` entries for unresolved observations
  * - merges all three streams into an urgent/important opportunity matrix
  * - appends that report to `docs/insights/YYYY-MM-DD.md`, one file per day, many reports per file
- * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/git-insights/git-insights.sh, docs/logs/, AGENTS/templates/logs.md, AGENTS/templates/insights.md, docs/insights/
+ * @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/git-insights/git-insights.sh, docs/logs/, AGENTS/skills/doc-logs/SKILL.md, AGENTS/skills/doc-insights/SKILL.md, docs/insights/
  */
 ```
 
@@ -80,7 +82,7 @@ echo "sidecar exit: $?"
   - hyphen-delimited list of bullets
   ```
 
-6. THEN append the same report to the insights file (see `AGENTS/templates/insights.md`)
+6. THEN append the same report to the insights file (see `AGENTS/skills/doc-insights/SKILL.md`)
   ```text
   - the sidecar reports the target but never creates it; take it from the telemetry header:
   - CREATE the file first if it does not exist, with `# <insights_file>` as its only line

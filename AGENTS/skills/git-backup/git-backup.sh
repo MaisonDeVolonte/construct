@@ -11,7 +11,7 @@
 # - the destination is fixed and takes no argument, so this never becomes a copy-anywhere tool
 # - `cp` here is invisible to the deny list and the hook, since script lines are not tool calls
 # - that gap is the design: a reviewed sidecar holds a capability the loose agent never gets
-# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/git-backup/SKILL.md, AGENTS/shared/handover.sh
+# @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/git-backup/SKILL.md, AGENTS/shared/handover.sh
 
 set -euo pipefail
 

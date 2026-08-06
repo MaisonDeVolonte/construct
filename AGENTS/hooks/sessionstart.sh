@@ -7,7 +7,7 @@
 # - creates today's log file if none exists yet
 # - injects today's log + most recent prior log + README.md + AGENTS.md into session context
 # - works with `claude`; does not work with `grok`
-# @see AGENTS.md, AGENTS/templates/logs.md, docs/logs/
+# @see AGENTS.md, AGENTS/skills/doc-logs/SKILL.md, docs/logs/
 
 TODAY_LOG="docs/logs/$(date +%Y-%m-%d).md"
 

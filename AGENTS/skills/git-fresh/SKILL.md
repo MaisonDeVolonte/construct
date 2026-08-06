@@ -3,6 +3,8 @@ name: git-fresh
 description: Price a hard reset, take the backup itself, then hand over the destructive rest.
 disallowed-tools: Write Edit
 disable-model-invocation: true
+metadata:
+  kind: trigger
 ---
 ```javascript
 /**
@@ -16,7 +18,7 @@ disable-model-invocation: true
  * - the trigger runs the backup stash only, since it is the one step that adds safety
  * - clean, reset, switch -f and branch deletes stay denied, so the user runs every one
  * - the backup running first is the whole point: a handover the user half-pastes still has it
- * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/git-fresh/git-fresh.sh, AGENTS/skills/git-audit/git-audit.sh
+ * @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/git-fresh/git-fresh.sh, AGENTS/skills/git-audit/git-audit.sh
  */
 ```
 

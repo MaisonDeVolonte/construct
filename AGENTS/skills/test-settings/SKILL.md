@@ -9,8 +9,8 @@
  * - the sidecar wraps `permissions.sh` and `scopes.sh`, so one run covers all three
  * - read-only: it reports findings and hands every repair back for the user to make
  * - appends one entry to the day's settings audit, never editing an earlier one
- * @see AGENTS.md, AGENTS/settings/settingsaudit.sh, AGENTS/templates/git.md,
- *      AGENTS/templates/audits.md, docs/audits/
+ * @see AGENTS.md, AGENTS/settings/settingsaudit.sh, AGENTS/skills/check-skills/SKILL.md,
+ *      AGENTS/skills/doc-audits/SKILL.md, docs/audits/
  */
 ```
 
@@ -28,7 +28,7 @@
   - success (exit code = 0) → continue to step 2 and record the clean run
   - `--static` skips the probes, `--quick` skips the wrapped sidecars, both for a faster pass
 
-2. append one entry to `[audit_file]`, in the shape `AGENTS/templates/audits.md` defines
+2. append one entry to `[audit_file]`, in the shape `AGENTS/skills/doc-audits/SKILL.md` defines
     - the heading reads `## Settings Audit #[next_audit]: [timestamp]`, both from the telemetry
     - `state` is the counts as hyphen bullets: scopes parsed, probes run, errors and warnings
     - `findings` lead with the label the sidecar printed, one bullet each, naming what it hit

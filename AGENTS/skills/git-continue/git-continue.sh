@@ -8,7 +8,7 @@
 # - fetch is the one write it makes, and it only moves remote-tracking refs
 # - measures ahead/behind after the fetch, so the handover names the real work
 # - the earlier version ran the sequence itself and read a behind trunk as diverged
-# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/git-continue/SKILL.md, AGENTS/shared/handover.sh
+# @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/git-continue/SKILL.md, AGENTS/shared/handover.sh
 
 set -euo pipefail
 

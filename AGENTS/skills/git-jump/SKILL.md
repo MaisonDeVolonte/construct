@@ -3,6 +3,8 @@ name: git-jump
 description: Verify every release precondition, then hand over the bump, push and promote.
 disallowed-tools: Write Edit
 disable-model-invocation: true
+metadata:
+  kind: trigger
 ---
 ```javascript
 /**
@@ -15,7 +17,7 @@ disable-model-invocation: true
  * - the bump, both pushes, the promotion merge and the release call are all the user's to run
  * - `--minor`/`--major` (default minor) only decides the version the handover names
  * - the release api call comes last, since the tag has to reach origin before it resolves
- * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/git-jump/git-jump.sh, .github/workflows/deploy.yml
+ * @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/git-jump/git-jump.sh, .github/workflows/deploy.yml
  */
 ```
 

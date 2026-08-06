@@ -1,7 +1,13 @@
+---
+name: doc-study
+description: Shape of a retrospective study in docs/study/, with its graded quiz.
+metadata:
+  kind: spec
+---
 ```javascript
 /**
  * ================================
- * @file study.md - study template
+ * @file SKILL.md - study template
  * ================================
  * @description
  * - one file per feature/workflow, `docs/study/`, named `<feature>.md` in kebab-case
@@ -11,8 +17,8 @@
  * - lists files in ideal-build order, not alphabetical or touched-order
  * - studies are written in maximally concise, roadmap-style language — a map, not a textbook
  * - `lines` carry a single clause, capped at 100 characters, and never wrap
- * - `AGENTS/templates/study.sh` validates a study against every rule above a script can judge
- * @see AGENTS.md, AGENTS/templates/study.sh, docs/study/
+ * - `AGENTS/skills/doc-study/doc-study.sh` validates a study against every rule above a script can judge
+ * @see AGENTS.md, AGENTS/skills/doc-study/doc-study.sh, docs/study/
  */
 ```
 
@@ -45,7 +51,7 @@ how to build the next similar thing, using this as the reference
 
 ```text
 VERIFY - not part of the artifact
-- RUN `AGENTS/templates/study.sh` once the study is written; pass a path to scope the run
+- RUN `AGENTS/skills/doc-study/doc-study.sh` once the study is written; pass a path to scope the run
 - FIX every ERROR, since each one breaks a rule stated in the header above
 - STOP on a `secret` finding and ask the user before truncating it; the key needs rotating first
 - JUSTIFY or fix every WARN; the sidecar tolerates them, the next reader may not

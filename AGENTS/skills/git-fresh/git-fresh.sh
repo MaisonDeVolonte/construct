@@ -9,7 +9,7 @@
 # - everything destructive stays in the handover, since none of it can be undone once run
 # - names every commit and branch the reset destroys before the user runs a thing
 # - measuring after the fetch is what makes the discarded/gained counts describe the real remote
-# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/git-fresh/SKILL.md, AGENTS/shared/handover.sh
+# @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/git-fresh/SKILL.md, AGENTS/shared/handover.sh
 
 set -euo pipefail
 

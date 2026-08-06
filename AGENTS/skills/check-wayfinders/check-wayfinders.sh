@@ -1,16 +1,16 @@
 #!/bin/bash
-# ==========================================================
-# @file wayfinders.sh - wayfinding header validator sidecar
-# ==========================================================
+# ===============================================================
+# @file check-wayfinders.sh - wayfinding header validator sidecar
+# ===============================================================
 # @description
 # - sidecar for `wayfinders.md` — asserts a wayfinding header matches the shape it documents
 # - one check per machine-checkable rule; every rule needing judgement prints as a human checklist
 # - ERROR breaks a rule the template states outright; WARN names a smell the template tolerates
-# - the header only; everything below it is `AGENTS/templates/comments.sh`'s to judge
+# - the header only; everything below it is `AGENTS/skills/check-comments/check-comments.sh`'s to judge
 # - a broken `@see` only warns here, and nothing gates references now, so the warn is all there is
 # - defaults to every tracked eligible file; pass files or a directory to scope it
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
-# @see AGENTS.md, AGENTS/settings/secrets.sh, AGENTS/templates/wayfinders.md, AGENTS/skills/git-insights/git-insights.sh
+# @see AGENTS.md, AGENTS/settings/secrets.sh, AGENTS/skills/check-wayfinders/SKILL.md, AGENTS/skills/git-insights/git-insights.sh
 
 set -euo pipefail
 
@@ -19,10 +19,10 @@ set -euo pipefail
 # ==============
 # the shared scan sits beside this file, not beside the repo being scanned: resolve them before
 # anything cds to a repo root, since BASH_SOURCE arrives relative and would follow that cd
-SHARED=$(cd "$(dirname "${BASH_SOURCE[0]}")/../settings" 2>/dev/null && pwd || true)
+SHARED=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../settings" 2>/dev/null && pwd || true)
 if [ ! -f "$SHARED/secrets.sh" ]; then
   echo "fatal: no AGENTS/settings/secrets.sh beside this sidecar" >&2; exit 1; fi
-# shellcheck source=../settings/secrets.sh
+# shellcheck source=../../settings/secrets.sh
 . "$SHARED/secrets.sh"
 
 # character counts, not byte counts: bash's ${#var} is multibyte-aware under a utf-8 locale, and
@@ -33,7 +33,7 @@ if [ -n "$UTF8_LOCALE" ]; then export LC_ALL="$UTF8_LOCALE"; fi
 MAX_WIDTH=100
 STRICT=0
 KEEP=0
-TEMPLATE="AGENTS/templates/wayfinders.md"
+TEMPLATE="AGENTS/skills/check-wayfinders/SKILL.md"
 
 # "the tags appear once each, in that order"
 EXPECTED_TAGS=$'file\ndescription\nsee'

@@ -1,7 +1,14 @@
+---
+name: check-comments
+description: Inline comment shape for every source file: why over how, sparingly, lowercase shorthand. Validates them.
+paths: **/*.ts, **/*.tsx, **/*.js, **/*.jsx, **/*.mjs, **/*.cjs, **/*.sh
+metadata:
+  kind: spec
+---
 ```javascript
 /**
  * =================================================
- * @file comments.md - inline comment shape template
+ * @file SKILL.md - inline comment shape template
  * =================================================
  * @description
  * SCOPE
@@ -26,8 +33,8 @@
  * - banner runs of =, - or * decorate a header rather than saying anything
  * - a line carrying a url is exempt from the width cap, since it cannot be wrapped
  * VERIFY
- * - `AGENTS/templates/comments.sh` validates a source file against every rule above a script can judge
- * @see AGENTS.md, AGENTS/templates/comments.sh, AGENTS/templates/wayfinders.md, AGENTS/hooks/posttooluse.sh
+ * - `AGENTS/skills/check-comments/check-comments.sh` validates a source file against every rule above a script can judge
+ * @see AGENTS.md, AGENTS/skills/check-comments/check-comments.sh, AGENTS/skills/check-wayfinders/SKILL.md, AGENTS/hooks/posttooluse.sh
  */
 ```
 
@@ -90,7 +97,7 @@
 
 ```text
 VERIFY - not part of the artifact
-- RUN `AGENTS/templates/comments.sh` after writing or editing a source file; pass a path to scope it
+- RUN `AGENTS/skills/check-comments/check-comments.sh` after writing or editing a source file; pass a path to scope it
 - FIX every ERROR, since each one breaks a rule stated in the header above
 - STOP on a `secret` finding and ask the user before truncating it; the key needs rotating first
 - JUSTIFY or fix every WARN; the sidecar tolerates them, the next reader may not

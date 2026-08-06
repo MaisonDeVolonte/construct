@@ -9,7 +9,7 @@
  * - each block quotes the json verbatim, then gives one why per line
  * - carries the keys and github mask reasoning, since user scope holds the credentials
  * - settingsaudit.sh diffs every rule here against the json, both directions
- * @see AGENTS/settings/settings.user.json, AGENTS/settings/settings.project.md, AGENTS/settings/settings.managed.md, AGENTS/settings/settings.cli.md, AGENTS/settings/settingsaudit.sh, AGENTS.md
+ * @see AGENTS/settings/settings.user.json, AGENTS/settings/settings.project.md, AGENTS/settings/settings.managed.md, AGENTS/settings/settings.cli.md, AGENTS/skills/test-settings/test-settings.sh, AGENTS.md
  */
 ```
 

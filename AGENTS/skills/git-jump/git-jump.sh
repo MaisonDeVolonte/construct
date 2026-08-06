@@ -8,7 +8,7 @@
 # - computes the next version from package.json rather than running `npm version` to learn it
 # - the release api call ships in the handover too, since the tag must reach origin first
 # - auth preflights through curl + bearer since gh cannot verify tls in the sandbox
-# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/git-jump/SKILL.md, AGENTS/shared/handover.sh
+# @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/git-jump/SKILL.md, AGENTS/shared/handover.sh
 
 set -euo pipefail
 

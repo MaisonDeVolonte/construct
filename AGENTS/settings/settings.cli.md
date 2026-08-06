@@ -7,7 +7,7 @@
  * - no json file to pair with: this scope is a flag, and nothing in it survives the session
  * - the scope you are allowed to be wrong in; test a rule here before a file inherits it
  * - second only to managed in precedence, so it outranks all three files on disk
- * @see AGENTS/settings/settings.user.md, AGENTS/settings/settings.managed.md, AGENTS/settings/settingsaudit.sh, AGENTS.md
+ * @see AGENTS/settings/settings.user.md, AGENTS/settings/settings.managed.md, AGENTS/skills/test-settings/test-settings.sh, AGENTS.md
  */
 ```
 

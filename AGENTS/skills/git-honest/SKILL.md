@@ -2,6 +2,8 @@
 name: git-honest
 description: Adversarial read-only code review producing a graded scorecard saved to file.
 disable-model-invocation: true
+metadata:
+  kind: trigger
 ---
 ```javascript
 /**
@@ -16,7 +18,7 @@ disable-model-invocation: true
  *   the shell telemetry
  * - outputs a harsh A-F scorecard with a one-sentence verdict; never flatters the user
  * - appends that scorecard to `docs/honest/YYYY-MM-DD.md`, one file per day, many per file
- * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/git-honest/git-honest.sh, README.md, AGENTS/templates/honest.md, docs/honest/
+ * @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/git-honest/git-honest.sh, README.md, AGENTS/skills/doc-honest/SKILL.md, docs/honest/
  */
 ```
 
@@ -71,7 +73,7 @@ echo "sidecar exit: $?"
   **verdict:** [one unapologetic, brutally honest sentence summarizing the actual state of the codebase]
   ```
 
-5. THEN append the same scorecard to the honest file (see `AGENTS/templates/honest.md`)
+5. THEN append the same scorecard to the honest file (see `AGENTS/skills/doc-honest/SKILL.md`)
   ```text
   - the sidecar reports the target but never creates it; take it from `--- HONEST ARCHIVE ---`:
   - CREATE the file first if it does not exist, with `# <honest_file>` as its only line

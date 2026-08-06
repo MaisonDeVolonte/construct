@@ -1,16 +1,16 @@
 #!/bin/bash
-# ====================================================
-# @file comments.sh - inline comment validator sidecar
-# ====================================================
+# =========================================================
+# @file check-comments.sh - comment shape validator sidecar
+# =========================================================
 # @description
 # - sidecar for `comments.md` — asserts inline comments match the shape that template documents
 # - one check per machine-checkable rule; every rule needing judgement prints as a human checklist
 # - ERROR breaks a rule the template states outright; WARN names a smell the template tolerates
 # - full-line comments only: a trailing comment cannot be told from a string without a real parser
-# - skips the wayfinding header, which is `AGENTS/templates/wayfinders.sh`'s to judge
+# - skips the wayfinding header, which is `AGENTS/skills/check-wayfinders/check-wayfinders.sh`'s to judge
 # - defaults to every tracked source file; pass files or a directory to scope it
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
-# @see AGENTS.md, AGENTS/settings/secrets.sh, AGENTS/templates/comments.md, AGENTS/templates/wayfinders.sh
+# @see AGENTS.md, AGENTS/settings/secrets.sh, AGENTS/skills/check-comments/SKILL.md, AGENTS/skills/check-wayfinders/check-wayfinders.sh
 
 set -euo pipefail
 
@@ -19,10 +19,10 @@ set -euo pipefail
 # ==============
 # the shared scan sits beside this file, not beside the repo being scanned: resolve them before
 # anything cds to a repo root, since BASH_SOURCE arrives relative and would follow that cd
-SHARED=$(cd "$(dirname "${BASH_SOURCE[0]}")/../settings" 2>/dev/null && pwd || true)
+SHARED=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../settings" 2>/dev/null && pwd || true)
 if [ ! -f "$SHARED/secrets.sh" ]; then
   echo "fatal: no AGENTS/settings/secrets.sh beside this sidecar" >&2; exit 1; fi
-# shellcheck source=../settings/secrets.sh
+# shellcheck source=../../settings/secrets.sh
 . "$SHARED/secrets.sh"
 
 # character counts, not byte counts: bash's ${#var} is multibyte-aware under a utf-8 locale, and
@@ -33,7 +33,7 @@ if [ -n "$UTF8_LOCALE" ]; then export LC_ALL="$UTF8_LOCALE"; fi
 MAX_WIDTH=100
 STRICT=0
 KEEP=0
-TEMPLATE="AGENTS/templates/comments.md"
+TEMPLATE="AGENTS/skills/check-comments/SKILL.md"
 
 # "a comment past 2 consecutive lines belongs in the wayfinding header instead"
 MAX_BLOCK_LINES=2

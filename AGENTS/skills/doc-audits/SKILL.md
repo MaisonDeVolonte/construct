@@ -1,7 +1,13 @@
+---
+name: doc-audits
+description: Shape of a dated audit in docs/audits/, which /git-audit appends findings and resolutions to.
+metadata:
+  kind: spec
+---
 ```javascript
 /**
  * =========================================
- * @file audits.md - audit archive template
+ * @file SKILL.md - audit archive template
  * =========================================
  * @description
  * - tracked in git, one audit file per day and kind, appended across runs
@@ -15,8 +21,8 @@
  * - `telemetry` closes each entry with the raw run, fenced, so every claim above it is checkable
  * - carry unresolved findings forward by restating them, never by editing the older audit
  * - err on the side of brevity, not completeness
- * - `AGENTS/templates/audits.sh` validates an audit file against every rule above a script can judge
- * @see AGENTS.md, AGENTS/templates/audits.sh, AGENTS/skills/git-audit/SKILL.md,
+ * - `AGENTS/skills/doc-audits/doc-audits.sh` validates an audit file against every rule above a script can judge
+ * @see AGENTS.md, AGENTS/skills/doc-audits/doc-audits.sh, AGENTS/skills/git-audit/SKILL.md,
  *      AGENTS/settings/settingsaudit.md, docs/audits/
  */
 ```
@@ -64,7 +70,7 @@ never edit an earlier audit; a stale finding is signal about how long it went un
 
 ```text
 VERIFY - not part of the artifact
-- RUN `AGENTS/templates/audits.sh` once the audit is appended; pass a path to scope the run
+- RUN `AGENTS/skills/doc-audits/doc-audits.sh` once the audit is appended; pass a path to scope the run
 - FIX every ERROR, since each one breaks a rule stated in the header above
 - STOP on a `secret` finding and ask the user before truncating it; the key needs rotating first
 - JUSTIFY or fix every WARN; the sidecar tolerates them, the next reader may not

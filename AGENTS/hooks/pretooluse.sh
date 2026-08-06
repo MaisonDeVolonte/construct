@@ -75,7 +75,7 @@ PROTECTED='\.claude/|\.git/|\.husky/|\.devin/|\.cursor/|webflow/|\.tfstate|docke
 PROTECTED="$PROTECTED"'|(^|[/[:space:]])\.env'
 # the policy directories: settings rules gate the Edit and Write tools, and this gates the bash
 # verbs those rules never see, since an agent that can rewrite either one can regrant itself
-PROTECTED="$PROTECTED"'|AGENTS/settings/|AGENTS/hooks/'
+PROTECTED="$PROTECTED"'|AGENTS/settings/|AGENTS/hooks/|AGENTS/skills/test-'
 WRITERS='(^|[[:space:]])(cp|mv|rm|tee|ln|install|rsync|truncate|shred|chmod|chown|dd|touch)([[:space:]]|$)'
 INPLACE='(sed|perl|awk|python[0-9]?|ruby)[^|;&]*[[:space:]]-i'
 

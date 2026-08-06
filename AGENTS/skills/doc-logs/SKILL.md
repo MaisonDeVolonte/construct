@@ -1,7 +1,13 @@
+---
+name: doc-logs
+description: Shape of a daily agent log in docs/logs/: threads, notes, and prompts.
+metadata:
+  kind: spec
+---
 ```javascript
 /**
  * ============================
- * @file logs.md - log template
+ * @file SKILL.md - log template
  * ============================
  * @description
  * - one log file per day, holding both the work and the prompts that drove it
@@ -24,8 +30,8 @@
  * - focus on outcomes, not the conversation (no play-by-plays)
  * - err on the side of brevity, not completeness
  * - ultimately, logs should only capture the most meaningful signals, ignoring noise
- * - `AGENTS/templates/logs.sh` validates a log against every rule above a script can judge
- * @see AGENTS.md, AGENTS/templates/logs.sh, docs/logs/
+ * - `AGENTS/skills/doc-logs/doc-logs.sh` validates a log against every rule above a script can judge
+ * @see AGENTS.md, AGENTS/skills/doc-logs/doc-logs.sh, docs/logs/
  */
 ```
 
@@ -108,7 +114,7 @@ synthesize pending notes when creating a new thread, and prune that thread's pro
 
 ```text
 VERIFY - not part of the artifact
-- RUN `AGENTS/templates/logs.sh` after closing a thread, adding a note, or synthesizing
+- RUN `AGENTS/skills/doc-logs/doc-logs.sh` after closing a thread, adding a note, or synthesizing
 - FIX every ERROR, since each one breaks a rule stated in the header above
 - STOP on a `secret` finding and ask the user before truncating it; the key needs rotating first
 - JUSTIFY or fix every WARN; the sidecar tolerates them, the next reader may not

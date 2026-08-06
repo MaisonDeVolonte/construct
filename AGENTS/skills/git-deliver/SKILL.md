@@ -4,6 +4,8 @@ description: Bucket uncommitted work into atomic PRs, gate the plan, then hand o
 argument-hint: [--first]
 disallowed-tools: Write Edit
 disable-model-invocation: true
+metadata:
+  kind: trigger
 ---
 ```javascript
 /**
@@ -20,7 +22,7 @@ disable-model-invocation: true
  * - gated: never delivers; every block is the user's to paste, in the order given
  * - the preflight is read-only too, so even floating changes onto trunk is handed over
  * - push authenticates only outside the sandbox, so the whole bucket is the user's to run
- * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/git-deliver/git-deliver.sh, AGENTS/shared/handover.sh
+ * @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/git-deliver/git-deliver.sh, AGENTS/shared/handover.sh
  */
 ```
 

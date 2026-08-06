@@ -19,10 +19,10 @@ set -euo pipefail
 # the corpus and the hook sit beside this file, not beside the repo being scanned: resolve them
 # before anything cds to a repo root, since BASH_SOURCE arrives relative and would follow that cd
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || true)
-CORPUS="$HERE/corpus.tsv"
-HOOK="$HERE/../hooks/pretooluse.sh"
-if [ ! -f "$CORPUS" ]; then echo "fatal: no corpus.tsv beside this script" >&2; exit 1; fi
-if [ ! -f "$HOOK" ]; then echo "fatal: no ../hooks/pretooluse.sh beside this script" >&2; exit 1; fi
+CORPUS="$HERE/../../settings/corpus.tsv"
+HOOK="$HERE/../../hooks/pretooluse.sh"
+if [ ! -f "$CORPUS" ]; then echo "fatal: no AGENTS/settings/corpus.tsv reachable" >&2; exit 1; fi
+if [ ! -f "$HOOK" ]; then echo "fatal: no AGENTS/hooks/pretooluse.sh reachable" >&2; exit 1; fi
 
 STRICT=0
 KEEP=0

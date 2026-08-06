@@ -3,6 +3,8 @@ name: git-backup
 description: Snapshot history and working tree, verify the snapshot, then hand over the restore.
 disallowed-tools: Write Edit
 disable-model-invocation: true
+metadata:
+  kind: trigger
 ---
 ```javascript
 /**
@@ -15,7 +17,7 @@ disable-model-invocation: true
  * - the one trigger that needs no confirmation, since a copy destroys nothing it finds
  * - captures history and working tree separately, because a `.git` copy loses uncommitted work
  * - the restore is handed over, never run: putting files back overwrites what sits there now
- * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/git-backup/git-backup.sh, AGENTS/skills/git-fresh/SKILL.md
+ * @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/git-backup/git-backup.sh, AGENTS/skills/git-fresh/SKILL.md
  */
 ```
 

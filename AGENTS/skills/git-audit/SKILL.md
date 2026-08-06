@@ -2,6 +2,8 @@
 name: git-audit
 description: Read-only git diagnostics: branch triage, team probes, and a dated audit saved to file.
 disable-model-invocation: true
+metadata:
+  kind: trigger
 ---
 ```javascript
 /**
@@ -14,7 +16,7 @@ disable-model-invocation: true
  *   clutter, conflict risk, and a dirty trunk
  * - outputs a numbered list of issues with manual + `@agent` shortcut resolutions
  * - appends that report to `docs/audits/YYYY-MM-DD.md`, one file per day, many audits per file
- * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/git-audit/git-audit.sh, AGENTS/templates/audits.md, docs/audits/
+ * @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/git-audit/git-audit.sh, AGENTS/skills/doc-audits/SKILL.md, docs/audits/
  */
 ```
 
@@ -56,7 +58,7 @@ echo "sidecar exit: $?"
   - include specific/explicit resolution steps (both manual terminal commands and @agent shortcuts where possible)
   ```
 
-4. THEN append the same report to the audit file (see `AGENTS/templates/audits.md`)
+4. THEN append the same report to the audit file (see `AGENTS/skills/doc-audits/SKILL.md`)
   ```text
   - the sidecar reports the target but never creates it; take it from `--- audit ---`:
   - CREATE the file first if it does not exist, with `# <audit_file>` as its only line

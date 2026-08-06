@@ -1,14 +1,14 @@
 #!/bin/bash
-# ===================================================
-# @file audits.sh - audit template validator sidecar
-# ===================================================
+# =====================================================
+# @file doc-audits.sh - audit archive validator sidecar
+# =====================================================
 # @description
 # - sidecar for `audits.md` — asserts an audit archive matches the template that documents it
 # - one check per machine-checkable rule; every rule needing judgement prints as a human checklist
 # - ERROR breaks a rule the template states outright; WARN names a smell the template tolerates
 # - defaults to every file in `docs/audits/`; pass files or a directory to scope it
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
-# @see AGENTS.md, AGENTS/settings/secrets.sh, AGENTS/templates/audits.md, AGENTS/skills/git-audit/SKILL.md, AGENTS/templates/plans.sh, docs/audits/
+# @see AGENTS.md, AGENTS/settings/secrets.sh, AGENTS/skills/doc-audits/SKILL.md, AGENTS/skills/git-audit/SKILL.md, AGENTS/skills/doc-plans/doc-plans.sh, docs/audits/
 
 set -euo pipefail
 
@@ -17,10 +17,10 @@ set -euo pipefail
 # ==============
 # the shared scan sits beside this file, not beside the repo being scanned: resolve them before
 # anything cds to a repo root, since BASH_SOURCE arrives relative and would follow that cd
-SHARED=$(cd "$(dirname "${BASH_SOURCE[0]}")/../settings" 2>/dev/null && pwd || true)
+SHARED=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../settings" 2>/dev/null && pwd || true)
 if [ ! -f "$SHARED/secrets.sh" ]; then
   echo "fatal: no AGENTS/settings/secrets.sh beside this sidecar" >&2; exit 1; fi
-# shellcheck source=../settings/secrets.sh
+# shellcheck source=../../settings/secrets.sh
 . "$SHARED/secrets.sh"
 
 # character counts, not byte counts: bash's ${#var} is multibyte-aware under a utf-8 locale, and
@@ -31,7 +31,7 @@ if [ -n "$UTF8_LOCALE" ]; then export LC_ALL="$UTF8_LOCALE"; fi
 MAX_WIDTH=100
 STRICT=0
 KEEP=0
-TEMPLATE="AGENTS/templates/audits.md"
+TEMPLATE="AGENTS/skills/doc-audits/SKILL.md"
 ARTIFACTS="docs/audits"
 
 # the subsections every audit carries, which is the one thing every entry must agree on
