@@ -1,7 +1,13 @@
+---
+name: doc-honest
+description: Shape of an adversarial graded scorecard in docs/honest/, written by /git-honest.
+metadata:
+  kind: spec
+---
 ```javascript
 /**
  * ==============================================
- * @file honest.md - honest scorecard template
+ * @file SKILL.md - honest scorecard template
  * ==============================================
  * @description
  * - tracked in git, one honest file per day, appended across runs
@@ -14,8 +20,8 @@
  * - skip the raw telemetry dump; keep the read of it, not the printout
  * - never soften a written scorecard, and never re-grade an older one to match a newer mood
  * - grade drift across dated files is the point; a lane stuck at D is the signal
- * - `AGENTS/templates/honest.sh` validates a scorecard against every rule above a script can judge
- * @see AGENTS.md, AGENTS/templates/honest.sh, AGENTS/skills/git-honest/SKILL.md, docs/honest/
+ * - `AGENTS/skills/doc-honest/doc-honest.sh` validates a scorecard against every rule above a script can judge
+ * @see AGENTS.md, AGENTS/skills/doc-honest/doc-honest.sh, AGENTS/skills/git-honest/SKILL.md, docs/honest/
  */
 ```
 
@@ -59,7 +65,7 @@ never edit an earlier scorecard; a grade that has not moved in a week is the fin
 
 ```text
 VERIFY - not part of the artifact
-- RUN `AGENTS/templates/honest.sh` once the scorecard is appended; pass a path to scope the run
+- RUN `AGENTS/skills/doc-honest/doc-honest.sh` once the scorecard is appended; pass a path to scope the run
 - FIX every ERROR, since each one breaks a rule stated in the header above
 - STOP on a `secret` finding and ask the user before truncating it; the key needs rotating first
 - JUSTIFY or fix every WARN; the sidecar tolerates them, the next reader may not

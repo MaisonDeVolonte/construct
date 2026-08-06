@@ -7,7 +7,7 @@
 # - read-only apart from `fetch --prune` and a trunk fast-forward, neither of which loses work
 # - classifies each local branch as gone, merged, or live, so the handover deletes only the spent
 # - stash and branch deletes are denied, so it prints them instead of running them
-# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/git-empty/SKILL.md, AGENTS/shared/handover.sh
+# @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/git-empty/SKILL.md, AGENTS/shared/handover.sh
 
 set -euo pipefail
 

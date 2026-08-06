@@ -1,14 +1,14 @@
 #!/bin/bash
-# ====================================================
-# @file honest.sh - honest scorecard validator sidecar
-# ====================================================
+# ========================================================
+# @file doc-honest.sh - honest scorecard validator sidecar
+# ========================================================
 # @description
 # - sidecar for `honest.md` — asserts a scorecard archive matches the template that documents it
 # - one check per machine-checkable rule; every rule needing judgement prints as a human checklist
 # - ERROR breaks a rule the template states outright; WARN names a smell the template tolerates
 # - defaults to every file in `docs/honest/`; pass files or a directory to scope it
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
-# @see AGENTS.md, AGENTS/settings/secrets.sh, AGENTS/templates/honest.md, AGENTS/skills/git-honest/SKILL.md, AGENTS/templates/plans.sh, docs/honest/
+# @see AGENTS.md, AGENTS/settings/secrets.sh, AGENTS/skills/doc-honest/SKILL.md, AGENTS/skills/git-honest/SKILL.md, AGENTS/skills/doc-plans/doc-plans.sh, docs/honest/
 
 set -euo pipefail
 
@@ -17,10 +17,10 @@ set -euo pipefail
 # ==============
 # the shared scan sits beside this file, not beside the repo being scanned: resolve them before
 # anything cds to a repo root, since BASH_SOURCE arrives relative and would follow that cd
-SHARED=$(cd "$(dirname "${BASH_SOURCE[0]}")/../settings" 2>/dev/null && pwd || true)
+SHARED=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../settings" 2>/dev/null && pwd || true)
 if [ ! -f "$SHARED/secrets.sh" ]; then
   echo "fatal: no AGENTS/settings/secrets.sh beside this sidecar" >&2; exit 1; fi
-# shellcheck source=../settings/secrets.sh
+# shellcheck source=../../settings/secrets.sh
 . "$SHARED/secrets.sh"
 
 # character counts, not byte counts: bash's ${#var} is multibyte-aware under a utf-8 locale, and
@@ -31,7 +31,7 @@ if [ -n "$UTF8_LOCALE" ]; then export LC_ALL="$UTF8_LOCALE"; fi
 MAX_WIDTH=100
 STRICT=0
 KEEP=0
-TEMPLATE="AGENTS/templates/honest.md"
+TEMPLATE="AGENTS/skills/doc-honest/SKILL.md"
 ARTIFACTS="docs/honest"
 
 # the subsections every scorecard carries, which is the one thing every entry must agree on

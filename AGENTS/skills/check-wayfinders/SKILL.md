@@ -1,7 +1,14 @@
+---
+name: check-wayfinders
+description: The jsdoc wayfinding header every source file opens with, and where it sits. Validates them.
+paths: **/*.ts, **/*.tsx, **/*.js, **/*.jsx, **/*.mjs, **/*.cjs, **/*.sh
+metadata:
+  kind: spec
+---
 ```javascript
 /**
  * ======================================================
- * @file wayfinders.md - jsdoc wayfinding header template
+ * @file SKILL.md - jsdoc wayfinding header template
  * ======================================================
  * @description
  * SCOPE
@@ -24,9 +31,9 @@
  * - `@see` earns its place by naming what a reader opens next, not everything the file imports
  * - group a long `@description` under uppercase headings, the way this block does
  * VERIFY
- * - `AGENTS/templates/wayfinders.sh` validates a header against every rule above a script can judge
+ * - `AGENTS/skills/check-wayfinders/check-wayfinders.sh` validates a header against every rule above a script can judge
  * - repo-wide reference integrity has no gate now; `AGENTS/skills/git-insights/git-insights.sh` only reports it
- * @see AGENTS.md, AGENTS/templates/wayfinders.sh, AGENTS/templates/comments.md, AGENTS/skills/git-insights/git-insights.sh
+ * @see AGENTS.md, AGENTS/skills/check-wayfinders/check-wayfinders.sh, AGENTS/skills/check-comments/SKILL.md, AGENTS/skills/git-insights/git-insights.sh
  */
 ```
 
@@ -79,7 +86,7 @@
 >  * @description
 >  * - ran only on explicit `/git-backup` command
 >  * - the frontmatter above is the gate; this block is what a reader opens first
->  * @see AGENTS/templates/git.md, git-backup.sh
+>  * @see AGENTS/skills/check-skills/SKILL.md, git-backup.sh
 >  */
 > ```
 > ```
@@ -97,7 +104,7 @@
 
 ```text
 VERIFY - not part of the artifact
-- RUN `AGENTS/templates/wayfinders.sh` after adding or editing a header; pass a path to scope it
+- RUN `AGENTS/skills/check-wayfinders/check-wayfinders.sh` after adding or editing a header; pass a path to scope it
 - FIX every ERROR, since each one breaks a rule stated in the header above
 - STOP on a `secret` finding and ask the user before truncating it; the key needs rotating first
 - JUSTIFY or fix every WARN; the sidecar tolerates them, the next reader may not

@@ -3,6 +3,8 @@ name: git-continue
 description: Measure the trunk delta, then run the sync it planned against four narrow allows.
 disallowed-tools: Write Edit
 disable-model-invocation: true
+metadata:
+  kind: trigger
 ---
 ```javascript
 /**
@@ -15,7 +17,7 @@ disable-model-invocation: true
  * - runs `AGENTS/skills/git-continue/git-continue.sh`, whose only write is a fetch of remote-tracking refs
  * - the sidecar stays read-only; the four sync forms are narrow allows the trigger runs itself
  * - separates ahead from behind, since a behind trunk fast-forwards and never needs @git-fresh
- * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/git-continue/git-continue.sh, AGENTS/shared/handover.sh
+ * @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/git-continue/git-continue.sh, AGENTS/shared/handover.sh
  */
 ```
 

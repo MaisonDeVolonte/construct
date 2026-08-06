@@ -3,6 +3,8 @@ name: git-gud
 description: Re-run CI on a stale branch PR against the current default branch, after @git-deliver leaves a PR computed against a trunk that has since moved.
 argument-hint: [--watch]
 disable-model-invocation: true
+metadata:
+  kind: trigger
 ---
 ```javascript
 /**
@@ -16,7 +18,7 @@ disable-model-invocation: true
  * - the sidecar sits in this folder, and reaches `handover.sh` by path rather than by adjacency
  * - the plugin root is absolute, so no per-project symlink is needed to reach it
  * - `--watch` waits for the fresh ci run to complete, and runs as a tool call rather than inline
- * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/git-gud/git-gud.sh, AGENTS/shared/handover.sh
+ * @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/git-gud/git-gud.sh, AGENTS/shared/handover.sh
  */
 ```
 

@@ -7,7 +7,7 @@
  * - pairs with settings.project.json; copy to .claude/settings.json
  * - committed, so the only scope a clone carries; mirrors user as its portable floor
  * - a mirror claim here is an assertion: settingsaudit.sh diffs it and fails on divergence
- * @see AGENTS/settings/settings.project.json, AGENTS/settings/settings.user.md, AGENTS/settings/settings.local.md, AGENTS/settings/settingsaudit.sh, AGENTS.md
+ * @see AGENTS/settings/settings.project.json, AGENTS/settings/settings.user.md, AGENTS/settings/settings.local.md, AGENTS/skills/test-settings/test-settings.sh, AGENTS.md
  */
 ```
 

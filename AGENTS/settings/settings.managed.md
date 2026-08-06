@@ -7,7 +7,7 @@
  * - pairs with settings.managed.json; sudo copy to the ClaudeCode managed path
  * - the unoverridable ceiling, kept deliberately bare; booleans stated here are pinned
  * - nothing lands here until it has run clean in user
- * @see AGENTS/settings/settings.managed.json, AGENTS/settings/settings.user.md, AGENTS/settings/settingsaudit.sh, AGENTS.md
+ * @see AGENTS/settings/settings.managed.json, AGENTS/settings/settings.user.md, AGENTS/skills/test-settings/test-settings.sh, AGENTS.md
  */
 ```
 

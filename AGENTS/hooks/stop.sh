@@ -7,7 +7,7 @@
 # - every hour: appends notes, flushes uncaptured prompts, and synthesizes the thread
 # - one file means one mtime, so the interval timer measures every kind of write
 # - works with `claude`; does not work with `grok`
-# @see AGENTS.md, AGENTS/templates/logs.md, docs/logs/
+# @see AGENTS.md, AGENTS/skills/doc-logs/SKILL.md, docs/logs/
 
 TODAYS_LOG="docs/logs/$(date +%Y-%m-%d).md"
 # seconds between runs
@@ -23,11 +23,11 @@ then mkdir -p docs/logs; echo "# $TODAYS_LOG" > "$TODAYS_LOG"; fi
 ELAPSED_TIME=$((NOW - LAST_MODIFIED))
 if [ "$ELAPSED_TIME" -gt "$UPDATE_INTERVAL" ]; then
 
-  NOTES_TASK="append notes to the end of $TODAYS_LOG (see AGENTS/templates/logs.md)"
+  NOTES_TASK="append notes to the end of $TODAYS_LOG (see AGENTS/skills/doc-logs/SKILL.md)"
 
   PROMPTS_TASK="append any uncaptured prompts to their thread's PROMPTS block in $TODAYS_LOG"
 
-  SYNTHESIZE_TASK="synthesize $TODAYS_LOG (see AGENTS/templates/logs.md): incorporate notes \
+  SYNTHESIZE_TASK="synthesize $TODAYS_LOG (see AGENTS/skills/doc-logs/SKILL.md): incorporate notes \
   into thread prose, and prune each thread's prompts without turning them into prose"
 
   jq -n --arg reason "$NOTES_TASK; $PROMPTS_TASK; $SYNTHESIZE_TASK; notify user" \

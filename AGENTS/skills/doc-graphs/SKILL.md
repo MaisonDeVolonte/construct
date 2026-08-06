@@ -1,7 +1,13 @@
+---
+name: doc-graphs
+description: Shape of a graph spec prompt file in docs/graphs/.
+metadata:
+  kind: spec
+---
 ```javascript
 /**
  * =====================================
- * @file graphs.md - graph spec template
+ * @file SKILL.md - graph spec template
  * =====================================
  * @description
  * FILE
@@ -27,8 +33,8 @@
  * - a fresh session executes the saved spec and writes whatever `output` names
  * - `--plan` means `docs/plans/<same-basename>.md` per plans.md, and it must pass plans.sh
  * VERIFY
- * - `AGENTS/templates/graphs.sh` validates a spec against every rule above a script can judge
- * @see AGENTS.md, AGENTS/templates/graphs.sh, AGENTS/templates/plans.md, docs/graphs/
+ * - `AGENTS/skills/doc-graphs/doc-graphs.sh` validates a spec against every rule above a script can judge
+ * @see AGENTS.md, AGENTS/skills/doc-graphs/doc-graphs.sh, AGENTS/skills/doc-plans/SKILL.md, docs/graphs/
  */
 ```
 
@@ -101,7 +107,7 @@ OUTPUT:       docs/plans/2026-07-30-operation-monorepo.md, per plans.md, passing
 
 ```
 VERIFY - not part of the artifact
-- RUN `AGENTS/templates/graphs.sh` once the spec is written; pass a path to scope the run
+- RUN `AGENTS/skills/doc-graphs/doc-graphs.sh` once the spec is written; pass a path to scope the run
 - FIX every ERROR, since each one breaks a rule stated in the header above
 - STOP on a `secret` finding and ask the user before truncating it; the key needs rotating first
 - JUSTIFY or fix every WARN; the sidecar tolerates them, the next reader may not

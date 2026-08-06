@@ -11,7 +11,7 @@
 # - wraps permissions.sh and scopes.sh rather than replacing them, surfacing their error counts
 # - a tracked path reads as guarded at `ask`, since `deny` reaches the sandbox and blocks git itself
 # - `--static` skips the probes, `--quick` skips the wrapped sidecars, `--strict` fails on warnings
-# @see AGENTS.md, AGENTS/templates/audits.md, AGENTS/templates/git.md,
+# @see AGENTS.md, AGENTS/skills/doc-audits/SKILL.md, AGENTS/skills/check-skills/SKILL.md,
 #      AGENTS/settings/permissions.sh, AGENTS/settings/scopes.sh, docs/audits/
 
 set -euo pipefail

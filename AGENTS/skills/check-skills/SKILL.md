@@ -1,7 +1,13 @@
+---
+name: check-skills
+description: Shape every skill pair must hold: the SKILL.md, its sidecar, and the frontmatter that gates it. Validates them.
+metadata:
+  kind: spec
+---
 ```javascript
 /**
  * ======================================
- * @file git.md - git automation template
+ * @file SKILL.md - git automation template
  * ======================================
  * @description
  * - ran only on explicit `@gitautomation` commands
@@ -10,8 +16,8 @@
  * - fail: outputs raw terminal errors
  * - success: reports the telemetry, then fences the handover for the user to paste
  * - the only template whose sidecar scans `AGENTS/skills/`, not a `docs/` artifact directory
- * - `AGENTS/templates/git.sh` validates every trigger doc and sidecar pair against the rules above
- * @see AGENTS.md, AGENTS/templates/git.sh, AGENTS/shared/handover.sh, AGENTS/skills/
+ * - `AGENTS/skills/check-skills/check-skills.sh` validates every trigger doc and sidecar pair against the rules above
+ * @see AGENTS.md, AGENTS/skills/check-skills/check-skills.sh, AGENTS/shared/handover.sh, AGENTS/skills/
  */
 ```
 
@@ -77,7 +83,7 @@ git command two
 
 ```text
 VERIFY - not part of the trigger
-- RUN `AGENTS/templates/git.sh` after touching a trigger doc or its sidecar; pass a path to scope it
+- RUN `AGENTS/skills/check-skills/check-skills.sh` after touching a trigger doc or its sidecar; pass a path to scope it
 - FIX every ERROR, since each one breaks a rule stated in the header above
 - STOP on a `secret` finding and ask the user before truncating it; the key needs rotating first
 - JUSTIFY or fix every WARN; the sidecar tolerates them, the next reader may not

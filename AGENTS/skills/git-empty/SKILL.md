@@ -3,6 +3,8 @@ name: git-empty
 description: Prune dead tracking refs and hand over the trunk sync and every branch delete.
 disallowed-tools: Write Edit
 disable-model-invocation: true
+metadata:
+  kind: trigger
 ---
 ```javascript
 /**
@@ -16,7 +18,7 @@ disable-model-invocation: true
  * - the sidecar classifies each spent branch itself and emits `-d` or `-D` to match
  * - a gone branch that is neither merged nor absorbed is kept, never offered for deletion
  * - every branch delete is denied, so the whole block stays the user's to run in order
- * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/git-empty/git-empty.sh, AGENTS/skills/git-audit/git-audit.sh
+ * @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/git-empty/git-empty.sh, AGENTS/skills/git-audit/git-audit.sh
  */
 ```
 

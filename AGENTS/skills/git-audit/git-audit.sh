@@ -6,7 +6,7 @@
 # - sidecar for `@git-audit` — probes repo/branch state for telemetry
 # - reports today's audit path and audit count, and never creates the file itself
 # - team probes ride curl + Bearer against the github rest api, the one path the sandbox serves
-# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/git-audit/SKILL.md, AGENTS/templates/audits.md, docs/audits/, README.md
+# @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/git-audit/SKILL.md, AGENTS/skills/doc-audits/SKILL.md, docs/audits/, README.md
 
 # probes: echo "key: $(git some command 2>/dev/null || echo n/a)"
 

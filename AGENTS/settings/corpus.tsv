@@ -89,6 +89,6 @@ safe	none	ls .git/refs
 safe	none	cat .git/config > /private/tmp/out
 safe	none	rm /private/tmp/scratch.env
 safe	none	mkdir -p docs/logs
-safe	none	bash AGENTS/templates/comments.sh
+safe	none	bash AGENTS/skills/check-comments/check-comments.sh
 safe	none	npm test
 safe	none	npx tsc --noEmit

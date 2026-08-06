@@ -22,8 +22,8 @@ set -euo pipefail
 # the hook sits beside this file, not beside the repo under test: resolve it before any cd, since
 # BASH_SOURCE arrives relative and would follow that cd to somewhere it does not exist
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || true)
-HOOK="$HERE/../hooks/pretooluse.sh"
-if [ ! -f "$HOOK" ]; then echo "fatal: no ../hooks/pretooluse.sh beside this script" >&2; exit 1; fi
+HOOK="$HERE/../../hooks/pretooluse.sh"
+if [ ! -f "$HOOK" ]; then echo "fatal: no AGENTS/hooks/pretooluse.sh reachable" >&2; exit 1; fi
 if ! command -v jq >/dev/null 2>&1; then echo "fatal: jq is required and not installed" >&2; exit 1; fi
 
 STRICT=0

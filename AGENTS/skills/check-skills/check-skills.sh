@@ -1,6 +1,6 @@
 #!/bin/bash
 # ====================================================
-# @file git.sh - git automation pair validator sidecar
+# @file check-skills.sh - skill pair validator sidecar
 # ====================================================
 # @description
 # - sidecar for `git.md` — asserts every `@git*` trigger doc and its shell sidecar hold together
@@ -8,7 +8,7 @@
 # - ERROR breaks a rule the template states outright; WARN names a smell the template tolerates
 # - defaults to every pair in `AGENTS/skills/`; pass a doc, a sidecar, or a directory to scope it
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
-# @see AGENTS.md, AGENTS/settings/secrets.sh, AGENTS/templates/git.md, AGENTS/skills/, AGENTS/templates/plans.sh, .github/workflows/ci.yml
+# @see AGENTS.md, AGENTS/settings/secrets.sh, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/, AGENTS/skills/doc-plans/doc-plans.sh, .github/workflows/ci.yml
 
 set -euo pipefail
 
@@ -17,15 +17,15 @@ set -euo pipefail
 # ==============
 # the shared scan sits beside this file, not beside the repo being scanned: resolve them before
 # anything cds to a repo root, since BASH_SOURCE arrives relative and would follow that cd
-SHARED=$(cd "$(dirname "${BASH_SOURCE[0]}")/../settings" 2>/dev/null && pwd || true)
+SHARED=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../settings" 2>/dev/null && pwd || true)
 if [ ! -f "$SHARED/secrets.sh" ]; then
   echo "fatal: no AGENTS/settings/secrets.sh beside this sidecar" >&2; exit 1; fi
-# shellcheck source=../settings/secrets.sh
+# shellcheck source=../../settings/secrets.sh
 . "$SHARED/secrets.sh"
 
 STRICT=0
 KEEP=0
-TEMPLATE="AGENTS/templates/git.md"
+TEMPLATE="AGENTS/skills/check-skills/SKILL.md"
 TRIGGERS="AGENTS/skills"
 
 # the postures the index assigns; a trigger nobody can tell the blast radius of is a trap
@@ -221,11 +221,11 @@ check_branches() {
 # agent writing it has nothing to follow
 check_artifact() {
   local doc=$1 type
-  for type in audits honest insights logs plans study; do
+  for type in audits credentials graphs honest insights logs plans study; do
     if ! grep -q "docs/$type/" "$doc"; then continue; fi
-    if ! grep -q "AGENTS/templates/$type\.md" "$doc"; then
+    if ! grep -q "AGENTS/skills/$type\.md" "$doc"; then
       warn "$doc" "$(where "$doc" "docs/$type/")" artifact \
-        "writes docs/$type/ without naming AGENTS/templates/$type.md"
+        "writes docs/$type/ without naming AGENTS/skills/$type.md"
     fi
   done
 }
@@ -298,6 +298,25 @@ check_scrub() {
   done
 }
 
+# a trigger acts on the repo and is invoked deliberately; a spec describes a shape and should load
+# whenever the model touches the thing it describes. the two earn opposite frontmatter, so the
+# kind is declared rather than guessed — `metadata` exists for exactly this and the harness ignores it
+skill_kind() {
+  local doc=$1 declared
+  declared=$(awk '/^metadata:/ { inside = 1; next }
+                  inside && /^[^[:space:]]/ { inside = 0 }
+                  inside && /^[[:space:]]+kind:/ { gsub(/^[[:space:]]+kind:[[:space:]]*/, ""); print; exit }' "$doc")
+  printf '%s' "${declared:-unset}"
+}
+
+# a spec must NOT carry the invocation gate, since the whole point is that the model reaches for it
+check_spec() {
+  local doc=$1
+  if grep -qE '^disable-model-invocation:[[:space:]]*(true|yes|on|1)' "$doc"; then
+    err "$doc" 1 spec_gated "a spec is meant to auto-load; drop disable-model-invocation"
+  fi
+}
+
 # --- run list (add new checks here) ---
 for pair in "${PAIRS[@]}"; do
   # a sidecar reaching this loop has no doc at all, so the pair checks have nothing to read
@@ -306,16 +325,24 @@ for pair in "${PAIRS[@]}"; do
       err "$pair" 1 unpaired "no ${pair%.sh}.md; a sidecar without a trigger doc is unreachable"
       continue;;
   esac
+  # every skill earns the shape checks; only a trigger earns the ones about being invoked
   check_pair            "$pair"
   check_doc_wayfinding  "$pair"
-  check_trigger         "$pair"
-  check_invocation      "$pair"
-  check_branches        "$pair"
-  check_artifact        "$pair"
   check_sidecar_header  "$pair"
   check_sidecar_lint    "$pair"
-  check_index           "$pair"
   check_scrub           "$pair"
+  case "$(skill_kind "$pair")" in
+    spec)
+      check_spec        "$pair";;
+    trigger)
+      check_trigger     "$pair"
+      check_invocation  "$pair"
+      check_branches    "$pair"
+      check_artifact    "$pair"
+      check_index       "$pair";;
+    *)
+      err "$pair" 1 no_kind "frontmatter needs 'metadata:' with 'kind: trigger' or 'kind: spec'";;
+  esac
 done
 
 # ==============

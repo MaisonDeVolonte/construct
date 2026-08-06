@@ -1,7 +1,13 @@
+---
+name: doc-plans
+description: Shape of a plan in docs/plans/: context, goal, solution, risks, checklist, readiness, notes.
+metadata:
+  kind: spec
+---
 ```javascript
 /**
  * ==============================
- * @file plans.md - plan template
+ * @file SKILL.md - plan template
  * ==============================
  * @description
  * FILE
@@ -46,8 +52,8 @@
  * - `notes` are numbered so every `(see #x)` resolves, and are the only place verbosity belongs
  * - prefer a short line plus `(see #x)` over a long line that explains itself
  * VERIFY
- * - `AGENTS/templates/plans.sh` validates a plan against every rule above a script can judge
- * @see AGENTS.md, AGENTS/templates/plans.sh, AGENTS/templates/logs.md, docs/plans/
+ * - `AGENTS/skills/doc-plans/doc-plans.sh` validates a plan against every rule above a script can judge
+ * @see AGENTS.md, AGENTS/skills/doc-plans/doc-plans.sh, AGENTS/skills/doc-logs/SKILL.md, docs/plans/
  */
 ```
 
@@ -141,7 +147,7 @@ suggested rules to set in order for agents to work reliably:
 
 ```text
 VERIFY - not part of the artifact
-- RUN `AGENTS/templates/plans.sh` once the plan is written; pass a path to scope the run
+- RUN `AGENTS/skills/doc-plans/doc-plans.sh` once the plan is written; pass a path to scope the run
 - FIX every ERROR, since each one breaks a rule stated in the header above
 - STOP on a `secret` finding and ask the user before truncating it; the key needs rotating first
 - JUSTIFY or fix every WARN; the sidecar tolerates them, the next reader may not

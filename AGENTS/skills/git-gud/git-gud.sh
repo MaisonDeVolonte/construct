@@ -5,7 +5,7 @@
 # @description
 # - sidecar for `@git-gud` — re-runs ci on a stale pr against the default branch
 # - talks to github through curl + bearer auth since gh cannot verify tls in the sandbox
-# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/git-gud/SKILL.md, AGENTS/shared/handover.sh
+# @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/git-gud/SKILL.md, AGENTS/shared/handover.sh
 # - the shared file is reached by path from this skill folder, not from beside this script, since
 #   a skill owns its own directory; stage 4 moves it to `AGENTS/shared/` and this path with it
 

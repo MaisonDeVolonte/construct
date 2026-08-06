@@ -1,7 +1,13 @@
+---
+name: doc-insights
+description: Shape of an opportunity scan in docs/insights/, written by /git-insights.
+metadata:
+  kind: spec
+---
 ```javascript
 /**
  * ==================================================
- * @file insights.md - opportunity report template
+ * @file SKILL.md - opportunity report template
  * ==================================================
  * @description
  * - tracked in git, one insights file per day, appended across runs
@@ -14,8 +20,8 @@
  * - skip the raw sidecar dump; keep the read of it, not the printout
  * - an opportunity that recurs across dated files is a finding; restate it, never edit the older report
  * - a Q1 entry that survives three reports has stopped being urgent in practice, say so
- * - `AGENTS/templates/insights.sh` validates a report against every rule above a script can judge
- * @see AGENTS.md, AGENTS/templates/insights.sh, AGENTS/skills/git-insights/SKILL.md, docs/insights/
+ * - `AGENTS/skills/doc-insights/doc-insights.sh` validates a report against every rule above a script can judge
+ * @see AGENTS.md, AGENTS/skills/doc-insights/doc-insights.sh, AGENTS/skills/git-insights/SKILL.md, docs/insights/
  */
 ```
 
@@ -62,7 +68,7 @@ never edit an earlier report; a recurring opportunity is signal about what keeps
 
 ```text
 VERIFY - not part of the artifact
-- RUN `AGENTS/templates/insights.sh` once the report is appended; pass a path to scope the run
+- RUN `AGENTS/skills/doc-insights/doc-insights.sh` once the report is appended; pass a path to scope the run
 - FIX every ERROR, since each one breaks a rule stated in the header above
 - STOP on a `secret` finding and ask the user before truncating it; the key needs rotating first
 - JUSTIFY or fix every WARN; the sidecar tolerates them, the next reader may not

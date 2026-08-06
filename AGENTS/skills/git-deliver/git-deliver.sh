@@ -9,7 +9,7 @@
 # - the loop never delivers; each bucket is handed over as a block the user pastes and runs
 # - github's git endpoints take only basic auth, which base64s past the proxy, so push needs a tty
 # - a delivered .claude/settings.json strands its checkout; the pull after needs a hatch restore
-# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/git-deliver/SKILL.md, AGENTS/shared/handover.sh
+# @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/git-deliver/SKILL.md, AGENTS/shared/handover.sh
 
 set -euo pipefail
 

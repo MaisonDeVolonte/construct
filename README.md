@@ -146,18 +146,19 @@ TABLE OF CONTENTS
 - [taskcompleted](AGENTS/hooks/taskcompleted.sh): blocks the turn to make the agent note the day's log
 - [stop](AGENTS/hooks/stop.sh): every hour, saves notes and prompts, then synthesizes the day's log
 
-### Templates (see `AGENTS/templates/`)
-> each pairs with a matching `.sh` sidecar that verifies conformance
-- [audits](AGENTS/templates/audits.md): `@git-audit` appends findings and resolutions
-- [comments](AGENTS/templates/comments.md): inline comment shape in every source file
-- [git](AGENTS/templates/git.md): `@git*` triggers and sidecars follow this shape
-- [graphs](AGENTS/templates/graphs.md): `@graphspec` writes graph spec prompt files
-- [honest](AGENTS/templates/honest.md): `@git-honest` adversarial graded scorecards
-- [insights](AGENTS/templates/insights.md): `@git-insights` searches repo for opportunities
-- [logs](AGENTS/templates/logs.md): `@logthread`, `@lognote` and `@logsynth` maintain agent logs
-- [plans](AGENTS/templates/plans.md): `@graphspec --execute` detailed fanout plan generation
-- [study](AGENTS/templates/study.md): `@studyguide` writes detailed retrospective with graded quiz
-- [wayfinders](AGENTS/templates/wayfinders.md): the header every source file opens with
+### Specs (see `AGENTS/skills/`)
+> each pairs with a matching `.sh` sidecar that verifies conformance; specs auto-load, never gated
+- [/check-comments](AGENTS/skills/check-comments/SKILL.md): inline comment shape in every source file
+- [/check-skills](AGENTS/skills/check-skills/SKILL.md): the shape every skill pair holds
+- [/check-wayfinders](AGENTS/skills/check-wayfinders/SKILL.md): the header every source file opens with
+- [/doc-audits](AGENTS/skills/doc-audits/SKILL.md): `/git-audit` appends findings and resolutions
+- [/doc-credentials](AGENTS/skills/doc-credentials/SKILL.md): `/test-credentials` proves the mask, never quoting a value
+- [/doc-graphs](AGENTS/skills/doc-graphs/SKILL.md): `@graphspec` writes graph spec prompt files
+- [/doc-honest](AGENTS/skills/doc-honest/SKILL.md): `/git-honest` adversarial graded scorecards
+- [/doc-insights](AGENTS/skills/doc-insights/SKILL.md): `/git-insights` searches repo for opportunities
+- [/doc-logs](AGENTS/skills/doc-logs/SKILL.md): `@logthread`, `@lognote` and `@logsynth` maintain agent logs
+- [/doc-plans](AGENTS/skills/doc-plans/SKILL.md): `@graphspec --execute` detailed fanout plan generation
+- [/doc-study](AGENTS/skills/doc-study/SKILL.md): `@studyguide` writes detailed retrospective with graded quiz
 
 ### Verifying
 - `test what you deploy`: a passing local run is not a shipped artifact
@@ -497,10 +498,11 @@ managed → cli → local → project → user (scalars override, arrays merge)
 ### Audits
 > `/sandbox`: claude command that prints the merged config (the 'source of truth')
 - `/fewer-permission-prompts`: claude skill that proposes new allow entries from real transcript usage
-- [@settingsaudit](AGENTS/settings/settingsaudit.md): READ-ONLY; audits every scope, probes the boundary live (saved to file)
-- [permissions.sh](AGENTS/settings/permissions.sh): replays the corpus through the real hook, then audits the live rules
-- [scopes.sh](AGENTS/settings/scopes.sh): maps every sidecar against the merged scope stack
-- [secrets.sh](AGENTS/settings/secrets.sh): shared credential patterns, used in every template sidecar
+- [/test-credentials](AGENTS/skills/test-credentials/SKILL.md): READ-ONLY; probes every masked and denied credential live (saved to file)
+- [/test-permissions](AGENTS/skills/test-permissions/test-permissions.sh): replays the corpus through the real hook, then audits the live rules
+- [/test-scopes](AGENTS/skills/test-scopes/test-scopes.sh): maps every sidecar against the merged scope stack
+- [/test-settings](AGENTS/skills/test-settings/SKILL.md): READ-ONLY; audits every scope, probes the boundary live (saved to file)
+- [secrets.sh](AGENTS/settings/secrets.sh): shared credential patterns, sourced by every validator
 - [corpus.tsv](AGENTS/settings/corpus.tsv): labeled command corpus for the audits; never executed
 
 ### Diagnostics

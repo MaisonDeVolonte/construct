@@ -7,7 +7,7 @@
  * - pairs with settings.local.json; copy to .claude/settings.local.json, gitignored
  * - this repo, just you; the hooks are the real payload, the rest is restatement
  * - the drawer every 'Always Allow' click lands in
- * @see AGENTS/settings/settings.local.json, AGENTS/settings/settings.user.md, AGENTS/hooks/, AGENTS/settings/settingsaudit.sh, AGENTS.md
+ * @see AGENTS/settings/settings.local.json, AGENTS/settings/settings.user.md, AGENTS/hooks/, AGENTS/skills/test-settings/test-settings.sh, AGENTS.md
  */
 ```
 

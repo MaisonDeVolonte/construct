@@ -5,7 +5,7 @@
 # @description
 # - sidecar for `@git-honest` — gathers telemetry for the honest scorecard
 # - reports today's honest path and scorecard count, and never creates the file itself
-# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/git-honest/SKILL.md, AGENTS/templates/honest.md, docs/honest/
+# @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/git-honest/SKILL.md, AGENTS/skills/doc-honest/SKILL.md, docs/honest/
 
 set -euo pipefail
 
