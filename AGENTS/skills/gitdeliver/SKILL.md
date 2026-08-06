@@ -1,7 +1,14 @@
+---
+name: gitdeliver
+description: Bucket uncommitted work into atomic PRs, gate the plan, then hand over every block.
+argument-hint: [--first]
+disallowed-tools: Write Edit
+disable-model-invocation: true
+---
 ```javascript
 /**
  * ===================================================
- * @file gitdeliver.md - gated atomic delivery trigger
+ * @file SKILL.md - gated atomic delivery trigger
  * ===================================================
  * @description
  * - ran only on explicit `@gitdeliver` command
@@ -13,7 +20,7 @@
  * - gated: never delivers; every block is the user's to paste, in the order given
  * - the preflight is read-only too, so even floating changes onto trunk is handed over
  * - push authenticates only outside the sandbox, so the whole bucket is the user's to run
- * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitdeliver.sh, AGENTS/git/handover.sh
+ * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/gitdeliver/gitdeliver.sh, AGENTS/shared/handover.sh
  */
 ```
 
@@ -30,12 +37,16 @@
 **FLAGS:**
 - `--first`: plans every bucket as normal, but emits only the FIRST block
 
-1. run the native shell command exactly as specified
-  ```bash
-  AGENTS/git/gitdeliver.sh
-  ```
-  - fail (exit code > 0) → abort and report: "<raw terminal error>"
-  - success (exit code = 0) → capture `default branch` from the telemetry
+## telemetry
+
+```!
+"${CLAUDE_PLUGIN_ROOT}"/skills/gitdeliver/gitdeliver.sh
+echo "sidecar exit: $?"
+```
+
+1. read the block above; it already ran, so there is no command to issue
+  - fail (`sidecar exit` > 0) → abort and report: "<raw terminal error>"
+  - success (`sidecar exit` = 0) → capture `default branch` from the telemetry
   - IF the handover block names any prep command, hand it over and WAIT before step 2
     - the preflight measures only, so the tree is still wherever the user left it
     - bucketing against an unsynced trunk drafts commits the user then has to redo

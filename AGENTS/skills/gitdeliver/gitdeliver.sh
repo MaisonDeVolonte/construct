@@ -9,15 +9,16 @@
 # - the loop never delivers; each bucket is handed over as a block the user pastes and runs
 # - github's git endpoints take only basic auth, which base64s past the proxy, so push needs a tty
 # - a delivered .claude/settings.json strands its checkout; the pull after needs a hatch restore
-# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitdeliver.md, AGENTS/git/handover.sh
+# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/gitdeliver/SKILL.md, AGENTS/shared/handover.sh
 
 set -euo pipefail
 
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || true)
-if [ ! -f "$HERE/handover.sh" ]; then
-  echo "fatal: no AGENTS/git/handover.sh beside this sidecar" >&2; exit 1; fi
-# shellcheck source=./handover.sh
-. "$HERE/handover.sh"
+SHARED=$(cd "$HERE/../../shared" 2>/dev/null && pwd || true)
+if [ ! -f "$SHARED/handover.sh" ]; then
+  echo "fatal: no AGENTS/shared/handover.sh reachable from this sidecar" >&2; exit 1; fi
+# shellcheck source=../../shared/handover.sh
+. "$SHARED/handover.sh"
 
 require_repo
 require_tools curl jq

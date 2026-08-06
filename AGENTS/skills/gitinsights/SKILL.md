@@ -1,18 +1,23 @@
+---
+name: gitinsights
+description: Scan repo, docs and logs for what to work on next, saved to file.
+disable-model-invocation: true
+---
 ```javascript
 /**
  * =========================================================
- * @file gitinsights.md - read-only opportunity-scan trigger
+ * @file SKILL.md - read-only opportunity-scan trigger
  * =========================================================
  * @description
  * - ran only on explicit `@gitinsights` command; read-only, never mutates tracked files
  * - answers "I've lost the thread, where is it worth working next" — a direction, not a verdict
  * - report-only by contract: nothing downstream gates on it, so every finding is a lead
- * - runs `AGENTS/git/gitinsights.sh` for deterministic findings (broken references, code markers)
+ * - runs `AGENTS/skills/gitinsights/gitinsights.sh` for deterministic findings (broken references, code markers)
  * - reconciles `README.md`/`AGENTS.md`/trigger docs against actual repo reality
  * - reads the 5 most recent `docs/logs/` entries for unresolved observations
  * - merges all three streams into an urgent/important opportunity matrix
  * - appends that report to `docs/insights/YYYY-MM-DD.md`, one file per day, many reports per file
- * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitinsights.sh, docs/logs/, AGENTS/templates/logs.md, AGENTS/templates/insights.md, docs/insights/
+ * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/gitinsights/gitinsights.sh, docs/logs/, AGENTS/templates/logs.md, AGENTS/templates/insights.md, docs/insights/
  */
 ```
 
@@ -23,10 +28,14 @@
 - broken references are one signal among many, never the point; a clean scan still owes leads
 - streams 2 and 3 carry the judgement, so a run reporting only sidecar counts has skipped the work
 
-1. run the sidecar for deterministic findings
-  ```bash
-  AGENTS/git/gitinsights.sh
-  ```
+## telemetry
+
+```!
+"${CLAUDE_PLUGIN_ROOT}"/skills/gitinsights/gitinsights.sh
+echo "sidecar exit: $?"
+```
+
+1. read the block above; it already ran, so there is no command to issue
   - report-only; it never fails the run — capture its telemetry (broken references + code markers)
 
 2. reconcile docs against reality — run this block once per objective, one objective at a time:

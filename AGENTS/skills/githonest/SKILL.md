@@ -1,17 +1,22 @@
+---
+name: githonest
+description: Adversarial read-only code review producing a graded scorecard saved to file.
+disable-model-invocation: true
+---
 ```javascript
 /**
  * =============================================================
- * @file githonest.md - adversarial doc-vs-reality audit trigger
+ * @file SKILL.md - adversarial doc-vs-reality audit trigger
  * =============================================================
  * @description
  * - ran only on explicit `@githonest` command; read-only, never mutates tracked files
- * - runs `AGENTS/git/githonest.sh`, then reads `README.md`/`AGENTS.md` to learn the
+ * - runs `AGENTS/skills/githonest/githonest.sh`, then reads `README.md`/`AGENTS.md` to learn the
  *   project's documented claims
  * - scores effort-vs-output, claim-vs-reality, test coverage, and risk hygiene against
  *   the shell telemetry
  * - outputs a harsh A-F scorecard with a one-sentence verdict; never flatters the user
  * - appends that scorecard to `docs/honest/YYYY-MM-DD.md`, one file per day, many per file
- * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/githonest.sh, README.md, AGENTS/templates/honest.md, docs/honest/
+ * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/githonest/githonest.sh, README.md, AGENTS/templates/honest.md, docs/honest/
  */
 ```
 
@@ -20,12 +25,16 @@
 - purpose: to ruthlessly compare the project's documented claims against its technical reality
 - never flatters the user; punishes hand-wavy conventions and heavily penalizes "green ci" without actual test coverage
 
-1. run the native shell command exactly as specified:
-  ```bash
-  AGENTS/git/githonest.sh
-  ```
-  - fail (exit code > 0) → abort and report: "<raw terminal error>"
-  - success (exit code = 0) → continue
+## telemetry
+
+```!
+"${CLAUDE_PLUGIN_ROOT}"/skills/githonest/githonest.sh
+echo "sidecar exit: $?"
+```
+
+1. read the block above; it already ran, so there is no command to issue
+  - fail (`sidecar exit` > 0) → abort and report: "<raw terminal error>"
+  - success (`sidecar exit` = 0) → continue
 
 2. read the core foundational documents to learn the "claims":
   - read `README.md`, which always exists and always carries claims worth grading

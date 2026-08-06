@@ -9,7 +9,8 @@
  * - eligible files are js, jsx, ts, tsx, mjs, cjs and sh, since those are what carry the block
  * - everything below the header belongs to `comments.sh`, and nothing here judges it
  * FORM
- * - the block opens on line 1, or line 1 after a shebang, with nothing above it
+ * - the block opens on line 1, or on the line under a shebang or a frontmatter block
+ * - frontmatter outranks the header, since the harness reads a skill's yaml only from line 1
  * - `@file`, `@description` and `@see` each appear once, in that order
  * - a banner of `=` sits above and below the `@file` line, matching its width
  * - `@file` reads `<filename> - <short, specific title>`, and the filename is the real one
@@ -24,8 +25,8 @@
  * - group a long `@description` under uppercase headings, the way this block does
  * VERIFY
  * - `AGENTS/templates/wayfinders.sh` validates a header against every rule above a script can judge
- * - repo-wide reference integrity has no gate now; `AGENTS/git/gitinsights.sh` only reports it
- * @see AGENTS.md, AGENTS/templates/wayfinders.sh, AGENTS/templates/comments.md, AGENTS/git/gitinsights.sh
+ * - repo-wide reference integrity has no gate now; `AGENTS/skills/gitinsights/gitinsights.sh` only reports it
+ * @see AGENTS.md, AGENTS/templates/wayfinders.sh, AGENTS/templates/comments.md, AGENTS/skills/gitinsights/gitinsights.sh
  */
 ```
 
@@ -59,6 +60,28 @@
 > # - builds, tags and pushes; refuses to run on a dirty tree
 > # - the only script that talks to the registry
 > # @see Dockerfile, .github/workflows/ci.yml
+> ```
+
+## the skill form, opening under the closing frontmatter marker
+
+*example:*
+> ```markdown
+> ---
+> description: Snapshots history and tree, verifies it, hands over the restore.
+> disable-model-invocation: true
+> ---
+>
+> ```javascript
+> /**
+>  * =================================================
+>  * @file SKILL.md - history and tree backup trigger
+>  * =================================================
+>  * @description
+>  * - ran only on explicit `/gitbackup` command
+>  * - the frontmatter above is the gate; this block is what a reader opens first
+>  * @see AGENTS/templates/git.md, gitbackup.sh
+>  */
+> ```
 > ```
 
 ## what a drifted header looks like

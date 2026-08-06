@@ -8,15 +8,16 @@
 # - computes the next version from package.json rather than running `npm version` to learn it
 # - the release api call ships in the handover too, since the tag must reach origin first
 # - auth preflights through curl + bearer since gh cannot verify tls in the sandbox
-# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitjump.md, AGENTS/git/handover.sh
+# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/gitjump/SKILL.md, AGENTS/shared/handover.sh
 
 set -euo pipefail
 
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || true)
-if [ ! -f "$HERE/handover.sh" ]; then
-  echo "fatal: no AGENTS/git/handover.sh beside this sidecar" >&2; exit 1; fi
-# shellcheck source=./handover.sh
-. "$HERE/handover.sh"
+SHARED=$(cd "$HERE/../../shared" 2>/dev/null && pwd || true)
+if [ ! -f "$SHARED/handover.sh" ]; then
+  echo "fatal: no AGENTS/shared/handover.sh reachable from this sidecar" >&2; exit 1; fi
+# shellcheck source=../../shared/handover.sh
+. "$SHARED/handover.sh"
 
 FLAG=${1:-}
 if [ "$FLAG" = "--major" ]; then TYPE="major"

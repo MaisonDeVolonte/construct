@@ -6,9 +6,9 @@
 # - sidecar for `git.md` — asserts every `@git*` trigger doc and its shell sidecar hold together
 # - one check per machine-checkable rule; every rule needing judgement prints as a human checklist
 # - ERROR breaks a rule the template states outright; WARN names a smell the template tolerates
-# - defaults to every pair in `AGENTS/git/`; pass a doc, a sidecar, or a directory to scope it
+# - defaults to every pair in `AGENTS/skills/`; pass a doc, a sidecar, or a directory to scope it
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
-# @see AGENTS.md, AGENTS/settings/secrets.sh, AGENTS/templates/git.md, AGENTS/git/, AGENTS/templates/plans.sh, .github/workflows/ci.yml
+# @see AGENTS.md, AGENTS/settings/secrets.sh, AGENTS/templates/git.md, AGENTS/skills/, AGENTS/templates/plans.sh, .github/workflows/ci.yml
 
 set -euo pipefail
 
@@ -26,7 +26,7 @@ if [ ! -f "$SHARED/secrets.sh" ]; then
 STRICT=0
 KEEP=0
 TEMPLATE="AGENTS/templates/git.md"
-TRIGGERS="AGENTS/git"
+TRIGGERS="AGENTS/skills"
 
 # the postures the index assigns; a trigger nobody can tell the blast radius of is a trap
 POSTURES='READ-ONLY|SAFE|GATED|DESTRUCTIVE|RELEASE'
@@ -52,14 +52,19 @@ if [ ${#PAIRS[@]} -eq 0 ]; then
   PAIRS=("$TRIGGERS")
 fi
 
-# a trigger is one lowercase word, so `gitfresh.md` is a trigger and `settings.user.md` is the
-# reference doc for a data file; a directory scan sees both and only the first is a pair
+# a skill owns a directory, so the trigger's name is the folder rather than the file: every skill
+# doc is called SKILL.md, and deriving the name from the file would call all of them 'skill'
+trigger_name() {
+  local doc=$1
+  if [ "$(basename "$doc")" = 'SKILL.md' ]; then basename "$(dirname "$doc")"; return; fi
+  basename "$doc" .md
+}
+
+# the doc half of a pair is a SKILL.md inside a lowercase skill folder; anything else in the tree
+# is a reference doc rather than a trigger, and only the first kind is a pair
 is_trigger_name() {
-  case "$(basename "$1")" in
-    [a-z]*.md|[a-z]*.sh) ;;
-    *) return 1;;
-  esac
-  printf '%s' "$(basename "$1")" | grep -qE '^[a-z]+\.(md|sh)$'
+  [ "$(basename "$1")" = 'SKILL.md' ] || return 1
+  printf '%s' "$(basename "$(dirname "$1")")" | grep -qE '^[a-z]+$'
 }
 
 # a sub-tool is invoked by another script rather than by a trigger, so it has no doc to pair with;
@@ -76,15 +81,15 @@ is_subtool() {
 EXPANDED=()
 for path in "${PAIRS[@]}"; do
   if [ -d "$path" ]; then
-    for nested in "$path"/*.md; do
+    for nested in "$path"/*/SKILL.md "$path"/SKILL.md; do
       [ -f "$nested" ] || continue
       is_trigger_name "$nested" || continue
       EXPANDED+=("$nested")
     done
-    for nested in "$path"/*.sh; do
+    for nested in "$path"/*/*.sh "$path"/*.sh; do
       [ -f "$nested" ] || continue
       is_subtool "$nested" && continue
-      [ -f "${nested%.sh}.md" ] || EXPANDED+=("$nested")
+      [ -f "$(dirname "$nested")/SKILL.md" ] || EXPANDED+=("$nested")
     done
   elif [ -f "$path" ]; then EXPANDED+=("$path")
   else echo "fatal: no such trigger file: $path" >&2; exit 1; fi
@@ -128,10 +133,10 @@ where() {
 # trigger reachable, so the sidecar is looked for beside the doc rather than in one fixed folder
 check_pair() {
   local doc=$1 name sidecar
-  name=$(basename "$doc" .md)
+  name=$(trigger_name "$doc")
   sidecar="$(dirname "$doc")/$name.sh"
-  if ! printf '%s' "$(basename "$doc")" | grep -qE '^[a-z]+\.md$'; then
-    err "$doc" 1 filename "trigger docs are named <workflow>.md, all lowercase"
+  if ! printf '%s' "$name" | grep -qE '^[a-z]+$'; then
+    err "$doc" 1 filename "the skill folder is the command name, so it is one lowercase word"
   fi
   if [ ! -f "$sidecar" ]; then
     err "$doc" 1 unpaired "no $sidecar; every trigger doc starts with a shell sidecar"
@@ -144,13 +149,18 @@ check_pair() {
 
 # the wayfinding block from AGENTS.md, which is how anyone reading the doc learns its boundaries
 check_doc_wayfinding() {
-  local doc=$1 name
-  name=$(basename "$doc" .md)
-  if [ "$(sed -n '1p' "$doc")" != '```javascript' ]; then
-    err "$doc" 1 wayfinding "line 1 opens the wayfinding block: \`\`\`javascript"
+  local doc=$1 name opens_on=1 frontmatter_end
+  name=$(trigger_name "$doc")
+  # a skill doc opens with yaml frontmatter, since the harness only reads it from line 1
+  if [ "$(sed -n '1p' "$doc")" = '---' ]; then
+    frontmatter_end=$(awk 'NR > 1 && $0 == "---" { print NR; exit }' "$doc")
+    if [ -n "$frontmatter_end" ]; then opens_on=$((frontmatter_end + 1)); fi
   fi
-  if ! grep -qE "^ \* @file $name\.md - " "$doc"; then
-    err "$doc" 1 wayfinding "@file must read '$name.md - <short, specific title>'"
+  if [ "$(sed -n "${opens_on}p" "$doc")" != '```javascript' ]; then
+    err "$doc" "$opens_on" wayfinding "line $opens_on opens the wayfinding block: \`\`\`javascript"
+  fi
+  if ! grep -qE "^ \* @file SKILL\.md - " "$doc"; then
+    err "$doc" 1 wayfinding "@file must read 'SKILL.md - <short, specific title>'"
   fi
   if ! grep -q '^ \* @description' "$doc"; then
     err "$doc" 1 wayfinding "no @description; the header is what stops a reader guessing"
@@ -171,9 +181,9 @@ check_doc_wayfinding() {
 # "ran only on explicit `@gitautomation` commands" — the whole safety model rests on this line
 check_trigger() {
   local doc=$1 name
-  name=$(basename "$doc" .md)
-  if ! grep -qE "^\*\*@$name:\*\*.*(ONLY|only) on explicit" "$doc"; then
-    err "$doc" 1 trigger "state it outright: '**@$name:** Run ONLY on explicit \`@$name\` command'"
+  name=$(trigger_name "$doc")
+  if ! grep -qE '^disable-model-invocation:[[:space:]]*(true|yes|on|1)[[:space:]]*$' "$doc"; then
+    err "$doc" 1 trigger "frontmatter needs 'disable-model-invocation: true'; prose is not a gate"
   fi
 }
 
@@ -181,13 +191,14 @@ check_trigger() {
 # somebody can copy, and the path has to be the sidecar that belongs to it
 check_invocation() {
   local doc=$1 name home
-  name=$(basename "$doc" .md)
+  name=$(trigger_name "$doc")
   home=$(dirname "$doc")
-  if ! grep -qE "^[[:space:]]*$home/$name\.sh([[:space:]]|$)" "$doc"; then
+  if ! grep -qE "($home|skills/$name)/$name\.sh([[:space:]]|\"|$)" "$doc"; then
     err "$doc" 1 invocation "the doc never runs $home/$name.sh"
   fi
-  if ! grep -qE '^[[:space:]]*```bash' "$doc"; then
-    warn "$doc" 1 invocation "put the command in a \`\`\`bash block, exactly as it should be run"
+  # the bang block is what makes step one unskippable, since the harness runs it before any read
+  if ! grep -qE '^```!' "$doc"; then
+    warn "$doc" 1 invocation "run the sidecar from a \`\`\`! block, so it lands before the model reads"
   fi
 }
 
@@ -198,10 +209,10 @@ check_branches() {
   local doc=$1
   # a report-only sidecar has exactly one path by contract, so it has no failure branch to document
   if grep -qE 'report-only|never fails' "$doc"; then return 0; fi
-  if ! grep -qE 'exit code[[:space:]]+(>|>=|!=)[[:space:]]*[0-9]|nonzero' "$doc"; then
+  if ! grep -qE '(exit code|sidecar exit)[^0-9]*(>|>=|!=)[[:space:]]*[0-9]|nonzero' "$doc"; then
     err "$doc" 1 no_failure_branch "no failure branch; say what happens when the sidecar exits nonzero"
   fi
-  if ! grep -qE 'exit code[[:space:]]+=+[[:space:]]*0' "$doc"; then
+  if ! grep -qE '(exit code|sidecar exit)[^0-9]*=+[[:space:]]*0' "$doc"; then
     err "$doc" 1 no_success_branch "no success branch; say what the telemetry means and what follows"
   fi
 }
@@ -222,8 +233,8 @@ check_artifact() {
 # the sidecar is the half that touches git, so its own header and its shebang are load-bearing
 check_sidecar_header() {
   local doc=$1 name sidecar
-  name=$(basename "$doc" .md)
-  sidecar="$TRIGGERS/$name.sh"
+  name=$(trigger_name "$doc")
+  sidecar="$(dirname "$doc")/$name.sh"
   if [ ! -f "$sidecar" ]; then return 0; fi
   if [ "$(sed -n '1p' "$sidecar")" != '#!/bin/bash' ]; then
     err "$sidecar" 1 shebang "line 1 must read '#!/bin/bash'"
@@ -247,8 +258,8 @@ check_sidecar_header() {
 # that fails them locally has already failed ci
 check_sidecar_lint() {
   local doc=$1 name sidecar hit line
-  name=$(basename "$doc" .md)
-  sidecar="$TRIGGERS/$name.sh"
+  name=$(trigger_name "$doc")
+  sidecar="$(dirname "$doc")/$name.sh"
   if [ ! -f "$sidecar" ]; then return 0; fi
   if ! bash -n "$sidecar" 2>/dev/null; then
     err "$sidecar" 1 syntax "does not parse; 'bash -n' is the first gate ci runs"
@@ -266,11 +277,11 @@ check_sidecar_lint() {
 # is one nobody can judge the blast radius of before running it
 check_index() {
   local doc=$1 name entry
-  name=$(basename "$doc" .md)
+  name=$(trigger_name "$doc")
   if [ -z "$INDEX" ]; then return 0; fi
-  entry=$(grep -nE "\(AGENTS/[a-z]+/$name\.md\)" "$INDEX" | head -n 1 || true)
+  entry=$(grep -nE "\(AGENTS/skills/$name/SKILL\.md\)" "$INDEX" | head -n 1 || true)
   if [ -z "$entry" ]; then
-    err "$doc" 1 unindexed "$INDEX does not list @$name; nobody will find it"
+    err "$doc" 1 unindexed "$INDEX does not list /$name; nobody will find it"
     return 0
   fi
   if ! printf '%s' "$entry" | grep -qE "($POSTURES)"; then
@@ -281,8 +292,8 @@ check_index() {
 # both halves of a pair get scanned, since a sidecar is as likely to hold a pasted token as its doc
 check_scrub() {
   local doc=$1 name file
-  name=$(basename "$doc" .md)
-  for file in "$doc" "$TRIGGERS/$name.sh"; do
+  name=$(trigger_name "$doc")
+  for file in "$doc" "$(dirname "$doc")/$name.sh"; do
     if [ -f "$file" ]; then scan_secrets "$file"; fi
   done
 }

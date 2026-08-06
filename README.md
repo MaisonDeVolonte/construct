@@ -122,21 +122,21 @@ TABLE OF CONTENTS
 - DEFAULT posture is READ-ONLY e.g. chat, brainstorm, evaluate, and plan
 - DO NOT write code, edit files, or run commands without explicit approval
 
-### Git (see `AGENTS/git/`)
+### Git (see `AGENTS/skills/`)
 > each pairs with a matching `.sh` sidecar that measures, then hands the commands back
-> two triggers run part of their own block against narrow allows: `@gitcontinue`'s sync, which is
-> recoverable throughout, and `@gitfresh`'s backup stash, which is what makes its reset survivable
-- [@gitaudit](AGENTS/git/gitaudit.md): diagnostics, triage, report, summary, tasks (saved to file)
-- [@gitbackup](AGENTS/git/gitbackup.md): snapshots history and tree, verifies it, hands over the restore
-- [@gitcontinue](AGENTS/git/gitcontinue.md): measures the trunk delta, then runs the sync it planned
-- [@gitdeliver](AGENTS/git/gitdeliver.md): buckets changes atomically, gates the plan, hands over every block
-- [@gitempty](AGENTS/git/gitempty.md): prunes tracking refs, hands over the trunk sync and branch deletes
-- [@gitfresh](AGENTS/git/gitfresh.md): prices a hard reset, takes the backup, hands over the reset
-- [@gitgud](AGENTS/git/gitgud.md): query branch delta, merge remote main into it, and run fresh CI
-- [@githonest](AGENTS/git/githonest.md): brutally honest code review, progress report (saved to file)
-- [@gitinsights](AGENTS/git/gitinsights.md): points at what to work on next, from scans, docs and logs (saved to file)
-- [@gitjump](AGENTS/git/gitjump.md): verifies release preconditions, hands over bump/push/promote
-- [handover.sh](AGENTS/git/handover.sh): shared preflights, queries, and the telemetry/handover blocks
+> two triggers run part of their own block against narrow allows: `/gitcontinue`'s sync, which is
+> recoverable throughout, and `/gitfresh`'s backup stash, which is what makes its reset survivable
+- [/gitaudit](AGENTS/skills/gitaudit/SKILL.md): diagnostics, triage, report, summary, tasks (saved to file)
+- [/gitbackup](AGENTS/skills/gitbackup/SKILL.md): snapshots history and tree, verifies it, hands over the restore
+- [/gitcontinue](AGENTS/skills/gitcontinue/SKILL.md): measures the trunk delta, then runs the sync it planned
+- [/gitdeliver](AGENTS/skills/gitdeliver/SKILL.md): buckets changes atomically, gates the plan, hands over every block
+- [/gitempty](AGENTS/skills/gitempty/SKILL.md): prunes tracking refs, hands over the trunk sync and branch deletes
+- [/gitfresh](AGENTS/skills/gitfresh/SKILL.md): prices a hard reset, takes the backup, hands over the reset
+- [/gitgud](AGENTS/skills/gitgud/SKILL.md): query branch delta, merge remote main into it, and run fresh CI
+- [/githonest](AGENTS/skills/githonest/SKILL.md): brutally honest code review, progress report (saved to file)
+- [/gitinsights](AGENTS/skills/gitinsights/SKILL.md): points at what to work on next, from scans, docs and logs (saved to file)
+- [/gitjump](AGENTS/skills/gitjump/SKILL.md): verifies release preconditions, hands over bump/push/promote
+- [handover.sh](AGENTS/shared/handover.sh): shared preflights, queries, and the telemetry/handover blocks
 
 ### Hooks (see `AGENTS/hooks/`)
 - [sessionstart](AGENTS/hooks/sessionstart.sh): injects the README and the two most recent log files into context

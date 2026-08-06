@@ -10,7 +10,7 @@
 # - a broken `@see` only warns here, and nothing gates references now, so the warn is all there is
 # - defaults to every tracked eligible file; pass files or a directory to scope it
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
-# @see AGENTS.md, AGENTS/settings/secrets.sh, AGENTS/templates/wayfinders.md, AGENTS/git/gitinsights.sh
+# @see AGENTS.md, AGENTS/settings/secrets.sh, AGENTS/templates/wayfinders.md, AGENTS/skills/gitinsights/gitinsights.sh
 
 set -euo pipefail
 
@@ -179,6 +179,7 @@ check_present() {
 }
 
 # "the block opens on line 1, or line 1 after a shebang, with nothing above it"
+# frontmatter needs no branch here: only source extensions reach this, and none of them carry yaml
 check_position() {
   local file=$1 style=$2 first expected=1
   if head -n 1 "$file" | grep -q '^#!'; then expected=2; fi

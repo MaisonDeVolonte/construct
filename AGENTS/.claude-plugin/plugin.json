@@ -1,0 +1,8 @@
+{
+  "name": "operator",
+  "description": "Secure agentic coding infra: sandboxed automations, workflows, and conventions.",
+  "version": "0.1.0",
+  "homepage": "https://github.com/MaisonDeVolonte/operator",
+  "repository": "https://github.com/MaisonDeVolonte/operator",
+  "license": "MIT"
+}

@@ -1,15 +1,21 @@
+---
+name: gitcontinue
+description: Measure the trunk delta, then run the sync it planned against four narrow allows.
+disallowed-tools: Write Edit
+disable-model-invocation: true
+---
 ```javascript
 /**
  * ======================================================
- * @file gitcontinue.md - trunk sync handover trigger
+ * @file SKILL.md - trunk sync handover trigger
  * ======================================================
  * @description
  * - ran only on explicit `@gitcontinue` command
  * - measures the trunk delta, then runs the sync it planned
- * - runs `AGENTS/git/gitcontinue.sh`, whose only write is a fetch of remote-tracking refs
+ * - runs `AGENTS/skills/gitcontinue/gitcontinue.sh`, whose only write is a fetch of remote-tracking refs
  * - the sidecar stays read-only; the four sync forms are narrow allows the trigger runs itself
  * - separates ahead from behind, since a behind trunk fast-forwards and never needs @gitfresh
- * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitcontinue.sh, AGENTS/git/handover.sh
+ * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/gitcontinue/gitcontinue.sh, AGENTS/shared/handover.sh
  */
 ```
 
@@ -18,12 +24,16 @@
 - enforces trunk-based development: the sync always ends on the trunk, never a feature branch
 - the sidecar measures and plans; the trigger runs it, and a diverged trunk is still handed over
 
-1. run the native shell command exactly as specified
-  ```bash
-  AGENTS/git/gitcontinue.sh
-  ```
-  - fail (exit code > 0) → abort and report: "<raw terminal error>"
-  - success (exit code = 0) → continue to step 2
+## telemetry
+
+```!
+"${CLAUDE_PLUGIN_ROOT}"/skills/gitcontinue/gitcontinue.sh
+echo "sidecar exit: $?"
+```
+
+1. read the block above; it already ran, so there is no command to issue
+  - fail (`sidecar exit` > 0) → abort and report: "<raw terminal error>"
+  - success (`sidecar exit` = 0) → continue to step 2
 
 2. report the telemetry, then act on `sync state`, since it decides which shape applies
     - `up to date` → say so; there is nothing to run
