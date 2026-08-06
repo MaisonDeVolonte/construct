@@ -6,22 +6,6 @@ disable-model-invocation: true
 metadata:
   kind: trigger
 ---
-```javascript
-/**
- * ====================================================
- * @file SKILL.md - gated post-merge cleanup trigger
- * ====================================================
- * @description
- * - ran only on explicit `@git-empty` command; typically post-merge, but safe anytime
- * - READ-ONLY: `AGENTS/skills/git-empty/git-empty.sh` prunes tracking refs and measures, deleting nothing
- * - runs `AGENTS/skills/git-audit/git-audit.sh` to classify branches (local/remote/ghost/zombie) for deletion
- * - the sidecar classifies each spent branch itself and emits `-d` or `-D` to match
- * - a gone branch that is neither merged nor absorbed is kept, never offered for deletion
- * - every branch delete is denied, so the whole block stays the user's to run in order
- * @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/git-empty/git-empty.sh, AGENTS/skills/git-audit/git-audit.sh
- */
-```
-
 **@git-empty:** Run ONLY on explicit `@git-empty` command
 - typically ran post-merge but safe to run anytime
 - prunes dead tracking refs, then reports the trunk delta and every branch that is spent

@@ -3,12 +3,20 @@
 # @file doc-insights.sh - opportunity report validator sidecar
 # ============================================================
 # @description
-# - sidecar for `insights.md` — asserts a report archive matches the template that documents it
-# - one check per machine-checkable rule; every rule needing judgement prints as a human checklist
-# - ERROR breaks a rule the template states outright; WARN names a smell the template tolerates
+# PAIR
+# - sidecar for `doc-insights` — asserts a report archive matches the shape its SKILL.md documents
+# - the doc carries the four sections and the matrix; this file carries what a script can judge
+# ARTIFACT
+# - `docs/insights/YYYY-MM-DD.md`, tracked in git, one file per day, appended across runs
+# - written by `@git-insights` only, so one file holds many reports
+# - a report captures the opportunity surface at a moment in time, never edited after the fact
+# - `observations` are what the three streams found; `opportunities` are what to do about it
+# - an opportunity recurring across dated files is itself a finding, so it gets restated
+# RUN
 # - defaults to every file in `docs/insights/`; pass files or a directory to scope it
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
-# @see AGENTS.md, AGENTS/settings/secrets.sh, AGENTS/skills/doc-insights/SKILL.md, AGENTS/skills/git-insights/SKILL.md, AGENTS/skills/doc-plans/doc-plans.sh, docs/insights/
+# - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
+# @see AGENTS.md, AGENTS/skills/doc-insights/SKILL.md, AGENTS/skills/git-insights/SKILL.md, AGENTS/skills/git-insights/git-insights.sh, docs/insights/, AGENTS/settings/secrets.sh
 
 set -euo pipefail
 

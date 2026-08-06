@@ -3,12 +3,20 @@
 # @file doc-honest.sh - honest scorecard validator sidecar
 # ========================================================
 # @description
-# - sidecar for `honest.md` — asserts a scorecard archive matches the template that documents it
-# - one check per machine-checkable rule; every rule needing judgement prints as a human checklist
-# - ERROR breaks a rule the template states outright; WARN names a smell the template tolerates
+# PAIR
+# - sidecar for `doc-honest` — asserts a scorecard archive matches the shape its SKILL.md documents
+# - the doc carries the four sections and the grade lanes; this file carries what a script can judge
+# ARTIFACT
+# - `docs/honest/YYYY-MM-DD.md`, tracked in git, one file per day, appended across runs
+# - written by `@git-honest` only, so one file holds many scorecards
+# - a scorecard captures the doc-vs-reality gap at a moment in time, never edited after the fact
+# - grades are A-F per lane, and strong infra grades cannot mask weak app or test ones
+# - grade drift across dated files is the point; a lane stuck at D is the signal
+# RUN
 # - defaults to every file in `docs/honest/`; pass files or a directory to scope it
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
-# @see AGENTS.md, AGENTS/settings/secrets.sh, AGENTS/skills/doc-honest/SKILL.md, AGENTS/skills/git-honest/SKILL.md, AGENTS/skills/doc-plans/doc-plans.sh, docs/honest/
+# - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
+# @see AGENTS.md, AGENTS/skills/doc-honest/SKILL.md, AGENTS/skills/git-honest/SKILL.md, AGENTS/skills/git-honest/git-honest.sh, docs/honest/, AGENTS/settings/secrets.sh
 
 set -euo pipefail
 

@@ -1,15 +1,23 @@
 #!/bin/bash
-# =======================================================
+# ========================================================
 # @file git-deliver.sh - atomic delivery preflight sidecar
-# =======================================================
+# ========================================================
 # @description
+# PAIR
 # - sidecar for `@git-deliver` — proves auth and state, then hands the prep commands over
+# - the trigger drains uncommitted work in atomic `type(scope)` buckets, one pr per bucket
+# - a bucket runs branch, commit, push, pr, auto-merge on green, then back to the trunk
+# - the reasoning is the automation: bucketing, ordering and message drafting are what it does
+# GATE
+# - it plans EVERY bucket first and stops there, since a wrong bucket is free to fix before a branch
+# - `--first` plans everything the same way, but emits only the first block
+# - gated: it never delivers, and every block is the user's to paste in the order given
+# SIDECAR
 # - read-only: switch, merge and restore are denied, so the preflight measures rather than moves
-# - github auth preflights through curl + bearer since gh cannot verify tls in the sandbox
-# - the loop never delivers; each bucket is handed over as a block the user pastes and runs
+# - github auth preflights through curl + bearer, since gh cannot verify tls in the sandbox
 # - github's git endpoints take only basic auth, which base64s past the proxy, so push needs a tty
-# - a delivered .claude/settings.json strands its checkout; the pull after needs a hatch restore
-# @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/git-deliver/SKILL.md, AGENTS/shared/handover.sh
+# - a delivered `.claude/settings.json` strands its checkout, so the pull after needs the hatch
+# @see AGENTS.md, AGENTS/skills/git-deliver/SKILL.md, AGENTS/skills/git-gud/SKILL.md, AGENTS/shared/handover.sh, AGENTS/skills/check-skills/SKILL.md
 
 set -euo pipefail
 

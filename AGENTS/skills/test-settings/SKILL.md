@@ -1,32 +1,29 @@
-```javascript
-/**
- * =========================================================
- * @file settingsaudit.md - settings stack audit trigger
- * =========================================================
- * @description
- * - ran only on explicit `@settingsaudit` command; safe anytime, since nothing is written
- * - runs `AGENTS/settings/settingsaudit.sh`, which audits every scope then probes the boundary
- * - the sidecar wraps `permissions.sh` and `scopes.sh`, so one run covers all three
- * - read-only: it reports findings and hands every repair back for the user to make
- * - appends one entry to the day's settings audit, never editing an earlier one
- * @see AGENTS.md, AGENTS/settings/settingsaudit.sh, AGENTS/skills/check-skills/SKILL.md,
- *      AGENTS/skills/doc-audits/SKILL.md, docs/audits/
- */
-```
-
-**@settingsaudit:** Run ONLY on explicit `@settingsaudit` command
+---
+name: test-settings
+description: Audit every settings scope for faults that stay silent until they matter, then probe the live boundary to confirm the gate is not dead.
+argument-hint: [--static|--quick]
+disable-model-invocation: true
+metadata:
+  kind: trigger
+---
+**/test-settings:** the frontmatter blocks every path except an explicit invocation
 - audits the merged settings stack for faults that are silent until the moment they matter
 - static checks read the files: parse, drift, verb symmetry, scope placement, hygiene, guard
 - live probes exercise the boundary, since a config can be perfect while the gate is dead
 - never edits a settings file; every finding is handed back as the user's to apply
 
-1. run the native shell command exactly as specified
-  ```bash
-  AGENTS/settings/settingsaudit.sh
-  ```
-  - fail (exit code > 0) → findings exist; continue to step 2 and report them
-  - success (exit code = 0) → continue to step 2 and record the clean run
-  - `--static` skips the probes, `--quick` skips the wrapped sidecars, both for a faster pass
+## telemetry
+
+```!
+"${CLAUDE_PLUGIN_ROOT}"/skills/test-settings/test-settings.sh
+echo "sidecar exit: $?"
+```
+
+1. read the block above; it already ran, so there is no command to issue
+  - fail (`sidecar exit` > 0) → findings exist; continue to step 2 and report them
+  - success (`sidecar exit` = 0) → continue to step 2 and record the clean run
+  - `--static` skips the probes and `--quick` skips the wrapped sidecars; both need a tool call,
+    since the block above takes no arguments
 
 2. append one entry to `[audit_file]`, in the shape `AGENTS/skills/doc-audits/SKILL.md` defines
     - the heading reads `## Settings Audit #[next_audit]: [timestamp]`, both from the telemetry
@@ -47,7 +44,7 @@
     | coverage | a rule with no why in the scope's `.md`, or a mirror claim that has diverged |
     | guard    | nothing protects the policy directories, so this auditor is editable |
     | probe    | a boundary that did not refuse, naming what got through |
-    | wrapped  | errors from permissions.sh or scopes.sh, naming the count |
+    | wrapped  | errors from the test-permissions or test-scopes replay, naming the count |
 
 3. report the audit inline, then STOP
 

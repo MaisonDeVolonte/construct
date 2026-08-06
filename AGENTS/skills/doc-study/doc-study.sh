@@ -3,12 +3,19 @@
 # @file doc-study.sh - study validator sidecar
 # ============================================
 # @description
-# - sidecar for `study.md` — asserts a study matches the template that documents it
-# - one check per machine-checkable rule; every rule needing judgement prints as a human checklist
-# - ERROR breaks a rule the template states outright; WARN names a smell the template tolerates
+# PAIR
+# - sidecar for `doc-study` — asserts a study matches the shape its SKILL.md documents
+# - the doc carries the file list, the model and the pattern; this file carries what a script judges
+# ARTIFACT
+# - `docs/study/<feature>.md` in kebab-case, tracked in git, one file per feature or workflow
+# - written on request after a feature ships, to build a mental model of how it works
+# - files are listed in ideal-build order, so the list doubles as the route through the feature
+# - a map and not a textbook, so it stays roadmap-terse even where the feature is not
+# RUN
 # - defaults to every file in `docs/study/`; pass files or a directory to scope it
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
-# @see AGENTS.md, AGENTS/settings/secrets.sh, AGENTS/skills/doc-study/SKILL.md, AGENTS/skills/doc-plans/doc-plans.sh, docs/study/
+# - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
+# @see AGENTS.md, AGENTS/skills/doc-study/SKILL.md, AGENTS/skills/doc-plans/SKILL.md, docs/study/, AGENTS/settings/secrets.sh
 
 set -euo pipefail
 

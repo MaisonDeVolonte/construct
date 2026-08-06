@@ -3,12 +3,20 @@
 # @file doc-credentials.sh - credential audit validator sidecar
 # =============================================================
 # @description
-# - sidecar for `doc-credentials` — asserts a credential report matches the shape documenting it
-# - the load-bearing check is the secret scan: this artifact is the one that must never hold a value
+# PAIR
+# - sidecar for `doc-credentials` — asserts a report matches the shape its SKILL.md documents
+# - the load-bearing check is the secret scan: this artifact must never hold a usable value
 # - a `secret` finding here is not a lint failure, it is a live leak and a rotation
+# ARTIFACT
+# - `docs/credentials/YYYY-MM-DD.md`, one file per day, written by `/test-credentials`
+# - gitignored with the rest of `docs/`, and it stays that way; this one names live secrets
+# - a four-and-four `fingerprint` is the one fragment allowed, and the detector re-runs on it
+# - a run that could not grade writes no file at all, since an ungraded run proves nothing
+# - `unruled` leads because it holds the work; `files` closes because a readable deny is loudest
+# RUN
 # - defaults to every file in `docs/credentials/`; pass files or a directory to scope it
 # - `--strict` promotes warnings to errors; exits 1 on any error
-# @see AGENTS.md, AGENTS/settings/secrets.sh, AGENTS/skills/doc-credentials/SKILL.md, docs/credentials/
+# @see AGENTS.md, AGENTS/skills/doc-credentials/SKILL.md, AGENTS/skills/test-credentials/SKILL.md, AGENTS/skills/test-credentials/test-credentials.sh, docs/credentials/, AGENTS/settings/secrets.sh
 
 set -euo pipefail
 

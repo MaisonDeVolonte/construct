@@ -3,13 +3,20 @@
 # @file test-credentials.sh - credential masking prober sidecar
 # =============================================================
 # @description
+# PAIR
 # - sidecar for `/test-credentials` — proves every credential is masked, unset, or unruled
-# - NEVER prints a credential value; a leak is reported by name and vector, never by content
-# - reads the merged settings for the rules, then probes the live environment against them
+# - it proves the masking story rather than asserting it, across every vector an agent reaches
+# - NEVER prints a credential value; a leak is named by variable and vector, never by content
+# SIDECAR
+# - read-only: it reads the merged settings for the rules, then probes the live environment
 # - refuses to grade when the credential layer is inactive, since every verdict would invert
 # - `mask` keeps the capability and hides the value; `deny` hides it by removing it entirely
 # - an unruled credential is the finding that matters: it needs a rule AND a rotation
-# @see AGENTS.md, AGENTS/skills/test-credentials/SKILL.md, AGENTS/settings/secrets.sh
+# TRIGGER
+# - the doc writes one dated report to `docs/credentials/`, in the `doc-credentials` shape
+# - it appends, since a dated report is evidence of what was true that day
+# - a `leaked` verdict rotates first and rules second; a rule over a burned secret is theatre
+# @see AGENTS.md, AGENTS/skills/test-credentials/SKILL.md, AGENTS/skills/doc-credentials/SKILL.md, AGENTS/settings/secrets.sh, docs/credentials/, AGENTS/skills/check-skills/SKILL.md
 
 set -euo pipefail
 

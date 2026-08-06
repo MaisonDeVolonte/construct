@@ -4,28 +4,17 @@ description: Shape of an adversarial graded scorecard in docs/honest/, written b
 metadata:
   kind: spec
 ---
-```javascript
-/**
- * ==============================================
- * @file SKILL.md - honest scorecard template
- * ==============================================
- * @description
- * - tracked in git, one honest file per day, appended across runs
- * - scrub client names, tokens, and other sensitive detail before it lands in a commit
- * - written by `@git-honest` only, appended each run, many scorecards per file
- * - `scorecards` capture the doc-vs-reality gap at a moment in time, never edited after the fact
- * - `grades` are A-F per lane; strong infra grades CANNOT mask weak app/test ones
- * - `lines` should contain a single clause/fact/action, limited to 100 characters
- * - name specific files, claims, and commits; an unfalsifiable criticism is worthless
- * - skip the raw telemetry dump; keep the read of it, not the printout
- * - never soften a written scorecard, and never re-grade an older one to match a newer mood
- * - grade drift across dated files is the point; a lane stuck at D is the signal
- * - `AGENTS/skills/doc-honest/doc-honest.sh` validates a scorecard against every rule above a script can judge
- * @see AGENTS.md, AGENTS/skills/doc-honest/doc-honest.sh, AGENTS/skills/git-honest/SKILL.md, docs/honest/
- */
-```
-
 # docs/honest/YYYY-MM-DD.md
+tracked in git, one file per day, appended to by `@git-honest` and nothing else:
+
+- a scorecard captures the doc-vs-reality gap at a moment in time, never edited after the fact
+- grades are A-F per lane, and strong infra grades CANNOT mask weak app or test ones
+- name specific files, claims, and commits; an unfalsifiable criticism is worthless
+- skip the raw telemetry dump; keep the read of it, not the printout
+- never soften a written scorecard, and never re-grade an older one to match a newer mood
+- grade drift across dated files is the point; a lane stuck at D is the signal
+- lines hold a single clause, fact or action, capped at 100 characters
+- scrub client names, tokens, and other sensitive detail before it lands in a commit
 
 ## Honest #1: YYYY-MM-DD HH:MM
 
@@ -66,7 +55,7 @@ never edit an earlier scorecard; a grade that has not moved in a week is the fin
 ```text
 VERIFY - not part of the artifact
 - RUN `AGENTS/skills/doc-honest/doc-honest.sh` once the scorecard is appended; pass a path to scope the run
-- FIX every ERROR, since each one breaks a rule stated in the header above
+- FIX every ERROR, since each one breaks a rule this spec states outright
 - STOP on a `secret` finding and ask the user before truncating it; the key needs rotating first
 - JUSTIFY or fix every WARN; the sidecar tolerates them, the next reader may not
 - ANSWER the checklist it prints, since those rules are the ones no script can judge

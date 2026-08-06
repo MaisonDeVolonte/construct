@@ -5,22 +5,6 @@ disable-model-invocation: true
 metadata:
   kind: trigger
 ---
-```javascript
-/**
- * ================================================================
- * @file SKILL.md - credential masking and exfiltration audit trigger
- * ================================================================
- * @description
- * - ran only on explicit `/test-credentials` command; read-only, it measures and reports
- * - answers one question per credential: provably masked, provably unset, or unruled
- * - NEVER writes a credential value; a leak is named by variable and vector, never quoted
- * - refuses to grade outside the sandbox, where every verdict inverts
- * - appends one dated report to `docs/credentials/`, never editing an earlier one
- * @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/test-credentials/test-credentials.sh,
- *      AGENTS/skills/doc-credentials/SKILL.md, docs/credentials/
- */
-```
-
 **/test-credentials:** the frontmatter blocks every path except an explicit invocation
 - proves the masking story rather than asserting it, across every vector an agent could reach
 - `mask` hides the value and keeps the capability; `deny` hides it by removing the variable

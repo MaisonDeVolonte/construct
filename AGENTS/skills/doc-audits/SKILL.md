@@ -4,30 +4,15 @@ description: Shape of a dated audit in docs/audits/, which /git-audit appends fi
 metadata:
   kind: spec
 ---
-```javascript
-/**
- * =========================================
- * @file SKILL.md - audit archive template
- * =========================================
- * @description
- * - tracked in git, one audit file per day and kind, appended across runs
- * - scrub client names, tokens, and other sensitive detail before it lands in a commit
- * - written by any `@*audit` trigger, appended each run, many audits per file
- * - the kind in the filename and the kind in each heading must match, so one archive reads as one
- * - this file owns the shape a validator can check; each sidecar owns the fields inside an entry
- * - `audits` capture repo state at a moment in time, so they are never edited after the fact
- * - `findings` lead with the label the trigger assigned (Ghost Branch, Local Clutter, etc)
- * - `lines` are hyphen bullets holding a single clause/fact/action, limited to 100 characters
- * - `telemetry` closes each entry with the raw run, fenced, so every claim above it is checkable
- * - carry unresolved findings forward by restating them, never by editing the older audit
- * - err on the side of brevity, not completeness
- * - `AGENTS/skills/doc-audits/doc-audits.sh` validates an audit file against every rule above a script can judge
- * @see AGENTS.md, AGENTS/skills/doc-audits/doc-audits.sh, AGENTS/skills/git-audit/SKILL.md,
- *      AGENTS/settings/settingsaudit.md, docs/audits/
- */
-```
-
 # docs/audits/YYYY-MM-DD-<kind>.md
+tracked in git, one file per day and per kind, appended to by every auditing trigger:
+
+- the kind in the filename and the kind in each heading match, so one archive reads as one
+- an audit captures repo state at a moment in time, so it is never edited after the fact
+- carry an unresolved finding forward by restating it, never by editing the older audit
+- lines are hyphen bullets holding a single clause, fact or action, capped at 100 characters
+- err on the side of brevity, not completeness
+- scrub client names, tokens, and other sensitive detail before it lands in a commit
 
 ## <Kind> Audit #1: YYYY-MM-DD HH:MM
 
@@ -71,7 +56,7 @@ never edit an earlier audit; a stale finding is signal about how long it went un
 ```text
 VERIFY - not part of the artifact
 - RUN `AGENTS/skills/doc-audits/doc-audits.sh` once the audit is appended; pass a path to scope the run
-- FIX every ERROR, since each one breaks a rule stated in the header above
+- FIX every ERROR, since each one breaks a rule this spec states outright
 - STOP on a `secret` finding and ask the user before truncating it; the key needs rotating first
 - JUSTIFY or fix every WARN; the sidecar tolerates them, the next reader may not
 - ANSWER the checklist it prints, since those rules are the ones no script can judge

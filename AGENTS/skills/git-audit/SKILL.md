@@ -5,22 +5,12 @@ disable-model-invocation: true
 metadata:
   kind: trigger
 ---
-```javascript
-/**
- * =====================================================
- * @file SKILL.md - read-only git diagnostics trigger
- * =====================================================
- * @description
- * - ran only on explicit `@git-audit` command; read-only, never mutates tracked files
- * - runs `AGENTS/skills/git-audit/git-audit.sh` then evaluates telemetry for ghost branches, local
- *   clutter, conflict risk, and a dirty trunk
- * - outputs a numbered list of issues with manual + `@agent` shortcut resolutions
- * - appends that report to `docs/audits/YYYY-MM-DD.md`, one file per day, many audits per file
- * @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/git-audit/git-audit.sh, AGENTS/skills/doc-audits/SKILL.md, docs/audits/
- */
-```
-
 **@git-audit:** Run ONLY on explicit `@git-audit` command
+- read-only: it probes repo and branch state and never mutates a tracked file
+- triages every local branch, then flags conflict risk, local clutter, and a dirty trunk
+- outputs a numbered issue list, each with a manual command and an `@agent` shortcut
+- appends that report to today's git audit; `@git-empty` and `@git-fresh` both reuse the triage
+
 ## telemetry
 
 ```!
@@ -65,7 +55,7 @@ echo "sidecar exit: $?"
     - `audit_file` is the path, `audit_time` is the heading timestamp
     - `audit_count` is how many audits the file already holds, so this one is #(audit_count + 1)
   - append a new `## Git Audit #N: YYYY-MM-DD HH:MM` section, never overwrite an earlier audit
-  - write the report as delivered to the user, in the four subsections audits.md defines
+  - write the report as delivered to the user, in the four subsections `doc-audits` defines
     - `state` and `findings` are hyphen bullets, one clause each
     - `resolutions` are checkboxes, one per finding, in the same order
     - `telemetry` closes the entry with the raw output, fenced and unedited

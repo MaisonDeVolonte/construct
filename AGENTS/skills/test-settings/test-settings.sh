@@ -1,18 +1,22 @@
 #!/bin/bash
 # ==========================================================
-# @file settingsaudit.sh - settings stack auditor and prober
+# @file test-settings.sh - settings stack auditor and prober
 # ==========================================================
 # @description
-# - sidecar for `@settingsaudit` — audits the settings stack, then probes it live
-# - read-only by contract: it reports and repairs nothing, since every fix is the user's to make
-# - STATIC checks read the files: parse, drift, verb symmetry, scope placement, hygiene
+# PAIR
+# - sidecar for `/test-settings` — audits the settings stack, then probes it live
+# - safe anytime: read-only by contract, since every fix is the user's to make
+# - a latent fault is the failure it exists for: protection that stopped working in silence
+# CHECKS
+# - STATIC checks read the files: parse, drift, verb symmetry, scope placement, hygiene, coverage
+# - `guard` is the check that watches this auditor, since an editable auditor can be made to pass
 # - LIVE probes exercise the boundary, because a config can be perfect while the gate is dead
-# - a latent fault is the failure this exists for: protection that stopped working in silence
-# - wraps permissions.sh and scopes.sh rather than replacing them, surfacing their error counts
+# - it wraps the permissions and scopes replays rather than replacing them, surfacing error counts
 # - a tracked path reads as guarded at `ask`, since `deny` reaches the sandbox and blocks git itself
+# RUN
 # - `--static` skips the probes, `--quick` skips the wrapped sidecars, `--strict` fails on warnings
-# @see AGENTS.md, AGENTS/skills/doc-audits/SKILL.md, AGENTS/skills/check-skills/SKILL.md,
-#      AGENTS/settings/permissions.sh, AGENTS/settings/scopes.sh, docs/audits/
+# - the doc appends one entry to the day's settings audit, never editing an earlier one
+# @see AGENTS.md, AGENTS/skills/test-settings/SKILL.md, AGENTS/skills/test-permissions/test-permissions.sh, AGENTS/skills/test-scopes/test-scopes.sh, AGENTS/skills/doc-audits/SKILL.md, docs/audits/
 
 set -euo pipefail
 

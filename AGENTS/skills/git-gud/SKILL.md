@@ -6,22 +6,6 @@ disable-model-invocation: true
 metadata:
   kind: trigger
 ---
-```javascript
-/**
- * ===============================================
- * @file SKILL.md - safe stale-pr refresh trigger
- * ===============================================
- * @description
- * - ran only on explicit `/git-gud` command, which the frontmatter gate enforces outright
- * - re-runs CI on a stale branch pr against the current default branch
- * - the sidecar runs at render time, so its telemetry lands before the model reads anything
- * - the sidecar sits in this folder, and reaches `handover.sh` by path rather than by adjacency
- * - the plugin root is absolute, so no per-project symlink is needed to reach it
- * - `--watch` waits for the fresh ci run to complete, and runs as a tool call rather than inline
- * @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/git-gud/git-gud.sh, AGENTS/shared/handover.sh
- */
-```
-
 **/git-gud:** the frontmatter blocks every path except an explicit invocation
 - run on a stale branch pr that needs CI to re-run against the current default branch
 - typically ran after `/git-deliver` fails to atomicize prs correctly

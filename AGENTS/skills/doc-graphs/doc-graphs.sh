@@ -3,12 +3,21 @@
 # @file doc-graphs.sh - graph spec validator sidecar
 # ==================================================
 # @description
-# - sidecar for `graphs.md` — asserts a graph spec matches the template that documents it
-# - one check per machine-checkable rule; every rule needing judgement prints as a human checklist
-# - ERROR breaks a rule the template states outright; WARN names a smell the template tolerates
+# PAIR
+# - sidecar for `doc-graphs` — asserts a graph spec matches the shape its SKILL.md documents
+# - the doc carries the seven fields and a worked example; this file carries what a script can judge
+# ARTIFACT
+# - `docs/graphs/YYYY-MM-DD-operation-<title>.md`, tracked in git, one file per spec
+# - written on explicit `@graphspec --<artifact> <goal>`, where the flag defaults to `--plan`
+# - the flag names what executing the spec must produce, so `--plan` yields a plan file
+# - fields run in order: goal, context, done when, fan out, rules, verify, output
+# - a key sits at column 1 and its value at column 15, so no value starts beneath its own key
+# - a spec states constraints, never plan steps; the checkboxes belong to the artifact it produces
+# RUN
 # - defaults to every file in `docs/graphs/`; pass files or a directory to scope it
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
-# @see AGENTS.md, AGENTS/settings/secrets.sh, AGENTS/skills/doc-graphs/SKILL.md, AGENTS/skills/doc-plans/doc-plans.sh, docs/graphs/
+# - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
+# @see AGENTS.md, AGENTS/skills/doc-graphs/SKILL.md, AGENTS/skills/doc-plans/SKILL.md, AGENTS/skills/doc-plans/doc-plans.sh, docs/graphs/, AGENTS/settings/secrets.sh
 
 set -euo pipefail
 

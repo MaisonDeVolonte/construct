@@ -6,22 +6,6 @@ disable-model-invocation: true
 metadata:
   kind: trigger
 ---
-```javascript
-/**
- * ==================================================
- * @file SKILL.md - destructive hard-reset trigger
- * ==================================================
- * @description
- * - ran only on explicit `@git-fresh` command; for a broken, conflicted, or desynced workspace
- * - runs `AGENTS/skills/git-audit/git-audit.sh` for context, then `AGENTS/skills/git-fresh/git-fresh.sh` to measure
- * - the sidecar destroys nothing and backs nothing up; it prints what a reset would cost
- * - the trigger runs the backup stash only, since it is the one step that adds safety
- * - clean, reset, switch -f and branch deletes stay denied, so the user runs every one
- * - the backup running first is the whole point: a handover the user half-pastes still has it
- * @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/git-fresh/git-fresh.sh, AGENTS/skills/git-audit/git-audit.sh
- */
-```
-
 **@git-fresh:** Run ONLY on explicit `@git-fresh` command
 - typically ran when the local workspace is broken, conflicted, or severely desynced
 - reports every commit, file and branch a reset would destroy, before the user runs anything

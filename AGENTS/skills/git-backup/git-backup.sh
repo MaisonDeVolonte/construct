@@ -1,17 +1,23 @@
 #!/bin/bash
-# ==================================================
+# ====================================================
 # @file git-backup.sh - full repo snapshot and restore
-# ==================================================
+# ====================================================
 # @description
-# - sidecar for `@git-backup` — takes the snapshot itself, then hands the restore over
+# PAIR
+# - sidecar for `@git-backup` — takes and verifies the snapshot, then hands the restore over
+# - run only on the explicit command, and worth typing before any destructive work
+# - the one trigger that needs no confirmation, since a copy destroys nothing it finds
+# SNAPSHOT
 # - the only sidecar that mutates on its own, since a copy adds safety and spends none
 # - history and working tree are captured separately: a `.git` copy alone loses uncommitted work
 # - the tree copy is tracked plus untracked-not-ignored, the exact set `clean -fd` can destroy
 # - ignored files are skipped on purpose, the same reason `@git-fresh` stashes with -u not -a
-# - the destination is fixed and takes no argument, so this never becomes a copy-anywhere tool
+# - the destination is fixed at gitignored `tmp/backups/`, so it never becomes a copy-anywhere tool
+# HANDOVER
+# - the restore is handed over, never run: putting files back overwrites what sits there now
 # - `cp` here is invisible to the deny list and the hook, since script lines are not tool calls
 # - that gap is the design: a reviewed sidecar holds a capability the loose agent never gets
-# @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/git-backup/SKILL.md, AGENTS/shared/handover.sh
+# @see AGENTS.md, AGENTS/skills/git-backup/SKILL.md, AGENTS/skills/git-fresh/SKILL.md, AGENTS/shared/handover.sh, AGENTS/skills/check-skills/SKILL.md
 
 set -euo pipefail
 

@@ -4,39 +4,27 @@ description: Shape of a graph spec prompt file in docs/graphs/.
 metadata:
   kind: spec
 ---
-```javascript
-/**
- * =====================================
- * @file SKILL.md - graph spec template
- * =====================================
- * @description
- * FILE
- * - one file per spec, `docs/graphs/`, named `YYYY-MM-DD-operation-<title>.md`
- * - tracked in git
- * - scrub client names, tokens, and other sensitive detail before it lands in a commit
- * - runs on explicit `@graphspec --<artifact> <goal>`; the flag defaults to `--plan`
- * - the flag names what executing the spec must produce, so `--plan` yields a plan file
- * - `--plan` is the only flag; the dated archives stay owned by their own triggers
- * FORM
- * - fields run in this order: goal, context, done when, fan out, rules, verify, output
- * - every field appears exactly once, its key at column 1 and its value at column 15
- * - continuation lines indent to column 15, so no value ever starts beneath its own key
- * - `lines` carry a single clause, capped at 100 characters, and never wrap
- * - a numbered list runs 1..n with no gap, since renumbering by hand silently drops an entry
- * CONTENT
- * - `context` cites the repo or interrogates the user; a fact from neither does not exist
- * - `fan out` names 2-5 agents, then closes with one unnumbered return shape
- * - `rules` bind every fanned agent, and name what stays out of scope
- * - a spec states constraints, never plan steps; a checkbox belongs in the artifact it produces
- * PIPELINE
- * - show the saved spec and stop; fan out begins only on the user's explicit go
- * - a fresh session executes the saved spec and writes whatever `output` names
- * - `--plan` means `docs/plans/<same-basename>.md` per plans.md, and it must pass plans.sh
- * VERIFY
- * - `AGENTS/skills/doc-graphs/doc-graphs.sh` validates a spec against every rule above a script can judge
- * @see AGENTS.md, AGENTS/skills/doc-graphs/doc-graphs.sh, AGENTS/skills/doc-plans/SKILL.md, docs/graphs/
- */
-```
+**the file:** `docs/graphs/YYYY-MM-DD-operation-<title>.md`, tracked in git, one per spec
+- written on explicit `@graphspec --<artifact> <goal>`, where the flag defaults to `--plan`
+- the flag names what executing the spec must produce, so `--plan` yields a plan file
+- `--plan` is the only flag; the dated archives stay owned by their own triggers
+- scrub client names, tokens, and other sensitive detail before it lands in a commit
+
+**the form:** seven fields, each appearing exactly once, in the order below
+- a key sits at column 1 and its value at column 15, so no value starts beneath its own key
+- continuation lines indent to column 15 as well
+- lines carry a single clause, capped at 100 characters, and never wrap
+- a numbered list runs 1..n with no gap, since renumbering by hand silently drops an entry
+
+**the content:** a spec states constraints, never plan steps
+- a checkbox belongs in the artifact the spec produces, never in the spec itself
+- `context` cites the repo or interrogates the user; a fact from neither does not exist
+- `fan out` names 2-5 agents, then closes with one unnumbered return shape
+- `rules` bind every fanned agent, and name what stays out of scope
+
+**the pipeline:** show the saved spec and STOP; fan out begins only on the user's explicit go
+- a fresh session executes the saved spec and writes whatever `output` names
+- `--plan` means `docs/plans/<same-basename>.md` per `doc-plans`, and it must pass its sidecar
 
 ▸ GRAPH SPEC
 
@@ -56,7 +44,7 @@ VERIFY:       describe a fresh agent that attacks each finding against DONE WHEN
               dropping whatever fails
 
 OUTPUT:       name the artifact executing this spec must produce, taken from the flag
-              --plan means docs/plans/<same-basename>.md per plans.md, passing plans.sh
+              --plan means docs/plans/<same-basename>.md per doc-plans, passing its sidecar
 
 *example:*
 ```
@@ -101,14 +89,14 @@ RULES:        1. a finding without evidence does not survive verify
 VERIFY:       a fresh agent attacks each finding against DONE WHEN and CONTEXT
               evidence that fails to reproduce, or contradicts a known fact, kills the finding
 
-OUTPUT:       docs/plans/2026-07-30-operation-monorepo.md, per plans.md, passing plans.sh
+OUTPUT:       docs/plans/2026-07-30-operation-monorepo.md, per doc-plans, passing its sidecar
 
 ```
 
 ```
 VERIFY - not part of the artifact
 - RUN `AGENTS/skills/doc-graphs/doc-graphs.sh` once the spec is written; pass a path to scope the run
-- FIX every ERROR, since each one breaks a rule stated in the header above
+- FIX every ERROR, since each one breaks a rule this spec states outright
 - STOP on a `secret` finding and ask the user before truncating it; the key needs rotating first
 - JUSTIFY or fix every WARN; the sidecar tolerates them, the next reader may not
 - ANSWER the checklist it prints, since those rules are the ones no script can judge

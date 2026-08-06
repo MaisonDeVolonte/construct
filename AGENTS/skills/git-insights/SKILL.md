@@ -5,24 +5,6 @@ disable-model-invocation: true
 metadata:
   kind: trigger
 ---
-```javascript
-/**
- * =========================================================
- * @file SKILL.md - read-only opportunity-scan trigger
- * =========================================================
- * @description
- * - ran only on explicit `@git-insights` command; read-only, never mutates tracked files
- * - answers "I've lost the thread, where is it worth working next" — a direction, not a verdict
- * - report-only by contract: nothing downstream gates on it, so every finding is a lead
- * - runs `AGENTS/skills/git-insights/git-insights.sh` for deterministic findings (broken references, code markers)
- * - reconciles `README.md`/`AGENTS.md`/trigger docs against actual repo reality
- * - reads the 5 most recent `docs/logs/` entries for unresolved observations
- * - merges all three streams into an urgent/important opportunity matrix
- * - appends that report to `docs/insights/YYYY-MM-DD.md`, one file per day, many reports per file
- * @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/git-insights/git-insights.sh, docs/logs/, AGENTS/skills/doc-logs/SKILL.md, AGENTS/skills/doc-insights/SKILL.md, docs/insights/
- */
-```
-
 **@git-insights:** Run ONLY on explicit `@git-insights` command
 - surfaces work opportunities from three streams: deterministic reference checks, doc-vs-reality reconciliation, and recent agent logs
 - categorizes every opportunity on an urgent/important matrix

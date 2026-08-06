@@ -6,21 +6,6 @@ disable-model-invocation: true
 metadata:
   kind: trigger
 ---
-```javascript
-/**
- * ======================================================
- * @file SKILL.md - trunk sync handover trigger
- * ======================================================
- * @description
- * - ran only on explicit `@git-continue` command
- * - measures the trunk delta, then runs the sync it planned
- * - runs `AGENTS/skills/git-continue/git-continue.sh`, whose only write is a fetch of remote-tracking refs
- * - the sidecar stays read-only; the four sync forms are narrow allows the trigger runs itself
- * - separates ahead from behind, since a behind trunk fast-forwards and never needs @git-fresh
- * @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/git-continue/git-continue.sh, AGENTS/shared/handover.sh
- */
-```
-
 **@git-continue:** Run ONLY on explicit `@git-continue` command
 - run to pause work, sync the trunk, and resume where you left off
 - enforces trunk-based development: the sync always ends on the trunk, never a feature branch

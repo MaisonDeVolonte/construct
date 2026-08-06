@@ -1,14 +1,21 @@
 #!/bin/bash
-# ===============================================
+# ================================================
 # @file git-insights.sh - opportunity-scan sidecar
-# ===============================================
+# ================================================
 # @description
-# - sidecar for `@git-insights` — deterministic checks for broken refs and code markers
+# PAIR
+# - sidecar for `@git-insights` — deterministic checks for broken references and code markers
 # - one of three streams the trigger merges; reconciliation and the logs carry the judgement
 # - report-only by contract: it exits 0 on findings, since a lead is not a failure
-# - reports today's insights path and report count, and never creates the file itself
 # - `--keep` preserves the tmp/ scratch file, which a failed run preserves anyway
-# @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/git-insights/SKILL.md, AGENTS/skills/doc-insights/SKILL.md, docs/insights/
+# TRIGGER
+# - it answers "I've lost the thread, where is it worth working next" — a direction, not a verdict
+# - stream 2 reconciles `README.md`, `AGENTS.md` and every skill doc against actual repo reality
+# - stream 3 reads the 5 most recent `docs/logs/` entries for unresolved observations
+# - it merges the three onto an urgent/important matrix, so a clean scan still owes leads
+# - it then appends that report to `docs/insights/YYYY-MM-DD.md`, in the `doc-insights` shape
+# - the sidecar names today's insights path and report count, and never creates the file itself
+# @see AGENTS.md, AGENTS/skills/git-insights/SKILL.md, AGENTS/skills/doc-insights/SKILL.md, AGENTS/skills/doc-logs/SKILL.md, docs/insights/, docs/logs/
 
 set -euo pipefail
 

@@ -4,38 +4,22 @@ description: Shape of a daily agent log in docs/logs/: threads, notes, and promp
 metadata:
   kind: spec
 ---
-```javascript
-/**
- * ============================
- * @file SKILL.md - log template
- * ============================
- * @description
- * - one log file per day, holding both the work and the prompts that drove it
- * - gitignored in this repo; host projects decide for themselves whether to track it
- * - scrub client names, tokens, and other sensitive detail before it lands in a commit
- * - `logs` are written in MAXIMALLY clear, concise, casual language, skipping trivial details
- * - `threads` group work by task/topic, limited to 50 lines of prose, prompts excluded
- * - `sections` lead with the main idea, followed by supporting ideas
- * - `lines` should contain a single clause/fact/action, limited to 100 characters
- * - `notes` are appended after taskcomplete or every 30 minutes, limited to 5 bullets
- * - manual triggers: `@logthread` adds a thread, `@lognote` a note, `@logsynth` a synthesis
- * - `prompts` are appended to the thread they drove, rewritten short, always timestamped
- * - a prompt that starts a new thread belongs to the thread it created, not the one before
- * - `synthesize` means two different things, never conflate them:
- *   - for notes, `incorporate & delete` them into the thread's prose
- *   - for prompts, `prune & rewrite` them in place; they stay a list, never becoming prose
- * - prune a prompt once it is trivial, redundant, or superseded by the one after it
- * - keep the prompt that changed direction, dropped a constraint, or corrected a wrong assumption
- * - minimize comma chains, em dashes, **bold**, `ticks`, and superfluous formatting
- * - focus on outcomes, not the conversation (no play-by-plays)
- * - err on the side of brevity, not completeness
- * - ultimately, logs should only capture the most meaningful signals, ignoring noise
- * - `AGENTS/skills/doc-logs/doc-logs.sh` validates a log against every rule above a script can judge
- * @see AGENTS.md, AGENTS/skills/doc-logs/doc-logs.sh, docs/logs/
- */
-```
-
 # docs/logs/YYYY-MM-DD.md
+one file per day, holding both the work and the prompts that drove it:
+
+- gitignored in this repo; host projects decide for themselves whether to track it
+- `logs` are written in MAXIMALLY clear, concise, casual language, skipping trivial details
+- `threads` group work by task or topic, limited to 50 lines of prose, prompts excluded
+- `sections` lead with the main idea, followed by supporting ideas
+- `lines` hold a single clause, fact or action, capped at 100 characters
+- `notes` are appended after taskcomplete or every 30 minutes, limited to 5 bullets
+- `prompts` are appended to the thread they drove, rewritten short, always timestamped
+- a prompt that starts a new thread belongs to the thread it created, not the one before
+- manual triggers: `@logthread` adds a thread, `@lognote` a note, `@logsynth` a synthesis
+- minimize comma chains, em dashes, **bold**, `ticks`, and superfluous formatting
+- focus on outcomes, not the conversation (no play-by-plays)
+- err on the side of brevity, not completeness; capture the meaningful signals, ignore the noise
+- scrub client names, tokens, and other sensitive detail before it lands in a commit
 
 ## Thread #1: project - short description
 
@@ -112,10 +96,16 @@ what the user actually asked, in the thread it drove
 ## Thread #2: Repeat the above format for each meaningful unit of work
 synthesize pending notes when creating a new thread, and prune that thread's prompts
 
+`synthesize` means two different things, never conflate them:
+- for notes, `incorporate & delete` them into the thread's prose
+- for prompts, `prune & rewrite` them in place; they stay a list, never becoming prose
+- prune a prompt once it is trivial, redundant, or superseded by the one after it
+- keep the prompt that changed direction, dropped a constraint, or corrected a wrong assumption
+
 ```text
 VERIFY - not part of the artifact
 - RUN `AGENTS/skills/doc-logs/doc-logs.sh` after closing a thread, adding a note, or synthesizing
-- FIX every ERROR, since each one breaks a rule stated in the header above
+- FIX every ERROR, since each one breaks a rule this spec states outright
 - STOP on a `secret` finding and ask the user before truncating it; the key needs rotating first
 - JUSTIFY or fix every WARN; the sidecar tolerates them, the next reader may not
 - ANSWER the checklist it prints, since those rules are the ones no script can judge

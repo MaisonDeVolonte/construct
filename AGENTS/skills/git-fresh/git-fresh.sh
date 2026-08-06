@@ -1,15 +1,23 @@
 #!/bin/bash
-# ===================================================
+# ====================================================
 # @file git-fresh.sh - hard-reset measure and handover
-# ===================================================
+# ====================================================
 # @description
+# PAIR
 # - sidecar for `@git-fresh` — measures what a reset would cost, then splits it into two blocks
-# - read-only itself: it backs nothing up, it only emits the backup for the trigger to run
+# - for a workspace that is broken, conflicted, or too desynced to recover by hand
+# - it names every commit, file and branch the reset destroys before the user runs a thing
+# SIDECAR
+# - read-only itself: it destroys nothing and backs nothing up, it only prices the reset
+# - measuring after the fetch is what makes the discarded and gained counts describe the remote
+# - the doc reads `git-audit.sh` first, so the branch triage is already on screen
+# TRIGGER
 # - the backup gets its own block, so the recoverable step never rides on a full-block paste
-# - everything destructive stays in the handover, since none of it can be undone once run
-# - names every commit and branch the reset destroys before the user runs a thing
-# - measuring after the fetch is what makes the discarded/gained counts describe the real remote
-# @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/git-fresh/SKILL.md, AGENTS/shared/handover.sh
+# - the trigger runs that stash and then proves it landed, since the rest of the run rests on it
+# - `-u` and not `-a`, since a reset never touches ignored files and stashing them buys nothing
+# - clean, reset, switch -f and branch deletes stay denied, so the user runs every one
+# - the backup running first is the whole point: a handover the user half-pastes still has it
+# @see AGENTS.md, AGENTS/skills/git-fresh/SKILL.md, AGENTS/skills/git-audit/git-audit.sh, AGENTS/skills/git-backup/SKILL.md, AGENTS/shared/handover.sh, AGENTS/skills/check-skills/SKILL.md
 
 set -euo pipefail
 

@@ -499,8 +499,8 @@ managed → cli → local → project → user (scalars override, arrays merge)
 > `/sandbox`: claude command that prints the merged config (the 'source of truth')
 - `/fewer-permission-prompts`: claude skill that proposes new allow entries from real transcript usage
 - [/test-credentials](AGENTS/skills/test-credentials/SKILL.md): READ-ONLY; probes every masked and denied credential live (saved to file)
-- [/test-permissions](AGENTS/skills/test-permissions/test-permissions.sh): replays the corpus through the real hook, then audits the live rules
-- [/test-scopes](AGENTS/skills/test-scopes/test-scopes.sh): maps every sidecar against the merged scope stack
+- [/test-permissions](AGENTS/skills/test-permissions/SKILL.md): READ-ONLY; replays the corpus through the real hook, then audits the live rules
+- [/test-scopes](AGENTS/skills/test-scopes/SKILL.md): READ-ONLY; maps every sidecar against the merged scope stack
 - [/test-settings](AGENTS/skills/test-settings/SKILL.md): READ-ONLY; audits every scope, probes the boundary live (saved to file)
 - [secrets.sh](AGENTS/settings/secrets.sh): shared credential patterns, sourced by every validator
 - [corpus.tsv](AGENTS/settings/corpus.tsv): labeled command corpus for the audits; never executed

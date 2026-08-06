@@ -1,12 +1,20 @@
 #!/bin/bash
-# =====================================================
+# ======================================================
 # @file git-audit.sh - read-only git diagnostics sidecar
-# =====================================================
+# ======================================================
 # @description
-# - sidecar for `@git-audit` — probes repo/branch state for telemetry
-# - reports today's audit path and audit count, and never creates the file itself
-# - team probes ride curl + Bearer against the github rest api, the one path the sandbox serves
-# @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/git-audit/SKILL.md, AGENTS/skills/doc-audits/SKILL.md, docs/audits/, README.md
+# PAIR
+# - sidecar for `@git-audit` — probes repo and branch state, and reports it as telemetry
+# - read-only and run only on the explicit command; it never mutates a tracked file
+# - team probes ride curl + bearer against the github rest api, the one path the sandbox serves
+# - `@git-empty` and `@git-fresh` both call it, since branch triage is the same read for all three
+# TRIGGER
+# - the doc labels ghost branches, local clutter, rebase-absorbed branches, and conflict risk
+# - `merged` is a patch-id read and `absorbed` is a tree read, so only `absorbed` clears a rebase
+# - it outputs a numbered issue list, each with a manual command and an `@agent` shortcut
+# - it then appends that report to `docs/audits/YYYY-MM-DD-git.md`, in the `doc-audits` shape
+# - the sidecar names today's audit path and count, and never creates the file itself
+# @see AGENTS.md, AGENTS/skills/git-audit/SKILL.md, AGENTS/skills/doc-audits/SKILL.md, AGENTS/shared/handover.sh, AGENTS/skills/check-skills/SKILL.md, docs/audits/
 
 # probes: echo "key: $(git some command 2>/dev/null || echo n/a)"
 

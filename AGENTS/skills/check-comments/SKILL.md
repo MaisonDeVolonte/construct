@@ -5,40 +5,27 @@ paths: **/*.ts, **/*.tsx, **/*.js, **/*.jsx, **/*.mjs, **/*.cjs, **/*.sh
 metadata:
   kind: spec
 ---
-```javascript
-/**
- * =================================================
- * @file SKILL.md - inline comment shape template
- * =================================================
- * @description
- * SCOPE
- * - source files, never a `docs/` artifact; this is the second template that scans code
- * - full-line comments only, since a trailing comment cannot be told from a string reliably
- * - the wayfinding header is out of scope here, and belongs to `wayfinders.sh` instead
- * SHAPE
- * - `lines` carry a single clause, capped at 100 characters, and never wrap
- * - a comment past 2 consecutive lines belongs in the wayfinding header instead
- * - lowercase shorthand english, comma separated, never sentence case
- * - no trailing period, since a comment is a label and not a sentence
- * - exactly one space after the marker, so `// like this` and never `//like this`
- * - a type hint closes a line where it helps, as in `// retry budget — seconds`
- * CONTENT
- * - `why` a thing exists beats `what` it does, unless the code is genuinely hard to follow
- * - more comments is good, more comments restating the code is noise
- * - refactoring for legibility beats explaining an unclear line in prose
- * - commented-out code gets deleted, since git already remembers it
- * EXEMPT
- * - directives are machine syntax, not prose: eslint-disable, ts-ignore, shellcheck, noqa
- * - `// SECTION TITLE` headers break a long file into parts, and stay uppercase
- * - banner runs of =, - or * decorate a header rather than saying anything
- * - a line carrying a url is exempt from the width cap, since it cannot be wrapped
- * VERIFY
- * - `AGENTS/skills/check-comments/check-comments.sh` validates a source file against every rule above a script can judge
- * @see AGENTS.md, AGENTS/skills/check-comments/check-comments.sh, AGENTS/skills/check-wayfinders/SKILL.md, AGENTS/hooks/posttooluse.sh
- */
-```
-
 # comment shapes
+the rules every inline comment holds to, each demonstrated once below.
+
+## scope
+- source files, never a `docs/` artifact; `check-wayfinders` owns the header above them
+- full-line comments only, since a trailing comment cannot be told from a string reliably
+- exempt from all of it: directives, `// SECTION TITLE` headers, banner runs, and url lines
+
+## shape
+- one clause per line, capped at 100 characters, and never wrapping
+- lowercase shorthand english, comma separated, never sentence case
+- no trailing period, since a comment is a label and not a sentence
+- exactly one space after the marker, so `// like this` and never `//like this`
+- a type hint closes a line where it helps, as in `// retry budget — seconds`
+- past 2 consecutive lines it stops being a comment and belongs in the wayfinding header
+
+## content
+- `why` a thing exists beats `what` it does, unless the code is genuinely hard to follow
+- more comments is good, more comments restating the code is noise
+- refactoring for legibility beats explaining an unclear line in prose
+- commented-out code gets deleted, since git already remembers it
 
 ## the default: one clause, lowercase, no period
 
@@ -98,7 +85,7 @@ metadata:
 ```text
 VERIFY - not part of the artifact
 - RUN `AGENTS/skills/check-comments/check-comments.sh` after writing or editing a source file; pass a path to scope it
-- FIX every ERROR, since each one breaks a rule stated in the header above
+- FIX every ERROR, since each one breaks a rule this spec states outright
 - STOP on a `secret` finding and ask the user before truncating it; the key needs rotating first
 - JUSTIFY or fix every WARN; the sidecar tolerates them, the next reader may not
 - ANSWER the checklist it prints, since those rules are the ones no script can judge

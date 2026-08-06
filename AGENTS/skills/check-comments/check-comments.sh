@@ -3,14 +3,20 @@
 # @file check-comments.sh - comment shape validator sidecar
 # =========================================================
 # @description
-# - sidecar for `comments.md` — asserts inline comments match the shape that template documents
-# - one check per machine-checkable rule; every rule needing judgement prints as a human checklist
-# - ERROR breaks a rule the template states outright; WARN names a smell the template tolerates
+# PAIR
+# - sidecar for `check-comments` — asserts inline comments match the shape its SKILL.md documents
+# - the doc carries the rules and the worked examples; this file carries what a script can judge
+# - a spec, so its frontmatter names paths rather than a command, and it loads on a match
+# SCOPE
+# - source files, never a `docs/` artifact; `check-wayfinders` owns the header above them
 # - full-line comments only: a trailing comment cannot be told from a string without a real parser
-# - skips the wayfinding header, which is `AGENTS/skills/check-wayfinders/check-wayfinders.sh`'s to judge
+# - directives, section titles, banner runs and url lines are exempt, since none of them are prose
+# RUN
 # - defaults to every tracked source file; pass files or a directory to scope it
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
-# @see AGENTS.md, AGENTS/settings/secrets.sh, AGENTS/skills/check-comments/SKILL.md, AGENTS/skills/check-wayfinders/check-wayfinders.sh
+# - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
+# - every rule needing judgement prints as a human checklist instead
+# @see AGENTS.md, AGENTS/skills/check-comments/SKILL.md, AGENTS/skills/check-wayfinders/SKILL.md, AGENTS/skills/check-wayfinders/check-wayfinders.sh, AGENTS/settings/secrets.sh, AGENTS/hooks/posttooluse.sh
 
 set -euo pipefail
 
