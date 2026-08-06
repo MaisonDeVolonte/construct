@@ -276,6 +276,8 @@ every token inherits the same layers; the axis is the layer, never the token
 "Write(.claude/**)", "Edit(.claude/**)",
 
 "Edit(AGENTS/**)", "Write(AGENTS/**)",
+"Edit(AGENTS.md)", "Write(AGENTS.md)",
+"Edit(README.md)", "Write(README.md)",
 ```
 - an agent that can rewrite these can grant itself anything
 - one rule per verb, since everything under `AGENTS/` either executes or instructs
@@ -284,6 +286,9 @@ every token inherits the same layers; the axis is the layer, never the token
 - a trigger doc is policy too: `git-fresh.md` carries the line telling an agent never to reset,
   and `templates/git.md` is where the read-only contract for every sidecar is written
 - rewriting one never beats the deny floor, but it does mislead the next session
+- `AGENTS.md` and `README.md` joined on 2026-08-06: the symlink makes them one file, and it is
+  the file `sessionstart.sh` injects, so an edit there rewrites what every future session believes
+- both names are listed because the target is `README.md` here and `AGENTS.md` in a host repo
 - `Bash(AGENTS/**/*.sh*)` stays on allow, so gating the edit never gates the run
 - the settings and the code enforcing them together; gating one leaves the rules protected and the enforcement editable
 - deny until 2026-08-04, and deny broke git rather than the agent: the projected deny refused the unlink a checkout needs

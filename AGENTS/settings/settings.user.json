@@ -112,6 +112,9 @@
 
     "ask": [
       "Bash(dangerouslyDisableSandbox:true)",
+
+      "Edit(README.md)", "Write(README.md)",
+      "Edit(AGENTS.md)", "Write(AGENTS.md)",
       "Edit(AGENTS/**)", "Write(AGENTS/**)",
 
       "Bash(npx*)",
