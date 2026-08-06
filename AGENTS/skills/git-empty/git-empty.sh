@@ -1,13 +1,13 @@
 #!/bin/bash
 # ==============================================
-# @file gitempty.sh - post-merge cleanup sidecar
+# @file git-empty.sh - post-merge cleanup sidecar
 # ==============================================
 # @description
-# - sidecar for `@gitempty` — finds spent branches, then hands the cleanup commands over
+# - sidecar for `@git-empty` — finds spent branches, then hands the cleanup commands over
 # - read-only apart from `fetch --prune` and a trunk fast-forward, neither of which loses work
 # - classifies each local branch as gone, merged, or live, so the handover deletes only the spent
 # - stash and branch deletes are denied, so it prints them instead of running them
-# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/gitempty/SKILL.md, AGENTS/shared/handover.sh
+# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/git-empty/SKILL.md, AGENTS/shared/handover.sh
 
 set -euo pipefail
 
@@ -80,7 +80,7 @@ LIVE_COUNT=$(git for-each-ref --format='%(refname:short)' refs/heads/ \
   | grep -vx "$DEFAULT_BRANCH" | grep -c . || true)
 LIVE_COUNT=$((LIVE_COUNT - SPENT_COUNT))
 
-telemetry_open gitempty
+telemetry_open git-empty
 telemetry_line "default branch" "$DEFAULT_BRANCH"
 telemetry_line "current branch" "$STARTING_BRANCH"
 telemetry_line "trunk behind origin" "$BEHIND"
@@ -93,7 +93,7 @@ telemetry_line "deletable with -d" "$(printf '%s' "${DELETE_SAFE# }" | sed 's/ /
 telemetry_line "deletable with -D (absorbed)" "$(printf '%s' "${DELETE_FORCE# }" | sed 's/ /, /g')"
 telemetry_line "kept, unmerged and unabsorbed" "$(printf '%s' "${KEEP_BRANCHES# }" | sed 's/ /, /g')"
 
-handover_open gitempty
+handover_open git-empty
 if [ "$AHEAD" -gt 0 ]; then
   handover_note "$DEFAULT_BRANCH has $AHEAD commit(s) origin does not — resolve before cleaning up"
 elif [ "$BEHIND" -eq 0 ] && [ "${DELETE_COUNT:-0}" -eq 0 ]; then

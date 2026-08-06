@@ -64,7 +64,7 @@ trigger_name() {
 # is a reference doc rather than a trigger, and only the first kind is a pair
 is_trigger_name() {
   [ "$(basename "$1")" = 'SKILL.md' ] || return 1
-  printf '%s' "$(basename "$(dirname "$1")")" | grep -qE '^[a-z]+$'
+  printf '%s' "$(basename "$(dirname "$1")")" | grep -qE '^[a-z]+(-[a-z]+)*$'
 }
 
 # a sub-tool is invoked by another script rather than by a trigger, so it has no doc to pair with;
@@ -135,8 +135,8 @@ check_pair() {
   local doc=$1 name sidecar
   name=$(trigger_name "$doc")
   sidecar="$(dirname "$doc")/$name.sh"
-  if ! printf '%s' "$name" | grep -qE '^[a-z]+$'; then
-    err "$doc" 1 filename "the skill folder is the command name, so it is one lowercase word"
+  if ! printf '%s' "$name" | grep -qE '^[a-z]+(-[a-z]+)*$'; then
+    err "$doc" 1 filename "the skill folder is the command name, so it is lowercase kebab-case"
   fi
   if [ ! -f "$sidecar" ]; then
     err "$doc" 1 unpaired "no $sidecar; every trigger doc starts with a shell sidecar"

@@ -1,11 +1,11 @@
 #!/bin/bash
 # =============================================
-# @file gitgud.sh - stale-pr ci refresh sidecar
+# @file git-gud.sh - stale-pr ci refresh sidecar
 # =============================================
 # @description
-# - sidecar for `@gitgud` — re-runs ci on a stale pr against the default branch
+# - sidecar for `@git-gud` — re-runs ci on a stale pr against the default branch
 # - talks to github through curl + bearer auth since gh cannot verify tls in the sandbox
-# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/gitgud/SKILL.md, AGENTS/shared/handover.sh
+# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/git-gud/SKILL.md, AGENTS/shared/handover.sh
 # - the shared file is reached by path from this skill folder, not from beside this script, since
 #   a skill owns its own directory; stage 4 moves it to `AGENTS/shared/` and this path with it
 
@@ -66,14 +66,14 @@ if [ "$AUTH_CODE" != "200" ]; then
 # the current branch names the pr; forks aren't supported so the head owner is the repo owner
 CURRENT_BRANCH=$(git branch --show-current)
 if [ -z "$CURRENT_BRANCH" ]; then
-  echo "fatal: detached HEAD (run @gitgud from the pr branch)" >&2; exit 1; fi
+  echo "fatal: detached HEAD (run @git-gud from the pr branch)" >&2; exit 1; fi
 
 # always target the open pr for the branch you're sitting on — number, refs, and url arrive
 # in one list query; mergeability only computes on the single-pr endpoint read next
 PR_INFO=$(github_api "$GITHUB_API/repos/$REPO_SLUG/pulls?state=open&head=$REPO_OWNER:$CURRENT_BRANCH" 2>/dev/null \
   | jq -r '.[0] // empty | [.number, .head.ref, .base.ref, .html_url] | @tsv' 2>/dev/null || echo "")
 if [ -z "$PR_INFO" ]; then
-  echo "fatal: no open pr for the current branch (run @gitgud from the pr branch)" >&2; exit 1; fi
+  echo "fatal: no open pr for the current branch (run @git-gud from the pr branch)" >&2; exit 1; fi
 IFS=$'\t' read -r PR_NUMBER PR_HEAD PR_BASE PR_URL <<< "$PR_INFO"
 
 # github computes mergeability lazily and first reads often say unknown — ask a few times
@@ -160,7 +160,7 @@ fi
 # TELEMETRY
 
 cat <<EOF
-=== @gitgud redelivery ===
+=== @git-gud redelivery ===
 PR: #$PR_NUMBER ($PR_HEAD → $PR_BASE)
 ABSORBED: $BEHIND_COUNT commit(s) from $DEFAULT_BRANCH
 ACTION: merged $DEFAULT_BRANCH into $PR_HEAD (synchronize event)

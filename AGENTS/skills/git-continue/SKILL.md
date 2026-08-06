@@ -1,5 +1,5 @@
 ---
-name: gitcontinue
+name: git-continue
 description: Measure the trunk delta, then run the sync it planned against four narrow allows.
 disallowed-tools: Write Edit
 disable-model-invocation: true
@@ -10,16 +10,16 @@ disable-model-invocation: true
  * @file SKILL.md - trunk sync handover trigger
  * ======================================================
  * @description
- * - ran only on explicit `@gitcontinue` command
+ * - ran only on explicit `@git-continue` command
  * - measures the trunk delta, then runs the sync it planned
- * - runs `AGENTS/skills/gitcontinue/gitcontinue.sh`, whose only write is a fetch of remote-tracking refs
+ * - runs `AGENTS/skills/git-continue/git-continue.sh`, whose only write is a fetch of remote-tracking refs
  * - the sidecar stays read-only; the four sync forms are narrow allows the trigger runs itself
- * - separates ahead from behind, since a behind trunk fast-forwards and never needs @gitfresh
- * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/gitcontinue/gitcontinue.sh, AGENTS/shared/handover.sh
+ * - separates ahead from behind, since a behind trunk fast-forwards and never needs @git-fresh
+ * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/git-continue/git-continue.sh, AGENTS/shared/handover.sh
  */
 ```
 
-**@gitcontinue:** Run ONLY on explicit `@gitcontinue` command
+**@git-continue:** Run ONLY on explicit `@git-continue` command
 - run to pause work, sync the trunk, and resume where you left off
 - enforces trunk-based development: the sync always ends on the trunk, never a feature branch
 - the sidecar measures and plans; the trigger runs it, and a diverged trunk is still handed over
@@ -27,7 +27,7 @@ disable-model-invocation: true
 ## telemetry
 
 ```!
-"${CLAUDE_PLUGIN_ROOT}"/skills/gitcontinue/gitcontinue.sh
+"${CLAUDE_PLUGIN_ROOT}"/skills/git-continue/git-continue.sh
 echo "sidecar exit: $?"
 ```
 
@@ -46,7 +46,7 @@ echo "sidecar exit: $?"
 - a conflicted `git stash pop` leaves the stash entry intact, so say so and let the user resolve it
 - close by reporting the new state: branch, ahead/behind, and whether the tree came back dirty
 
-    The floor allows this trigger four forms: `git stash push -u -m 'auto-stash: @gitcontinue'`,
+    The floor allows this trigger four forms: `git stash push -u -m 'auto-stash: @git-continue'`,
     `git switch main|master`, `git merge --ff-only origin/main|master`, and `git stash pop`.
     Anything the sidecar prints beyond those is handed over, never reshaped to fit through the gate.
 

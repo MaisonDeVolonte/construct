@@ -8,7 +8,7 @@
 # - ERROR breaks a rule the template states outright; WARN names a smell the template tolerates
 # - defaults to every file in `docs/honest/`; pass files or a directory to scope it
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
-# @see AGENTS.md, AGENTS/settings/secrets.sh, AGENTS/templates/honest.md, AGENTS/skills/githonest/SKILL.md, AGENTS/templates/plans.sh, docs/honest/
+# @see AGENTS.md, AGENTS/settings/secrets.sh, AGENTS/templates/honest.md, AGENTS/skills/git-honest/SKILL.md, AGENTS/templates/plans.sh, docs/honest/
 
 set -euo pipefail
 

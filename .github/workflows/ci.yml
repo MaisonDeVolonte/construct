@@ -5,11 +5,11 @@
 # - the repo ships shell scripts that source each other, so ci gates exactly that and no more
 # - `shellcheck -x` lints every sidecar, hook, and validator at warning severity, sourced files too
 # - the shared files are linted directly as well, so a renamed variable fails the build (SC2034)
-# - references are NOT gated here: `gitinsights.sh` ranks opportunities, it never graded them
+# - references are NOT gated here: `git-insights.sh` ranks opportunities, it never graded them
 # - a report shaped for judgement makes a poor required check, so its replacement is its own tool
 # - until that checker lands nothing gates references, and a broken `@see` reaches main unblocked
-# - this is the required check that lets `gh pr merge --auto` engage (see AGENTS/skills/gitdeliver/SKILL.md)
-# @see AGENTS.md, AGENTS/skills/gitdeliver/SKILL.md, AGENTS/templates/wayfinders.md
+# - this is the required check that lets `gh pr merge --auto` engage (see AGENTS/skills/git-deliver/SKILL.md)
+# @see AGENTS.md, AGENTS/skills/git-deliver/SKILL.md, AGENTS/templates/wayfinders.md
 
 name: ci
 

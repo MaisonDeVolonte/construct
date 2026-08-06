@@ -156,7 +156,7 @@ every token inherits the same layers; the axis is the layer, never the token
 - gh fails whatever the config: no env var reaches a cgo-linked verifier
 - excluding gh would unsandbox the entire command string rather than just gh
 - push stays on the retry hatch by choice: dropping mask to gain it puts the real token in every sandboxed command
-- `@gitdeliver` hands its block to the user, so the credential never reaches an agent-run command
+- `@git-deliver` hands its block to the user, so the credential never reaches an agent-run command
 - verify the push, never the fetch: ls-remote succeeds on a public repo with no credential at all
 - never add a dummy `credential.helper`: it turns a clean prompt into a 401 and breaks the hatch's keychain path
 - `*.github.com` is avoided on purpose, since it reaches gist
@@ -246,8 +246,8 @@ every token inherits the same layers; the axis is the layer, never the token
 
 "Bash(git fetch*)", "Bash(git version*)",
 
-"Bash(git stash push -u -m 'auto-stash: @gitcontinue')", "Bash(git stash pop)",
-"Bash(git stash push -u -m 'gitfresh-*')",
+"Bash(git stash push -u -m 'auto-stash: @git-continue')", "Bash(git stash pop)",
+"Bash(git stash push -u -m 'git-fresh-*')",
 "Bash(git merge --ff-only origin/main)", "Bash(git merge --ff-only origin/master)",
 "Bash(git switch main)", "Bash(git switch master)"
 ```
@@ -281,7 +281,7 @@ every token inherits the same layers; the axis is the layer, never the token
 - one rule per verb, since everything under `AGENTS/` either executes or instructs
 - it replaced three narrower globs on 2026-08-04, which had left 19 markdown files ungated:
   the nine `@git*` triggers and the ten templates
-- a trigger doc is policy too: `gitfresh.md` carries the line telling an agent never to reset,
+- a trigger doc is policy too: `git-fresh.md` carries the line telling an agent never to reset,
   and `templates/git.md` is where the read-only contract for every sidecar is written
 - rewriting one never beats the deny floor, but it does mislead the next session
 - `Bash(AGENTS/**/*.sh*)` stays on allow, so gating the edit never gates the run
@@ -436,7 +436,7 @@ grouped most-destructive-first; any scope may add a deny, none may remove anothe
 - `git branch -c*` does not eat `--contains` and `-m*` does not eat `--merged`, since the
   match fails at the second character
 - `git push*` collapses the twelve old push rules, now that nothing pushes from an agent
-- `@gitfresh` hands these back rather than running them, which is the pattern to copy
+- `@git-fresh` hands these back rather than running them, which is the pattern to copy
 
 ### credentials — every verb, on every store
 ```json

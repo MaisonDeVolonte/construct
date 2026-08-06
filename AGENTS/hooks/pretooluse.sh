@@ -10,7 +10,7 @@
 # - keep both: deny rules are committed, while this hook's wiring is gitignored
 # - neither layer sees inside `AGENTS/skills/*/*.sh`, since a script's commands are not tool calls
 # - blocks force pushes and force branch deletes, silent (exit 0) for everything else
-# - also guards the narrow allows `@gitcontinue` opens: ff-only merge, plain switch, stash halves
+# - also guards the narrow allows `/git-continue` opens: ff-only merge, plain switch, stash halves
 # - also refuses bash writes into the policy dirs, which the Edit and Write rules never see
 # - asks, never denies, when a move lands outside the repo, since a rename is ordinary work
 # @see AGENTS.md, .claude/settings.json, .claude/settings.local.json, AGENTS/settings/

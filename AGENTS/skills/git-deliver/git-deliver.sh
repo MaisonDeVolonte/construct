@@ -1,15 +1,15 @@
 #!/bin/bash
 # =======================================================
-# @file gitdeliver.sh - atomic delivery preflight sidecar
+# @file git-deliver.sh - atomic delivery preflight sidecar
 # =======================================================
 # @description
-# - sidecar for `@gitdeliver` — proves auth and state, then hands the prep commands over
+# - sidecar for `@git-deliver` — proves auth and state, then hands the prep commands over
 # - read-only: switch, merge and restore are denied, so the preflight measures rather than moves
 # - github auth preflights through curl + bearer since gh cannot verify tls in the sandbox
 # - the loop never delivers; each bucket is handed over as a block the user pastes and runs
 # - github's git endpoints take only basic auth, which base64s past the proxy, so push needs a tty
 # - a delivered .claude/settings.json strands its checkout; the pull after needs a hatch restore
-# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/gitdeliver/SKILL.md, AGENTS/shared/handover.sh
+# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/git-deliver/SKILL.md, AGENTS/shared/handover.sh
 
 set -euo pipefail
 
@@ -66,7 +66,7 @@ if git status --porcelain 2>/dev/null | grep -q '\.claude/settings\.json'; then
   TOUCHES_SETTINGS=yes
 fi
 
-telemetry_open gitdeliver
+telemetry_open git-deliver
 telemetry_line "default branch" "$DEFAULT_BRANCH"
 telemetry_line "current branch" "$CURRENT_BRANCH"
 telemetry_line "github auth" "ok (http $AUTH_CODE)"
@@ -76,7 +76,7 @@ telemetry_line "trunk behind origin" "$BEHIND"
 telemetry_line "trunk ahead of origin" "$AHEAD"
 telemetry_line "touches .claude/settings.json" "$TOUCHES_SETTINGS"
 
-handover_open gitdeliver
+handover_open git-deliver
 if [ "$AHEAD" -gt 0 ]; then
   handover_note "$DEFAULT_BRANCH has $AHEAD commit(s) origin does not — resolve before delivering"
 elif [ "$CURRENT_BRANCH" = "$DEFAULT_BRANCH" ] && [ "$BEHIND" -eq 0 ] && [ "$STAGED_FILES" -eq 0 ]; then

@@ -1,5 +1,5 @@
 ---
-name: gitaudit
+name: git-audit
 description: Read-only git diagnostics: branch triage, team probes, and a dated audit saved to file.
 disable-model-invocation: true
 ---
@@ -9,20 +9,20 @@ disable-model-invocation: true
  * @file SKILL.md - read-only git diagnostics trigger
  * =====================================================
  * @description
- * - ran only on explicit `@gitaudit` command; read-only, never mutates tracked files
- * - runs `AGENTS/skills/gitaudit/gitaudit.sh` then evaluates telemetry for ghost branches, local
+ * - ran only on explicit `@git-audit` command; read-only, never mutates tracked files
+ * - runs `AGENTS/skills/git-audit/git-audit.sh` then evaluates telemetry for ghost branches, local
  *   clutter, conflict risk, and a dirty trunk
  * - outputs a numbered list of issues with manual + `@agent` shortcut resolutions
  * - appends that report to `docs/audits/YYYY-MM-DD.md`, one file per day, many audits per file
- * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/gitaudit/gitaudit.sh, AGENTS/templates/audits.md, docs/audits/
+ * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/git-audit/git-audit.sh, AGENTS/templates/audits.md, docs/audits/
  */
 ```
 
-**@gitaudit:** Run ONLY on explicit `@gitaudit` command
+**@git-audit:** Run ONLY on explicit `@git-audit` command
 ## telemetry
 
 ```!
-"${CLAUDE_PLUGIN_ROOT}"/skills/gitaudit/gitaudit.sh
+"${CLAUDE_PLUGIN_ROOT}"/skills/git-audit/git-audit.sh
 echo "sidecar exit: $?"
 ```
 

@@ -1,5 +1,5 @@
 ---
-name: gitinsights
+name: git-insights
 description: Scan repo, docs and logs for what to work on next, saved to file.
 disable-model-invocation: true
 ---
@@ -9,19 +9,19 @@ disable-model-invocation: true
  * @file SKILL.md - read-only opportunity-scan trigger
  * =========================================================
  * @description
- * - ran only on explicit `@gitinsights` command; read-only, never mutates tracked files
+ * - ran only on explicit `@git-insights` command; read-only, never mutates tracked files
  * - answers "I've lost the thread, where is it worth working next" — a direction, not a verdict
  * - report-only by contract: nothing downstream gates on it, so every finding is a lead
- * - runs `AGENTS/skills/gitinsights/gitinsights.sh` for deterministic findings (broken references, code markers)
+ * - runs `AGENTS/skills/git-insights/git-insights.sh` for deterministic findings (broken references, code markers)
  * - reconciles `README.md`/`AGENTS.md`/trigger docs against actual repo reality
  * - reads the 5 most recent `docs/logs/` entries for unresolved observations
  * - merges all three streams into an urgent/important opportunity matrix
  * - appends that report to `docs/insights/YYYY-MM-DD.md`, one file per day, many reports per file
- * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/gitinsights/gitinsights.sh, docs/logs/, AGENTS/templates/logs.md, AGENTS/templates/insights.md, docs/insights/
+ * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/git-insights/git-insights.sh, docs/logs/, AGENTS/templates/logs.md, AGENTS/templates/insights.md, docs/insights/
  */
 ```
 
-**@gitinsights:** Run ONLY on explicit `@gitinsights` command
+**@git-insights:** Run ONLY on explicit `@git-insights` command
 - surfaces work opportunities from three streams: deterministic reference checks, doc-vs-reality reconciliation, and recent agent logs
 - categorizes every opportunity on an urgent/important matrix
 - it is asked when the user has lost their bearings, so the deliverable is somewhere to start
@@ -31,7 +31,7 @@ disable-model-invocation: true
 ## telemetry
 
 ```!
-"${CLAUDE_PLUGIN_ROOT}"/skills/gitinsights/gitinsights.sh
+"${CLAUDE_PLUGIN_ROOT}"/skills/git-insights/git-insights.sh
 echo "sidecar exit: $?"
 ```
 
@@ -60,7 +60,7 @@ echo "sidecar exit: $?"
 
 5. generate the final report:
   ```markdown
-  # @gitinsights report
+  # @git-insights report
   *synthesized from sidecar findings, doc reconciliation, and the last 5 agent logs (YYYY-MM-DD to YYYY-MM-DD)*
 
   ## observations

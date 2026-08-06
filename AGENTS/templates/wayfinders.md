@@ -25,8 +25,8 @@
  * - group a long `@description` under uppercase headings, the way this block does
  * VERIFY
  * - `AGENTS/templates/wayfinders.sh` validates a header against every rule above a script can judge
- * - repo-wide reference integrity has no gate now; `AGENTS/skills/gitinsights/gitinsights.sh` only reports it
- * @see AGENTS.md, AGENTS/templates/wayfinders.sh, AGENTS/templates/comments.md, AGENTS/skills/gitinsights/gitinsights.sh
+ * - repo-wide reference integrity has no gate now; `AGENTS/skills/git-insights/git-insights.sh` only reports it
+ * @see AGENTS.md, AGENTS/templates/wayfinders.sh, AGENTS/templates/comments.md, AGENTS/skills/git-insights/git-insights.sh
  */
 ```
 
@@ -77,9 +77,9 @@
 >  * @file SKILL.md - history and tree backup trigger
 >  * =================================================
 >  * @description
->  * - ran only on explicit `/gitbackup` command
+>  * - ran only on explicit `/git-backup` command
 >  * - the frontmatter above is the gate; this block is what a reader opens first
->  * @see AGENTS/templates/git.md, gitbackup.sh
+>  * @see AGENTS/templates/git.md, git-backup.sh
 >  */
 > ```
 > ```

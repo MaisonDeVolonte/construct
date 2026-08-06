@@ -6,7 +6,7 @@
  * @description
  * - tracked in git, one insights file per day, appended across runs
  * - scrub client names, tokens, and other sensitive detail before it lands in a commit
- * - written by `@gitinsights` only, appended each run, many reports per file
+ * - written by `@git-insights` only, appended each run, many reports per file
  * - `reports` capture the opportunity surface at a moment in time, never edited after the fact
  * - `observations` are what the three streams found; `opportunities` are what to do about it
  * - `opportunities` sort onto the urgent/important matrix, and name the file they touch
@@ -15,7 +15,7 @@
  * - an opportunity that recurs across dated files is a finding; restate it, never edit the older report
  * - a Q1 entry that survives three reports has stopped being urgent in practice, say so
  * - `AGENTS/templates/insights.sh` validates a report against every rule above a script can judge
- * @see AGENTS.md, AGENTS/templates/insights.sh, AGENTS/skills/gitinsights/SKILL.md, docs/insights/
+ * @see AGENTS.md, AGENTS/templates/insights.sh, AGENTS/skills/git-insights/SKILL.md, docs/insights/
  */
 ```
 
@@ -34,7 +34,7 @@ what the three streams actually surfaced:
 - hyphen-delimited list of bullets
 
 *example:*
-> `githonest.sh` greps `content/**`, a path that no longer exists in this repo
+> `git-honest.sh` greps `content/**`, a path that no longer exists in this repo
 > README documents a `.gitkeep` scaffold that `.gitignore` no longer preserves
 > logs mention the same hook-testing gap on 3 separate days
 
@@ -57,7 +57,7 @@ opportunities restated from an earlier report, with how many reports they have s
 *example:*
 > hook test coverage — carried 3 reports, still Q1 on paper, evidently not urgent in practice
 
-## Insight #2: repeat the above format for each `@gitinsights` run on the same day
+## Insight #2: repeat the above format for each `@git-insights` run on the same day
 never edit an earlier report; a recurring opportunity is signal about what keeps getting skipped
 
 ```text

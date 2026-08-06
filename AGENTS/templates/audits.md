@@ -16,7 +16,7 @@
  * - carry unresolved findings forward by restating them, never by editing the older audit
  * - err on the side of brevity, not completeness
  * - `AGENTS/templates/audits.sh` validates an audit file against every rule above a script can judge
- * @see AGENTS.md, AGENTS/templates/audits.sh, AGENTS/skills/gitaudit/SKILL.md,
+ * @see AGENTS.md, AGENTS/templates/audits.sh, AGENTS/skills/git-audit/SKILL.md,
  *      AGENTS/settings/settingsaudit.md, docs/audits/
  */
 ```
@@ -44,16 +44,16 @@ one bullet per issue, leading with the label the trigger assigned
 one checkbox per finding, in the same order, naming a command or an `@agent` shortcut
 
 *example:*
-> - [ ] `git branch -d fix/nav-overflow` or `@gitempty`
-> - [ ] `@gitgud` to merge origin/main in and surface conflicts early
-> - [ ] `@gitempty`
+> - [ ] `git branch -d fix/nav-overflow` or `@git-empty`
+> - [ ] `@git-gud` to merge origin/main in and surface conflicts early
+> - [ ] `@git-empty`
 
 ### telemetry
 the raw sidecar output, fenced and unedited, so every claim above can be checked against it
 
 *example:*
 > ```text
-> --- @gitaudit telemetry ---
+> --- @git-audit telemetry ---
 > current_branch: main
 > staged_files: 0
 > ---------------------------

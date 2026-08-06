@@ -1,5 +1,5 @@
 ---
-name: gitjump
+name: git-jump
 description: Verify every release precondition, then hand over the bump, push and promote.
 disallowed-tools: Write Edit
 disable-model-invocation: true
@@ -10,16 +10,16 @@ disable-model-invocation: true
  * @file SKILL.md - release trigger
  * ==================================
  * @description
- * - ran only on explicit `@gitjump` command; aborts on any failed preflight check
- * - READ-ONLY: `AGENTS/skills/gitjump/gitjump.sh` verifies every precondition and hands the sequence over
+ * - ran only on explicit `@git-jump` command; aborts on any failed preflight check
+ * - READ-ONLY: `AGENTS/skills/git-jump/git-jump.sh` verifies every precondition and hands the sequence over
  * - the bump, both pushes, the promotion merge and the release call are all the user's to run
  * - `--minor`/`--major` (default minor) only decides the version the handover names
  * - the release api call comes last, since the tag has to reach origin before it resolves
- * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/gitjump/gitjump.sh, .github/workflows/deploy.yml
+ * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/git-jump/git-jump.sh, .github/workflows/deploy.yml
  */
 ```
 
-**@gitjump:** Run ONLY on explicit `@gitjump` command
+**@git-jump:** Run ONLY on explicit `@git-jump` command
 - run when you want to release a new minor or major version
 - aborts if any preflight fails: dirty tree, detached HEAD, out-of-sync trunk, missing production
 - computes the next version from `package.json` rather than applying it, since `npm version` commits
@@ -34,7 +34,7 @@ disable-model-invocation: true
 ## telemetry
 
 ```!
-"${CLAUDE_PLUGIN_ROOT}"/skills/gitjump/gitjump.sh $ARGUMENTS
+"${CLAUDE_PLUGIN_ROOT}"/skills/git-jump/git-jump.sh $ARGUMENTS
 echo "sidecar exit: $?"
 ```
 

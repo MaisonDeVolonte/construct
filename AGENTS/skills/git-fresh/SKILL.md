@@ -1,5 +1,5 @@
 ---
-name: gitfresh
+name: git-fresh
 description: Price a hard reset, take the backup itself, then hand over the destructive rest.
 disallowed-tools: Write Edit
 disable-model-invocation: true
@@ -10,17 +10,17 @@ disable-model-invocation: true
  * @file SKILL.md - destructive hard-reset trigger
  * ==================================================
  * @description
- * - ran only on explicit `@gitfresh` command; for a broken, conflicted, or desynced workspace
- * - runs `AGENTS/skills/gitaudit/gitaudit.sh` for context, then `AGENTS/skills/gitfresh/gitfresh.sh` to measure
+ * - ran only on explicit `@git-fresh` command; for a broken, conflicted, or desynced workspace
+ * - runs `AGENTS/skills/git-audit/git-audit.sh` for context, then `AGENTS/skills/git-fresh/git-fresh.sh` to measure
  * - the sidecar destroys nothing and backs nothing up; it prints what a reset would cost
  * - the trigger runs the backup stash only, since it is the one step that adds safety
  * - clean, reset, switch -f and branch deletes stay denied, so the user runs every one
  * - the backup running first is the whole point: a handover the user half-pastes still has it
- * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/gitfresh/gitfresh.sh, AGENTS/skills/gitaudit/gitaudit.sh
+ * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/git-fresh/git-fresh.sh, AGENTS/skills/git-audit/git-audit.sh
  */
 ```
 
-**@gitfresh:** Run ONLY on explicit `@gitfresh` command
+**@git-fresh:** Run ONLY on explicit `@git-fresh` command
 - typically ran when the local workspace is broken, conflicted, or severely desynced
 - reports every commit, file and branch a reset would destroy, before the user runs anything
 - takes the backup itself, then hands over every command that cannot be undone
@@ -29,7 +29,7 @@ disable-model-invocation: true
 ## telemetry
 
 ```!
-"${CLAUDE_PLUGIN_ROOT}"/skills/gitaudit/gitaudit.sh
+"${CLAUDE_PLUGIN_ROOT}"/skills/git-audit/git-audit.sh
 echo "sidecar exit: $?"
 ```
 
@@ -39,15 +39,15 @@ echo "sidecar exit: $?"
 
 2. run the native shell command exactly as specified
   ```bash
-  AGENTS/skills/gitfresh/gitfresh.sh
+  AGENTS/skills/git-fresh/git-fresh.sh
   ```
   - fail (`sidecar exit` > 0) → abort and report: "<raw terminal error>"
   - success (`sidecar exit` = 0) → continue to step 3
 
-3. run the `=== @gitfresh trigger ===` block, if the sidecar emitted one
+3. run the `=== @git-fresh trigger ===` block, if the sidecar emitted one
     - it appears only on a dirty tree; a clean tree has nothing to back up, so skip to step 4
     - run its single `git stash push` line as its own tool call, exactly as printed
-    - the floor allows only `git stash push -u -m 'gitfresh-*'`; anything else is handed over
+    - the floor allows only `git stash push -u -m 'git-fresh-*'`; anything else is handed over
     - `-u` and not `-a` on purpose: `git clean -fd` never touches ignored files, so stashing them
       would collect what the reset was never going to destroy, `.env` included
     - non-zero exit → STOP, report the raw error, and hand over NOTHING
@@ -64,7 +64,7 @@ echo "sidecar exit: $?"
 
 5. report the cost, then the handover, then STOP
     ```text
-    - @gitfresh telemetry data
+    - @git-fresh telemetry data
 
     - the backup is already taken: [stash entry name]
 
