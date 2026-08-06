@@ -156,7 +156,7 @@ TABLE OF CONTENTS
 - [/doc-graphs](AGENTS/skills/doc-graphs/SKILL.md): `@graphspec` writes graph spec prompt files
 - [/doc-honest](AGENTS/skills/doc-honest/SKILL.md): `/git-honest` adversarial graded scorecards
 - [/doc-insights](AGENTS/skills/doc-insights/SKILL.md): `/git-insights` searches repo for opportunities
-- [/doc-logs](AGENTS/skills/doc-logs/SKILL.md): `@logthread`, `@lognote` and `@logsynth` maintain agent logs
+- [/doc-logs](AGENTS/skills/doc-logs/SKILL.md): the daily agent log, created and gated by the hooks
 - [/doc-plans](AGENTS/skills/doc-plans/SKILL.md): `@graphspec --execute` detailed fanout plan generation
 - [/doc-study](AGENTS/skills/doc-study/SKILL.md): `@studyguide` writes detailed retrospective with graded quiz
 

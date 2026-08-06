@@ -23,13 +23,14 @@ set -euo pipefail
 # ==============
 # PREFLIGHT
 # ==============
-# the shared scan sits beside this file, not beside the repo being audited: resolve it before any
-# cd, since BASH_SOURCE arrives relative and would follow that cd to somewhere it does not exist
+# the shared scan sits in the settings tree, not beside this file and not beside the repo being
+# audited: resolve both before any cd, since BASH_SOURCE arrives relative and would follow that cd
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || true)
-if [ ! -f "$HERE/secrets.sh" ]; then
-  echo "fatal: no AGENTS/settings/secrets.sh beside this sidecar" >&2; exit 1; fi
-# shellcheck source=./secrets.sh
-. "$HERE/secrets.sh"
+SHARED=$(cd "$HERE/../../settings" 2>/dev/null && pwd || true)
+if [ ! -f "$SHARED/secrets.sh" ]; then
+  echo "fatal: no AGENTS/settings/secrets.sh reachable from this sidecar" >&2; exit 1; fi
+# shellcheck source=../../settings/secrets.sh
+. "$SHARED/secrets.sh"
 
 if ! command -v jq >/dev/null 2>&1; then echo "fatal: jq is required" >&2; exit 1; fi
 if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -334,16 +335,18 @@ check_probes() {
 # ==============
 # WRAPPED - the two sidecars that already answer their own question
 # ==============
+# each wrapped tool is its own skill now, so it resolves through the sibling folder rather than by
+# sitting beside this file; a missing one warns instead of failing, since the static half still ran
 run_wrapped() {
   local name script output count
-  for name in permissions scopes; do
-    script="$HERE/$name.sh"
-    if [ ! -f "$script" ]; then warn wrapped "$name" "no $name.sh beside this sidecar"; continue; fi
+  for name in test-permissions test-scopes; do
+    script="$HERE/../$name/$name.sh"
+    if [ ! -f "$script" ]; then warn wrapped "$name" "no $name.sh in its sibling skill folder"; continue; fi
     output=$(bash "$script" 2>&1 || true)
     count=$(printf '%s' "$output" | sed -n 's/^errors: \([0-9]\{1,\}\)$/\1/p' | head -n 1)
     count=${count:-0}
     if [ "$count" -gt 0 ]; then
-      err wrapped "$name" "$count errors; run AGENTS/settings/$name.sh for the detail"
+      err wrapped "$name" "$count errors; run AGENTS/skills/$name/$name.sh for the detail"
     else
       pass wrapped "$name" "0 errors"
     fi

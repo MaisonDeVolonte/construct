@@ -15,7 +15,7 @@ one file per day, holding both the work and the prompts that drove it:
 - `notes` are appended after taskcomplete or every 30 minutes, limited to 5 bullets
 - `prompts` are appended to the thread they drove, rewritten short, always timestamped
 - a prompt that starts a new thread belongs to the thread it created, not the one before
-- manual triggers: `@logthread` adds a thread, `@lognote` a note, `@logsynth` a synthesis
+- no trigger wraps it: a thread, a note or a synthesis is asked for in plain words
 - minimize comma chains, em dashes, **bold**, `ticks`, and superfluous formatting
 - focus on outcomes, not the conversation (no play-by-plays)
 - err on the side of brevity, not completeness; capture the meaningful signals, ignore the noise
