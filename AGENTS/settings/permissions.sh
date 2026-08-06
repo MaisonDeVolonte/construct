@@ -70,10 +70,12 @@ rules_of allow > "$SCRATCH/allow"
 rules_of ask   > "$SCRATCH/ask"
 
 # the hook answers in json or says nothing at all, and silence is the allow case
+# a blocked call and a prompted one are different verdicts, so read the decision rather than infer
 hook_verdict() {
   local cmd=$1 out
   out=$(jq -n --arg c "$cmd" '{tool_input:{command:$c}}' | bash "$HOOK" 2>/dev/null || true)
-  if [ -z "$out" ]; then printf 'silent'; else printf 'deny'; fi
+  if [ -z "$out" ]; then printf 'silent'; return; fi
+  printf '%s' "$out" | jq -r '.hookSpecificOutput.permissionDecision // "deny"' 2>/dev/null || printf 'deny'
 }
 
 # two tokens for a tool that takes a subcommand, one token for everything else
@@ -101,11 +103,15 @@ tier1() {
   while IFS=$'\t' read -r effect gate cmd; do
     case "$effect" in ''|'#'*) continue;; esac
     if [ -z "${cmd:-}" ]; then continue; fi
-    case "$gate" in hook|none) ;; *) continue;; esac
+    case "$gate" in hook|ask|none) ;; *) continue;; esac
     verdict=$(hook_verdict "$cmd")
     if [ "$gate" = "hook" ]; then
       if [ "$verdict" = "deny" ]; then T1_PASS=$((T1_PASS + 1))
       else T1_FAIL=$((T1_FAIL + 1)); err "$effect" "$cmd" "the hook lets this through; it is meant to block it"; fi
+    elif [ "$gate" = "ask" ]; then
+      # a deny here is as wrong as silence: the point of the rule is that the user gets the call
+      if [ "$verdict" = "ask" ]; then T1_PASS=$((T1_PASS + 1))
+      else T1_FAIL=$((T1_FAIL + 1)); err "$effect" "$cmd" "the hook answered '$verdict'; this one is meant to prompt"; fi
     else
       if [ "$verdict" = "silent" ]; then T1_PASS=$((T1_PASS + 1))
       else T1_FAIL=$((T1_FAIL + 1)); err "$effect" "$cmd" "the hook blocks legitimate work; over-blocking"; fi

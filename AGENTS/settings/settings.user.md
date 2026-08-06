@@ -244,7 +244,12 @@ every token inherits the same layers; the axis is the layer, never the token
 "Bash(git stash list*)", "Bash(git stash show*)",
 "Bash(git reflog)", "Bash(git reflog show*)",
 
-"Bash(git fetch*)", "Bash(git version*)"
+"Bash(git fetch*)", "Bash(git version*)",
+
+"Bash(git stash push -u -m 'auto-stash: @gitcontinue')", "Bash(git stash pop)",
+"Bash(git stash push -u -m 'gitfresh-*')",
+"Bash(git merge --ff-only origin/main)", "Bash(git merge --ff-only origin/master)",
+"Bash(git switch main)", "Bash(git switch master)"
 ```
 - enumerated rather than one broad git allow, since a plain push to a feature branch is not denied
 - an incomplete allowlist costs a prompt; an incomplete denylist costs a silent hole
@@ -252,6 +257,11 @@ every token inherits the same layers; the axis is the layer, never the token
 - `git merge-base` and `git merge-tree` survive because the merge deny requires a bare form or a space
 - `git fetch` is the one non-read here: it moves remote-tracking refs, which the atomic loop needs
 - `AGENTS/git/handover.sh` is written against this list, so a sidecar cannot drift out of it
+- the second block is the mutating exception, and every rule in it is a literal or a message glob
+- literals rather than `git switch *`, so the floor refuses a create or a discard without the hook
+- `git stash push` is allowed only under the two messages the triggers write, never a bare form
+- `--ff-only` is spelled into the rule, so a merge that could lose work never matches it
+- these mirror `settings.project.json` exactly; a deny here would outrank the allow there
 
 ## permissions.ask
 
@@ -373,15 +383,20 @@ grouped most-destructive-first; any scope may add a deny, none may remove anothe
 "Bash(git rebase*)", "Bash(git cherry-pick*)", "Bash(git revert*)", "Bash(git replace*)",
 "Bash(git am*)", "Bash(git apply*)", "Bash(git quiltimport*)",
 "Bash(git commit)", "Bash(git commit *)", "Bash(git commit-tree*)",
-"Bash(git merge)", "Bash(git merge *)", "Bash(git merge-file*)", "Bash(git pull*)",
+"Bash(git merge)", "Bash(git merge-file*)", "Bash(git pull*)",
 
-"Bash(git reset*)", "Bash(git restore*)", "Bash(git checkout*)", "Bash(git switch*)",
+"Bash(git reset*)", "Bash(git restore*)", "Bash(git checkout*)",
+"Bash(git switch)", "Bash(git switch -c*)", "Bash(git switch -C*)", "Bash(git switch -d*)",
+"Bash(git switch -f*)", "Bash(git switch -t*)", "Bash(git switch --create*)",
+"Bash(git switch --force-create*)", "Bash(git switch --force*)", "Bash(git switch --detach*)",
+"Bash(git switch --discard-changes*)", "Bash(git switch --orphan*)", "Bash(git switch --track*)",
+"Bash(git switch --guess*)", "Bash(git switch --ignore-other-worktrees*)",
 "Bash(git clean*)", "Bash(git rm*)", "Bash(git mv*)", "Bash(git add*)",
 "Bash(git bisect*)", "Bash(git sparse-checkout*)", "Bash(git worktree*)",
 "Bash(git submodule*)", "Bash(git rerere*)",
 
-"Bash(git stash)", "Bash(git stash push*)", "Bash(git stash save*)",
-"Bash(git stash pop*)", "Bash(git stash apply*)", "Bash(git stash drop*)",
+"Bash(git stash)", "Bash(git stash save*)",
+"Bash(git stash apply*)", "Bash(git stash drop*)",
 "Bash(git stash clear*)", "Bash(git stash branch*)", "Bash(git stash create*)",
 "Bash(git stash store*)",
 
