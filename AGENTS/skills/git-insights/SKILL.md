@@ -31,9 +31,9 @@ echo "sidecar exit: $?"
   objectives (one at a time):
   - **README.md** — does it still describe the project, stack, and setup accurately?
   - **AGENTS.md** — do its prose rules still hold (naming, css, imports, mirroring, etc.)?
-  - **/AGENTS/\*.md ↔ /AGENTS/\*.sh** — does each trigger's doc still match its script's flags and behavior?
+  - **AGENTS/skills/\*/** — does each skill's doc still match its own sidecar's flags and behavior?
 
-3. read the 5 most recent agent memory log files in `docs/logs/`
+3. read the 5 most recent agent logs in `docs/logs/`, the shape `AGENTS/skills/doc-logs/SKILL.md` defines
   - extract observations, pain points, unfinished tasks, recurring bugs, or architectural ideas
 
 4. merge all three streams, dedupe, and evaluate against the urgent/important matrix:
