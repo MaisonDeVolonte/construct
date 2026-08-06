@@ -1,7 +1,6 @@
 ---
 name: git-continue
 description: Measure the trunk delta, then run the sync it planned against four narrow allows.
-disallowed-tools: Write Edit
 disable-model-invocation: true
 metadata:
   kind: trigger

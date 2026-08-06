@@ -1,7 +1,6 @@
 ---
 name: git-backup
 description: Snapshot history and working tree, verify the snapshot, then hand over the restore.
-disallowed-tools: Write Edit
 disable-model-invocation: true
 metadata:
   kind: trigger

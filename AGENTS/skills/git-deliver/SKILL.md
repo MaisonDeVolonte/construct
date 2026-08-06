@@ -2,7 +2,6 @@
 name: git-deliver
 description: Bucket uncommitted work into atomic PRs, gate the plan, then hand over every block.
 argument-hint: [--first]
-disallowed-tools: Write Edit
 disable-model-invocation: true
 metadata:
   kind: trigger

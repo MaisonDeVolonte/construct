@@ -1,7 +1,6 @@
 ---
 name: git-jump
 description: Verify every release precondition, then hand over the bump, push and promote.
-disallowed-tools: Write Edit
 disable-model-invocation: true
 metadata:
   kind: trigger

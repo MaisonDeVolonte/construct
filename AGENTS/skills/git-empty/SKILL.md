@@ -1,7 +1,6 @@
 ---
 name: git-empty
 description: Prune dead tracking refs and hand over the trunk sync and every branch delete.
-disallowed-tools: Write Edit
 disable-model-invocation: true
 metadata:
   kind: trigger
