@@ -153,12 +153,19 @@ TABLE OF CONTENTS
 - [/check-wayfinders](AGENTS/skills/check-wayfinders/SKILL.md): the header every source file opens with
 - [/doc-audits](AGENTS/skills/doc-audits/SKILL.md): `/git-audit` appends findings and resolutions
 - [/doc-credentials](AGENTS/skills/doc-credentials/SKILL.md): `/test-credentials` proves the mask, never quoting a value
-- [/doc-graphs](AGENTS/skills/doc-graphs/SKILL.md): `@graphspec` writes graph spec prompt files
+- [/doc-graphs](AGENTS/skills/doc-graphs/SKILL.md): `/write-graph` writes fan-out spec prompt files
+- [/doc-guides](AGENTS/skills/doc-guides/SKILL.md): `/write-guide` writes a retrospective build guide
 - [/doc-honest](AGENTS/skills/doc-honest/SKILL.md): `/git-honest` adversarial graded scorecards
 - [/doc-insights](AGENTS/skills/doc-insights/SKILL.md): `/git-insights` searches repo for opportunities
 - [/doc-logs](AGENTS/skills/doc-logs/SKILL.md): the daily agent log, created and gated by the hooks
-- [/doc-plans](AGENTS/skills/doc-plans/SKILL.md): `@graphspec --execute` detailed fanout plan generation
-- [/doc-study](AGENTS/skills/doc-study/SKILL.md): `@studyguide` writes detailed retrospective with graded quiz
+- [/doc-plans](AGENTS/skills/doc-plans/SKILL.md): `/write-plan` staged checklist with readiness tables
+
+### Writing (see `AGENTS/skills/`)
+> each turns a conversation into one document, then validates it against the spec that shapes it
+> nothing is measured here; the input is the user, which is what separates these from the git family
+- [/write-graph](AGENTS/skills/write-graph/SKILL.md): SAFE; writes a fan-out spec to `docs/graphs/`
+- [/write-plan](AGENTS/skills/write-plan/SKILL.md): SAFE; writes a staged plan to `docs/plans/`
+- [/write-guide](AGENTS/skills/write-guide/SKILL.md): SAFE; writes a build guide to `docs/guides/`
 
 ### Verifying
 - `test what you deploy`: a passing local run is not a shipped artifact

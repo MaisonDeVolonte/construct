@@ -126,7 +126,7 @@ is_host_only() {
 is_generated() {
   case "$1" in
     *tests/report*|*tests/results*|*.next*|*node_modules*) return 0;;
-    docs/logs*|docs/plans*|docs/study*|docs/audits*|docs/honest*|docs/insights*|docs/graphs*) return 0;;
+    docs/logs*|docs/plans*|docs/guides*|docs/audits*|docs/honest*|docs/insights*|docs/graphs*) return 0;;
     *) return 1;;
   esac
 }
