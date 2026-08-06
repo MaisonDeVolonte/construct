@@ -7,7 +7,8 @@
 # - every git call here is on the permissions allow list; nothing in it mutates a repo
 # - `git_default_branch` asks the remote directly, since symbolic-ref and set-head are denied
 # - the handover block is the deliverable: measured here, pasted and run by the user
-# - a sidecar that needs to mutate emits the command instead of running it
+# - the trigger block is the narrow exception: measured here, run by the trigger as a tool call
+# - a sidecar that needs to mutate emits the command instead of running it, into either block
 # @see AGENTS.md, AGENTS/templates/git.md, AGENTS/settings/settings.user.md, AGENTS/git/
 
 # ==============
@@ -58,6 +59,15 @@ git_is_dirty() {
   [ -n "$(git status --porcelain 2>/dev/null)" ]
 }
 
+# absorbed: would merging $2 into $1 change anything? trees, not patch-ids, so a rebase survives it
+# a conflict, or a git too old for --write-tree, reports no — the fail-safe answer is "keep it"
+is_absorbed() {
+  local merged_tree trunk_tree
+  merged_tree=$(git merge-tree --write-tree "$1" "$2" 2>/dev/null) || { echo no; return; }
+  trunk_tree=$(git rev-parse "$1^{tree}" 2>/dev/null) || { echo no; return; }
+  if [ "$merged_tree" = "$trunk_tree" ]; then echo yes; else echo no; fi
+}
+
 # ==============
 # OUTPUT
 # ==============
@@ -75,6 +85,12 @@ telemetry_line() {
 # notes are commented rather than prose, and every line is runnable as written
 handover_open() {
   printf '\n=== @%s handover ===\n' "$1"
+}
+
+# TRIGGER is the counterpart block: what the trigger runs itself against a narrow allow, never
+# what the user pastes; a step earns a place here only by adding safety rather than spending it
+trigger_open() {
+  printf '\n=== @%s trigger ===\n' "$1"
 }
 
 handover_note() {

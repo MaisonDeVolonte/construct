@@ -7,8 +7,9 @@
  * - ran only on explicit `@gitempty` command; typically post-merge, but safe anytime
  * - READ-ONLY: `AGENTS/git/gitempty.sh` prunes tracking refs and measures, deleting nothing
  * - runs `AGENTS/git/gitaudit.sh` to classify branches (local/remote/ghost/zombie) for deletion
- * - the sidecar catches gone and merged branches; the audit catches the rebase-absorbed ones
- * - switch, merge and every branch delete are denied, so the user runs each one
+ * - the sidecar classifies each spent branch itself and emits `-d` or `-D` to match
+ * - a gone branch that is neither merged nor absorbed is kept, never offered for deletion
+ * - every branch delete is denied, so the whole block stays the user's to run in order
  * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/git/gitempty.sh, AGENTS/git/gitaudit.sh
  */
 ```

@@ -112,17 +112,7 @@ if [ -n "$GH_LOGIN" ]; then
     | jq '[.[] | select(.pull_request == null)] | length' 2>/dev/null || echo n/a)"
 else echo "github: api unavailable (team probes skipped)"; fi
 
-# absorbed: would merging this branch into the trunk change anything?
-# `merged` asks git cherry, which compares patch-ids, so a rebased or squashed branch reads as
-# unmerged forever. this merges in memory instead and compares the result to the trunk's tree:
-# identical means the branch adds nothing, which is what a deletion gate actually needs to know
-# a conflict, or a git too old for --write-tree, reports no — the fail-safe answer is "keep it"
-is_absorbed() {
-  local merged_tree trunk_tree
-  merged_tree=$(git merge-tree --write-tree "$1" "$2" 2>/dev/null) || { echo no; return; }
-  trunk_tree=$(git rev-parse "$1^{tree}" 2>/dev/null) || { echo no; return; }
-  if [ "$merged_tree" = "$trunk_tree" ]; then echo yes; else echo no; fi
-}
+# is_absorbed now lives in handover.sh, since @gitempty needs the same deletion gate
 
 # branches: last commit, ahead/behind, upstream tracking, reachable, remote, merged, absorbed
 echo "--- branches ---"
@@ -134,7 +124,9 @@ for branch in $(git for-each-ref --sort=-committerdate --format='%(refname:short
   if git merge-base --is-ancestor "$branch" "$DEFAULT_BRANCH" 2>/dev/null; then B_REACHABLE=yes; else B_REACHABLE=no; fi
   if git rev-parse --verify --quiet "refs/remotes/origin/$branch" >/dev/null; then B_REMOTE=yes; else B_REMOTE=no; fi
   if [ -n "$(git cherry "$DEFAULT_BRANCH" "$branch" 2>/dev/null | grep '^+')" ]; then B_MERGED=no; else B_MERGED=yes; fi
-  B_ABSORBED=$(is_absorbed "$DEFAULT_BRANCH" "$branch")
+  # against origin, not local: absorbed answers "is work lost by deleting", and a stale local
+  # trunk reads a landed branch as unmerged; the fetch above keeps this baseline current
+  B_ABSORBED=$(is_absorbed "origin/$DEFAULT_BRANCH" "$branch")
   echo "branch: $branch | last: $B_LAST | ahead: $B_AHEAD | behind: $B_BEHIND | upstream: ${B_TRACK:-none} | reachable: $B_REACHABLE | remote: $B_REMOTE | merged: $B_MERGED | absorbed: $B_ABSORBED | last_commit: $(git log -1 --format='%s' "$branch" 2>/dev/null)"
 done
 
