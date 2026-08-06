@@ -10,7 +10,7 @@
 # - `docs/logs/YYYY-MM-DD.md`, one file per day, holding the work and the prompts that drove it
 # - gitignored in this repo; host projects decide for themselves whether to track it
 # - `sessionstart.sh` creates the day's file and `stop.sh` gates the session on it being written
-# - `@logthread` adds a thread, `@lognote` a note, and `@logsynth` a synthesis, on demand
+# - no trigger wraps it: a thread, a note or a synthesis is asked for in plain words
 # - a thread groups work by task or topic; notes and prompts append under the thread they belong to
 # - notes get absorbed into the thread's prose on synthesis; prompts stay a list and get pruned
 # RUN

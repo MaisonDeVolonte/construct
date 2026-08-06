@@ -54,8 +54,8 @@ FINDINGS=$(mktemp "$TMPROOT/$TMPTAG-findings.XXXXXX")
 cleanup() { st=$?; if [ "$KEEP" -eq 0 ] && [ "$st" -eq 0 ]; then rm -f "$FINDINGS"; fi; }
 trap cleanup EXIT
 
-# dirs never worth scanning: dependencies, build output, and generated code
-EXCLUDES=(--exclude-dir=node_modules --exclude-dir=.git --exclude-dir=.next --exclude-dir=.open-next --exclude-dir=webflow --exclude-dir=report --exclude-dir=results --exclude='*.generated.*')
+# dirs never worth scanning: dependencies, build output, generated code and gitignored scratch
+EXCLUDES=(--exclude-dir=node_modules --exclude-dir=.git --exclude-dir=tmp --exclude-dir=.next --exclude-dir=.open-next --exclude-dir=webflow --exclude-dir=report --exclude-dir=results --exclude='*.generated.*')
 
 # reference targets generated at build/test time (not committed source) — never flag as missing
 is_generated() {
@@ -95,7 +95,7 @@ check_mirror_pointers() {
   while IFS= read -r hit; do
     [ -z "$hit" ] && continue
     file=${hit%%:*}
-    target=$(printf '%s' "$hit" | sed -n 's/.*@mirror[[:space:]]\{1,\}\([^[:space:]]\{1,\}\).*//git-audit1/p')
+    target=$(printf '%s' "$hit" | sed -n 's/.*@mirror[[:space:]]\{1,\}\([^[:space:]]\{1,\}\).*/\1/p')
     [ -z "$target" ] && continue
     case "$target" in */*|*.*) ;; *) continue;; esac   # only real path-shaped targets, not prose words
     [ -e "$target" ] && continue
@@ -111,7 +111,7 @@ check_markdown_links() {
   while IFS= read -r hit; do
     [ -z "$hit" ] && continue
     file=${hit%%:*}
-    target=$(printf '%s' "$hit" | sed -n 's/.*](\([^)]*\)).*//git-audit1/p')
+    target=$(printf '%s' "$hit" | sed -n 's/.*](\([^)]*\)).*/\1/p')
     [ -z "$target" ] && continue
     case "$target" in
       http://*|https://*|mailto:*|\#*) continue;;
@@ -141,7 +141,7 @@ check_see_paths() {
   while IFS= read -r hit; do
     [ -z "$hit" ] && continue
     file=${hit%%:*}
-    paths=$(printf '%s' "$hit" | sed -n 's/.*@see[[:space:]]\{1,\}\(.*\)//git-audit1/p')
+    paths=$(printf '%s' "$hit" | sed -n 's/.*@see[[:space:]]\{1,\}\(.*\)/\1/p')
     [ -z "$paths" ] && continue
     case "$paths" in *"{@link"*|*http*) continue;; esac   # a linked url, not a path list
     for token in $(printf '%s' "$paths" | tr ',' ' '); do
