@@ -1,14 +1,21 @@
 #!/bin/bash
-# =======================================================
+# ========================================================
 # @file git-continue.sh - trunk sync measure and hand over
-# =======================================================
+# ========================================================
 # @description
+# PAIR
 # - sidecar for `@git-continue` — measures the trunk delta, then emits the sync commands in order
+# - pause work, sync the trunk, resume: the sync always ends on the trunk, never a feature branch
+# SIDECAR
 # - read-only: it plans the sequence and the trigger runs it, so the sidecar itself stays measuring
 # - fetch is the one write it makes, and it only moves remote-tracking refs
 # - measures ahead/behind after the fetch, so the handover names the real work
+# - separates ahead from behind, since a behind trunk fast-forwards and never needs `@git-fresh`
 # - the earlier version ran the sequence itself and read a behind trunk as diverged
-# @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/git-continue/SKILL.md, AGENTS/shared/handover.sh
+# TRIGGER
+# - the four sync forms are narrow allows, which the trigger runs one tool call at a time
+# - a diverged trunk is handed over instead, since a rebase and a merge commit both rewrite history
+# @see AGENTS.md, AGENTS/skills/git-continue/SKILL.md, AGENTS/skills/git-fresh/SKILL.md, AGENTS/shared/handover.sh, AGENTS/skills/check-skills/SKILL.md
 
 set -euo pipefail
 

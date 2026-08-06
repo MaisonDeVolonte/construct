@@ -4,23 +4,12 @@ description: Shape of a retrospective study in docs/study/, with its graded quiz
 metadata:
   kind: spec
 ---
-```javascript
-/**
- * ================================
- * @file SKILL.md - study template
- * ================================
- * @description
- * - one file per feature/workflow, `docs/study/`, named `<feature>.md` in kebab-case
- * - tracked in git
- * - scrub client names, tokens, and other sensitive detail before it lands in a commit
- * - written on request, after a feature ships, to build a mental model of how it works
- * - lists files in ideal-build order, not alphabetical or touched-order
- * - studies are written in maximally concise, roadmap-style language — a map, not a textbook
- * - `lines` carry a single clause, capped at 100 characters, and never wrap
- * - `AGENTS/skills/doc-study/doc-study.sh` validates a study against every rule above a script can judge
- * @see AGENTS.md, AGENTS/skills/doc-study/doc-study.sh, docs/study/
- */
-```
+**the file:** `docs/study/<feature>.md`, kebab-case, tracked in git, one per feature or workflow
+- written on request, after a feature ships, to build a mental model of how it works
+- files are listed in ideal-build order, never alphabetical and never touched-order
+- maximally concise, roadmap-style language — a map, not a textbook
+- lines carry a single clause, capped at 100 characters, and never wrap
+- scrub client names, tokens, and other sensitive detail before it lands in a commit
 
 # STUDY: Short Title
 one line 'big idea' description of the topic/feature/concept to be studied
@@ -52,7 +41,7 @@ how to build the next similar thing, using this as the reference
 ```text
 VERIFY - not part of the artifact
 - RUN `AGENTS/skills/doc-study/doc-study.sh` once the study is written; pass a path to scope the run
-- FIX every ERROR, since each one breaks a rule stated in the header above
+- FIX every ERROR, since each one breaks a rule this spec states outright
 - STOP on a `secret` finding and ask the user before truncating it; the key needs rotating first
 - JUSTIFY or fix every WARN; the sidecar tolerates them, the next reader may not
 - ANSWER the checklist it prints, since those rules are the ones no script can judge

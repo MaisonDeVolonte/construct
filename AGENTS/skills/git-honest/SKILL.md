@@ -5,23 +5,6 @@ disable-model-invocation: true
 metadata:
   kind: trigger
 ---
-```javascript
-/**
- * =============================================================
- * @file SKILL.md - adversarial doc-vs-reality audit trigger
- * =============================================================
- * @description
- * - ran only on explicit `@git-honest` command; read-only, never mutates tracked files
- * - runs `AGENTS/skills/git-honest/git-honest.sh`, then reads `README.md`/`AGENTS.md` to learn the
- *   project's documented claims
- * - scores effort-vs-output, claim-vs-reality, test coverage, and risk hygiene against
- *   the shell telemetry
- * - outputs a harsh A-F scorecard with a one-sentence verdict; never flatters the user
- * - appends that scorecard to `docs/honest/YYYY-MM-DD.md`, one file per day, many per file
- * @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/git-honest/git-honest.sh, README.md, AGENTS/skills/doc-honest/SKILL.md, docs/honest/
- */
-```
-
 **@git-honest:** Run ONLY on explicit `@git-honest` command
 - runs an adversarial, strictly read-only audit of the codebase
 - purpose: to ruthlessly compare the project's documented claims against its technical reality

@@ -3,12 +3,21 @@
 # @file doc-plans.sh - plan validator sidecar
 # ===========================================
 # @description
-# - sidecar for `plans.md` — asserts a plan matches the template that documents it
-# - one check per machine-checkable rule; every rule needing judgement prints as a human checklist
-# - ERROR breaks a rule the template states outright; WARN names a smell the template tolerates
+# PAIR
+# - sidecar for `doc-plans` — asserts a plan matches the shape its SKILL.md documents
+# - the doc carries seven sections and three tables; this file carries what a script can judge
+# ARTIFACT
+# - `docs/plans/YYYY-MM-DD-operation-<title>.md`, tracked in git, one file per plan
+# - written before complex or architectural work, and closed out in `notes` rather than a summary
+# - sections run in order: context, goal, solution, risks, checklist, readiness, notes
+# - `checklist` holds the stages, each numbered, run in sequence, and each shipping as its own pr
+# - `readiness` holds the blockers, agents and permissions tables, which is where a plan gets gated
+# - `notes` are numbered so every `(see #x)` resolves, and are the only place verbosity belongs
+# RUN
 # - defaults to every file in `docs/plans/`; pass files or a directory to scope it
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
-# @see AGENTS.md, AGENTS/settings/secrets.sh, AGENTS/skills/doc-plans/SKILL.md, AGENTS/skills/git-insights/git-insights.sh, docs/plans/
+# - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
+# @see AGENTS.md, AGENTS/skills/doc-plans/SKILL.md, AGENTS/skills/doc-graphs/SKILL.md, AGENTS/skills/doc-logs/SKILL.md, docs/plans/, AGENTS/settings/secrets.sh
 
 set -euo pipefail
 

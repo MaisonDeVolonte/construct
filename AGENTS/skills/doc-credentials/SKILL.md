@@ -4,33 +4,19 @@ description: Shape of a dated credential audit in docs/credentials/, written by 
 metadata:
   kind: spec
 ---
-```javascript
-/**
- * ==========================================
- * @file SKILL.md - credential audit template
- * ==========================================
- * @description
- * FILE
- * - one file per day, `docs/credentials/`, named `YYYY-MM-DD.md`
- * - gitignored with the rest of `docs/`, and it stays that way; this one names live secrets
- * - NEVER contains a usable credential value
- * - a `fingerprint` of four leading and four trailing characters is the ONE exception, so a
- *   reader can match a row to the credential in their hand; it sits under every length in
- *   `SECRET_PATTERNS`, and the sidecar re-runs the detector on the fragment before printing it
- * - a run that could not grade writes no file at all, since an ungraded run proves nothing
- * BODY
- * - `unruled` leads, since it is the only section that holds work
- * - `masked` and `unset` follow as evidence, one row per vector
- * - `files` closes it, since a denied path that became readable is the loudest possible finding
- * - every verdict is one of: masked, unset, leaked, present, denied, readable, unreadable
- * VERIFY
- * - `AGENTS/skills/doc-credentials/doc-credentials.sh` asserts no value ever reached the file
- * @see AGENTS.md, AGENTS/skills/doc-credentials/doc-credentials.sh,
- *      AGENTS/skills/test-credentials/SKILL.md, docs/credentials/
- */
-```
-
 # docs/credentials/YYYY-MM-DD.md
+one file per day, written by `/test-credentials`, appended to and never rewritten:
+
+- gitignored with the rest of `docs/`, and it stays that way; this one names live secrets
+- it NEVER contains a usable credential value, in any section, for any reason
+- a `fingerprint` of four leading and four trailing characters is the ONE exception, so a
+  reader can match a row to the credential in their hand; it sits under every length in
+  `SECRET_PATTERNS`, and the sidecar re-runs the detector on the fragment before printing it
+- a run that could not grade writes no file at all, since an ungraded run proves nothing
+- `unruled` leads, since it is the only section that holds work
+- `masked` and `unset` follow as evidence, one row per vector
+- `files` closes it, since a denied path that became readable is the loudest possible finding
+- every verdict is one of: masked, unset, leaked, present, denied, readable, unreadable
 
 ## Verdict
 one line: the boundary holds, or these credentials need rotating first
@@ -72,6 +58,6 @@ an unset variable has nothing to fingerprint, so its cell reads `-`:
 VERIFY - not part of the artifact
 - RUN `AGENTS/skills/doc-credentials/doc-credentials.sh` after any report lands
 - STOP on a `secret` finding and rotate that credential before anything else; the file leaked it
-- FIX every ERROR, since each one breaks a rule stated in the header above
+- FIX every ERROR, since each one breaks a rule this spec states outright
 - ANSWER the checklist it prints, since those rules are the ones no script can judge
 ```

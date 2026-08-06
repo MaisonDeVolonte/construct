@@ -3,12 +3,21 @@
 # @file doc-logs.sh - agent log validator sidecar
 # ===============================================
 # @description
-# - sidecar for `logs.md` — asserts a day's log matches the template that documents it
-# - one check per machine-checkable rule; every rule needing judgement prints as a human checklist
-# - ERROR breaks a rule the template states outright; WARN names a smell the template tolerates
+# PAIR
+# - sidecar for `doc-logs` — asserts a day's log matches the shape its SKILL.md documents
+# - the doc carries threads, notes and prompts; this file carries what a script can judge
+# ARTIFACT
+# - `docs/logs/YYYY-MM-DD.md`, one file per day, holding the work and the prompts that drove it
+# - gitignored in this repo; host projects decide for themselves whether to track it
+# - `sessionstart.sh` creates the day's file and `stop.sh` gates the session on it being written
+# - `@logthread` adds a thread, `@lognote` a note, and `@logsynth` a synthesis, on demand
+# - a thread groups work by task or topic; notes and prompts append under the thread they belong to
+# - notes get absorbed into the thread's prose on synthesis; prompts stay a list and get pruned
+# RUN
 # - defaults to every file in `docs/logs/`; pass files or a directory to scope it
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
-# @see AGENTS.md, AGENTS/settings/secrets.sh, AGENTS/skills/doc-logs/SKILL.md, AGENTS/hooks/stop.sh, AGENTS/skills/doc-plans/doc-plans.sh, docs/logs/
+# - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
+# @see AGENTS.md, AGENTS/skills/doc-logs/SKILL.md, AGENTS/hooks/sessionstart.sh, AGENTS/hooks/stop.sh, docs/logs/, AGENTS/settings/secrets.sh
 
 set -euo pipefail
 

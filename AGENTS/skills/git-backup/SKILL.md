@@ -6,21 +6,6 @@ disable-model-invocation: true
 metadata:
   kind: trigger
 ---
-```javascript
-/**
- * ==============================================
- * @file SKILL.md - safe repo snapshot trigger
- * ==============================================
- * @description
- * - ran only on explicit `@git-backup` command; reach for it before anything destructive
- * - runs `AGENTS/skills/git-backup/git-backup.sh`, which takes the snapshot itself and verifies it
- * - the one trigger that needs no confirmation, since a copy destroys nothing it finds
- * - captures history and working tree separately, because a `.git` copy loses uncommitted work
- * - the restore is handed over, never run: putting files back overwrites what sits there now
- * @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/git-backup/git-backup.sh, AGENTS/skills/git-fresh/SKILL.md
- */
-```
-
 **@git-backup:** Run ONLY on explicit `@git-backup` command
 - takes a full, verified snapshot of history and working tree into gitignored `tmp/backups/`
 - takes no arguments and asks nothing; the destination is fixed and it overwrites nothing

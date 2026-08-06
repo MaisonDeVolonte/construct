@@ -3,21 +3,12 @@
 # @file check-skills.sh - skill pair validator sidecar
 # ====================================================
 # @description
-# PAIR
-# - sidecar for `check-skills` — asserts every skill doc and its sidecar still hold together
-# - the doc carries the shape a trigger follows; this file carries what a script can judge
-# - the only spec whose sidecar scans `AGENTS/skills/`, not a `docs/` artifact directory
-# SHAPE
-# - a pair is one `SKILL.md` and one `<name>.sh`, sharing a folder named for the trigger
-# - the doc keeps frontmatter as its orientation; the wayfinder lives in the sidecar, here
-# - a trigger runs only when invoked; a spec loads whenever the model touches what it describes
-# - the sidecar measures and never mutates, and sources `AGENTS/shared/handover.sh` for its blocks
-# - a sidecar needing to mutate emits the command into a block instead of running it
-# RUN
+# - sidecar for `git.md` — asserts every `@git*` trigger doc and its shell sidecar hold together
+# - one check per machine-checkable rule; every rule needing judgement prints as a human checklist
+# - ERROR breaks a rule the template states outright; WARN names a smell the template tolerates
 # - defaults to every pair in `AGENTS/skills/`; pass a doc, a sidecar, or a directory to scope it
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
-# - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
-# @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/shared/handover.sh, AGENTS/skills/, AGENTS/settings/secrets.sh, .github/workflows/ci.yml
+# @see AGENTS.md, AGENTS/settings/secrets.sh, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/, AGENTS/skills/doc-plans/doc-plans.sh, .github/workflows/ci.yml
 
 set -euo pipefail
 
@@ -156,22 +147,34 @@ check_pair() {
   fi
 }
 
-# the wayfinder now lives in the sidecar, which carries the whole pair; the doc keeps frontmatter
-# as its orientation, so a reader gets the map from one file rather than two that can disagree
+# the wayfinding block from AGENTS.md, which is how anyone reading the doc learns its boundaries
 check_doc_wayfinding() {
-  local doc=$1 name
+  local doc=$1 name opens_on=1 frontmatter_end
   name=$(trigger_name "$doc")
-  if grep -q '^```javascript' "$doc"; then
-    err "$doc" 1 doc_wayfinder "the wayfinder belongs in $name.sh; the doc keeps frontmatter only"
+  # a skill doc opens with yaml frontmatter, since the harness only reads it from line 1
+  if [ "$(sed -n '1p' "$doc")" = '---' ]; then
+    frontmatter_end=$(awk 'NR > 1 && $0 == "---" { print NR; exit }' "$doc")
+    if [ -n "$frontmatter_end" ]; then opens_on=$((frontmatter_end + 1)); fi
   fi
-  if [ "$(sed -n '1p' "$doc")" != '---' ]; then
-    err "$doc" 1 frontmatter "line 1 opens the frontmatter, which is what orients a reader now"
+  if [ "$(sed -n "${opens_on}p" "$doc")" != '```javascript' ]; then
+    err "$doc" "$opens_on" wayfinding "line $opens_on opens the wayfinding block: \`\`\`javascript"
   fi
-  if ! grep -qE '^name:[[:space:]]*'"$name"'[[:space:]]*$' "$doc"; then
-    err "$doc" 1 frontmatter "frontmatter needs 'name: $name', matching its folder"
+  if ! grep -qE "^ \* @file SKILL\.md - " "$doc"; then
+    err "$doc" 1 wayfinding "@file must read 'SKILL.md - <short, specific title>'"
   fi
-  if ! grep -qE '^description:[[:space:]]*\S' "$doc"; then
-    err "$doc" 1 frontmatter "frontmatter needs a description; it is the only listing a reader sees"
+  if ! grep -q '^ \* @description' "$doc"; then
+    err "$doc" 1 wayfinding "no @description; the header is what stops a reader guessing"
+  fi
+  if ! grep -q '^ \* @see' "$doc"; then
+    err "$doc" 1 wayfinding "no @see; list every related internal file"
+    return 0
+  fi
+  if ! grep -q "^ \* @see.*$TEMPLATE" "$doc"; then
+    warn "$doc" "$(where "$doc" '^ \* @see')" wayfinding "@see should name $TEMPLATE, the shape it follows"
+  fi
+  if ! grep -q "^ \* @see.*$(dirname "$doc")/$name\.sh" "$doc"; then
+    warn "$doc" "$(where "$doc" '^ \* @see')" wayfinding \
+      "@see should name its own sidecar, $(dirname "$doc")/$name.sh"
   fi
 }
 
@@ -297,7 +300,7 @@ check_scrub() {
 
 # a trigger acts on the repo and is invoked deliberately; a spec describes a shape and should load
 # whenever the model touches the thing it describes. the two earn opposite frontmatter, so the
-# kind is declared rather than guessed; `metadata` exists for it and the harness ignores it
+# kind is declared rather than guessed — `metadata` exists for exactly this and the harness ignores it
 skill_kind() {
   local doc=$1 declared
   declared=$(awk '/^metadata:/ { inside = 1; next }

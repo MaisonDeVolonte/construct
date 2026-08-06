@@ -4,58 +4,19 @@ description: Shape of a plan in docs/plans/: context, goal, solution, risks, che
 metadata:
   kind: spec
 ---
-```javascript
-/**
- * ==============================
- * @file SKILL.md - plan template
- * ==============================
- * @description
- * FILE
- * - one file per plan, `docs/plans/`, named `YYYY-MM-DD-operation-<title>.md`
- * - tracked in git
- * - scrub client names, tokens, and other sensitive detail before it lands in a commit
- * - written before complex or architectural work
- * - sections run in this order: context, goal, solution, risks, checklist, readiness, notes
- * - a completed plan closes with a summary in `notes`; a `## Summary` section breaks that order
- * STYLE
- * - plans are written in maximally clear, concise, action-oriented language
- * - write for humans, not machines: plain english over jargon, facts over metaphor
- * - `lead with the core idea` so plan steps are easy to scan and understand
- * - `lines` carry a single clause, capped at 100 characters, and never wrap
- * BODY
- * - `body` sections state conclusions only; the reasoning lives in numbered notes
- * - `order` every list deliberately; if the order is not obvious, say why in a note
- * - a claim with a number in it gets verified before it lands, or it does not land
- * CHECKLIST
- * - `stages` are numbered `### <n>. <name>`, run in sequence, and each ships as its own pr
- * - `deferred work` closes the checklist as a wishlist, never a section of its own
- * READINESS
- * - `readiness` states feasibility only; a row proposing new work belongs in the checklist
- * - `blockers` are unrelated work that gates starting at all, found in other open plans
- * - `agents` count every item in a stage as agentic, gated, or human-only, and the three sum
- * - every permission rule is quoted exactly from a settings file, or labelled a proposal
- * - a rule holding a pipe escapes it as `\|`, since an unescaped one splits the table
- * - deny beats allow, so a denied path is narrowed at the deny rule, never granted an allow
- * - `layer` names which system enforces the row, since the two take different rule shapes:
- *   - permissions = `Tool(pattern)`, and covers every tool
- *   - sandbox filesystem = a bare path, and covers bash writes and reads only
- *   - sandbox domain = a bare host, and covers bash network egress only
- * - a bash step that writes outside the working directory needs a sandbox row, even when a
- *   permission rule already allows the command; the two layers are enforced separately
- * - `scope` is where the rule lands: repo-specific goes to project, machine detail to user
- * - never propose a managed rule, since that is a sudo edit and a policy decision
- * - permissions:
- *   - agentic = matches an allow rule with no deny
- *   - human-only = matches a deny, or needs judgment, credentials, or a decision
- *   - gated = matches neither, so it prompts
- * NOTES
- * - `notes` are numbered so every `(see #x)` resolves, and are the only place verbosity belongs
- * - prefer a short line plus `(see #x)` over a long line that explains itself
- * VERIFY
- * - `AGENTS/skills/doc-plans/doc-plans.sh` validates a plan against every rule above a script can judge
- * @see AGENTS.md, AGENTS/skills/doc-plans/doc-plans.sh, AGENTS/skills/doc-logs/SKILL.md, docs/plans/
- */
-```
+**the file:** `docs/plans/YYYY-MM-DD-operation-<title>.md`, tracked in git, one per plan
+- written before complex or architectural work, never after it
+- sections run in this order: context, goal, solution, risks, checklist, readiness, notes
+- a completed plan closes with a summary in `notes`; a `## Summary` section breaks that order
+- scrub client names, tokens, and other sensitive detail before it lands in a commit
+
+**the style:** maximally clear, concise, action-oriented language
+- write for humans, not machines: plain english over jargon, facts over metaphor
+- lead with the core idea, so plan steps are easy to scan and understand
+- lines carry a single clause, capped at 100 characters, and never wrap
+- body sections state conclusions only; the reasoning lives in numbered notes
+- order every list deliberately; if the order is not obvious, say why in a note
+- a claim with a number in it gets verified before it lands, or it does not land
 
 # AGENT PLAN: Operation [non-serious title]
 one plain-english line: what this plan does
@@ -100,14 +61,16 @@ sorted by blast radius and irreversibility, never by likelihood
 - [ ] a stage that touches no files still earns a stage, if it gates the next one
 
 ### Deferred Work
+closes the checklist as a wishlist, never a section of its own
 - [ ] a wishlist of findings
 - [ ] that could be added to a future plan (see #5)
   - [ ] derived from the work in this plan
 
 ## Readiness
+states feasibility only; a row proposing new work belongs in the checklist instead
 
 ### Blockers
-unrelated tasks to clear before starting this plan, if any:
+unrelated tasks to clear before starting this plan, if any, found in other open plans:
 
 | task | blocks | where |
 |---|---|---|
@@ -116,6 +79,10 @@ unrelated tasks to clear before starting this plan, if any:
 
 ### Agents
 how each stage's checklist items are split by who can run them:
+- every item in a stage counts as exactly one of the three, and the three sum to the stage
+- `agentic` matches an allow rule with no deny
+- `human-only` matches a deny, or needs judgment, credentials, or a decision
+- `gated` matches neither, so it prompts
 
 | stage | agentic | human-only | gated | note # |
 |---|---|---|---|---|
@@ -124,6 +91,17 @@ how each stage's checklist items are split by who can run them:
 
 ### Permissions
 suggested rules to set in order for agents to work reliably:
+- quote every rule exactly from a settings file, or label it a proposal
+- a rule holding a pipe escapes it as `\|`, since an unescaped one splits the table
+- deny beats allow, so a denied path is narrowed at the deny rule, never granted an allow
+- never propose a managed rule, since that is a sudo edit and a policy decision
+- `layer` names which system enforces the row, since each takes a different rule shape:
+  - `permissions` = `Tool(pattern)`, and covers every tool
+  - `sandbox filesystem` = a bare path, and covers bash writes and reads only
+  - `sandbox domain` = a bare host, and covers bash network egress only
+- a bash step that writes outside the working directory needs a sandbox row, even when a
+  permission rule already allows the command; the two layers are enforced separately
+- `scope` is where the rule lands: repo-specific goes to project, machine detail to user
 
 | rule | layer | scope | suggestion |
 |---|---|---|---|
@@ -148,7 +126,7 @@ suggested rules to set in order for agents to work reliably:
 ```text
 VERIFY - not part of the artifact
 - RUN `AGENTS/skills/doc-plans/doc-plans.sh` once the plan is written; pass a path to scope the run
-- FIX every ERROR, since each one breaks a rule stated in the header above
+- FIX every ERROR, since each one breaks a rule this spec states outright
 - STOP on a `secret` finding and ask the user before truncating it; the key needs rotating first
 - JUSTIFY or fix every WARN; the sidecar tolerates them, the next reader may not
 - ANSWER the checklist it prints, since those rules are the ones no script can judge

@@ -3,12 +3,20 @@
 # @file doc-audits.sh - audit archive validator sidecar
 # =====================================================
 # @description
-# - sidecar for `audits.md` — asserts an audit archive matches the template that documents it
-# - one check per machine-checkable rule; every rule needing judgement prints as a human checklist
-# - ERROR breaks a rule the template states outright; WARN names a smell the template tolerates
+# PAIR
+# - sidecar for `doc-audits` — asserts an audit archive matches the shape its SKILL.md documents
+# - the doc carries the four subsections an entry holds; this file carries what a script can judge
+# - the pair owns the archive shape; each writing trigger owns the fields inside its own entry
+# ARTIFACT
+# - `docs/audits/YYYY-MM-DD-<kind>.md`, tracked in git, one file per day and per kind
+# - written by any auditing trigger, appended each run, so one file holds many audits
+# - the kind in the filename and the kind in each heading match, so one archive reads as one
+# - an audit captures repo state at a moment in time, so it is never edited after the fact
+# RUN
 # - defaults to every file in `docs/audits/`; pass files or a directory to scope it
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
-# @see AGENTS.md, AGENTS/settings/secrets.sh, AGENTS/skills/doc-audits/SKILL.md, AGENTS/skills/git-audit/SKILL.md, AGENTS/skills/doc-plans/doc-plans.sh, docs/audits/
+# - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
+# @see AGENTS.md, AGENTS/skills/doc-audits/SKILL.md, AGENTS/skills/git-audit/SKILL.md, AGENTS/skills/test-settings/SKILL.md, docs/audits/, AGENTS/settings/secrets.sh
 
 set -euo pipefail
 

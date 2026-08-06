@@ -1,11 +1,18 @@
 #!/bin/bash
-# =============================================================
+# ==============================================================
 # @file git-honest.sh - adversarial doc-vs-reality audit sidecar
-# =============================================================
+# ==============================================================
 # @description
-# - sidecar for `@git-honest` — gathers telemetry for the honest scorecard
-# - reports today's honest path and scorecard count, and never creates the file itself
-# @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/git-honest/SKILL.md, AGENTS/skills/doc-honest/SKILL.md, docs/honest/
+# PAIR
+# - sidecar for `@git-honest` — gathers the telemetry the adversarial scorecard is graded against
+# - read-only and run only on the explicit command; it never mutates a tracked file
+# TRIGGER
+# - the doc reads `README.md`, and `AGENTS.md` where a host ships one, to learn the claims
+# - it grades effort-vs-output, claim-vs-reality, test reality, risk hygiene and maintenance traps
+# - it outputs A-F per lane and one unapologetic verdict, and it never flatters the user
+# - it then appends that scorecard to `docs/honest/YYYY-MM-DD.md`, in the `doc-honest` shape
+# - the sidecar names today's honest path and scorecard count, and never creates the file itself
+# @see AGENTS.md, AGENTS/skills/git-honest/SKILL.md, AGENTS/skills/doc-honest/SKILL.md, README.md, docs/honest/, AGENTS/skills/check-skills/SKILL.md
 
 set -euo pipefail
 

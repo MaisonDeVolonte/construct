@@ -7,25 +7,6 @@ disable-model-invocation: true
 metadata:
   kind: trigger
 ---
-```javascript
-/**
- * ===================================================
- * @file SKILL.md - gated atomic delivery trigger
- * ===================================================
- * @description
- * - ran only on explicit `@git-deliver` command
- * - drains uncommitted work in atomic `type(scope)` buckets:
- *   branch → commit → push → pr → auto-merge on green → back to trunk
- * - plans EVERY bucket first and gates on approval, then emits every block in one pass
- * - the plan is the gate: bucketing errors cost nothing to fix before a branch exists
- * - `--first` flag plans everything but emits only the first block
- * - gated: never delivers; every block is the user's to paste, in the order given
- * - the preflight is read-only too, so even floating changes onto trunk is handed over
- * - push authenticates only outside the sandbox, so the whole bucket is the user's to run
- * @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/git-deliver/git-deliver.sh, AGENTS/shared/handover.sh
- */
-```
-
 **@git-deliver:** Run ONLY on explicit `@git-deliver` command
 - floats uncommitted changes onto the trunk, then drains them in atomic buckets
 - each atomic bucket: branch → commit → push → PR → auto-merge on green, then back to the trunk

@@ -6,21 +6,6 @@ disable-model-invocation: true
 metadata:
   kind: trigger
 ---
-```javascript
-/**
- * ==================================
- * @file SKILL.md - release trigger
- * ==================================
- * @description
- * - ran only on explicit `@git-jump` command; aborts on any failed preflight check
- * - READ-ONLY: `AGENTS/skills/git-jump/git-jump.sh` verifies every precondition and hands the sequence over
- * - the bump, both pushes, the promotion merge and the release call are all the user's to run
- * - `--minor`/`--major` (default minor) only decides the version the handover names
- * - the release api call comes last, since the tag has to reach origin before it resolves
- * @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/git-jump/git-jump.sh, .github/workflows/deploy.yml
- */
-```
-
 **@git-jump:** Run ONLY on explicit `@git-jump` command
 - run when you want to release a new minor or major version
 - aborts if any preflight fails: dirty tree, detached HEAD, out-of-sync trunk, missing production

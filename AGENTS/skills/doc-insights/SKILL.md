@@ -4,28 +4,17 @@ description: Shape of an opportunity scan in docs/insights/, written by /git-ins
 metadata:
   kind: spec
 ---
-```javascript
-/**
- * ==================================================
- * @file SKILL.md - opportunity report template
- * ==================================================
- * @description
- * - tracked in git, one insights file per day, appended across runs
- * - scrub client names, tokens, and other sensitive detail before it lands in a commit
- * - written by `@git-insights` only, appended each run, many reports per file
- * - `reports` capture the opportunity surface at a moment in time, never edited after the fact
- * - `observations` are what the three streams found; `opportunities` are what to do about it
- * - `opportunities` sort onto the urgent/important matrix, and name the file they touch
- * - `lines` should contain a single clause/fact/action, limited to 100 characters
- * - skip the raw sidecar dump; keep the read of it, not the printout
- * - an opportunity that recurs across dated files is a finding; restate it, never edit the older report
- * - a Q1 entry that survives three reports has stopped being urgent in practice, say so
- * - `AGENTS/skills/doc-insights/doc-insights.sh` validates a report against every rule above a script can judge
- * @see AGENTS.md, AGENTS/skills/doc-insights/doc-insights.sh, AGENTS/skills/git-insights/SKILL.md, docs/insights/
- */
-```
-
 # docs/insights/YYYY-MM-DD.md
+tracked in git, one file per day, appended to by `@git-insights` and nothing else:
+
+- a report captures the opportunity surface at a moment in time, never edited after the fact
+- `observations` are what the three streams found; `opportunities` are what to do about it
+- an opportunity sorts onto the urgent/important matrix, and names the file it touches
+- an opportunity that recurs across dated files is a finding; restate it, never edit the older one
+- a Q1 entry that survives three reports has stopped being urgent in practice, so say so
+- skip the raw sidecar dump; keep the read of it, not the printout
+- lines hold a single clause, fact or action, capped at 100 characters
+- scrub client names, tokens, and other sensitive detail before it lands in a commit
 
 ## Insight #1: YYYY-MM-DD HH:MM
 
@@ -69,7 +58,7 @@ never edit an earlier report; a recurring opportunity is signal about what keeps
 ```text
 VERIFY - not part of the artifact
 - RUN `AGENTS/skills/doc-insights/doc-insights.sh` once the report is appended; pass a path to scope the run
-- FIX every ERROR, since each one breaks a rule stated in the header above
+- FIX every ERROR, since each one breaks a rule this spec states outright
 - STOP on a `secret` finding and ask the user before truncating it; the key needs rotating first
 - JUSTIFY or fix every WARN; the sidecar tolerates them, the next reader may not
 - ANSWER the checklist it prints, since those rules are the ones no script can judge

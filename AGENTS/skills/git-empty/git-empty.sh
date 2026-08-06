@@ -1,13 +1,20 @@
 #!/bin/bash
-# ==============================================
+# ===============================================
 # @file git-empty.sh - post-merge cleanup sidecar
-# ==============================================
+# ===============================================
 # @description
+# PAIR
 # - sidecar for `@git-empty` — finds spent branches, then hands the cleanup commands over
+# - typically run post-merge, but safe anytime, since nothing in the pair deletes a branch
+# SIDECAR
 # - read-only apart from `fetch --prune` and a trunk fast-forward, neither of which loses work
 # - classifies each local branch as gone, merged, or live, so the handover deletes only the spent
-# - stash and branch deletes are denied, so it prints them instead of running them
-# @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/git-empty/SKILL.md, AGENTS/shared/handover.sh
+# - emits `-d` or `-D` to match, since `-d` consults the same patch-id read a rebase already fooled
+# - a gone branch that is neither merged nor absorbed is kept, never offered for deletion
+# TRIGGER
+# - the doc folds in `git-audit.sh`, whose local/remote/ghost/zombie split catches the rebased ones
+# - stash and branch deletes are denied, so the whole block stays the user's to run in order
+# @see AGENTS.md, AGENTS/skills/git-empty/SKILL.md, AGENTS/skills/git-audit/git-audit.sh, AGENTS/shared/handover.sh, AGENTS/skills/check-skills/SKILL.md
 
 set -euo pipefail
 

@@ -5,39 +5,29 @@ paths: **/*.ts, **/*.tsx, **/*.js, **/*.jsx, **/*.mjs, **/*.cjs, **/*.sh
 metadata:
   kind: spec
 ---
-```javascript
-/**
- * ======================================================
- * @file SKILL.md - jsdoc wayfinding header template
- * ======================================================
- * @description
- * SCOPE
- * - source files, never a `docs/` artifact; the sibling of `comments.md`, which owns the rest
- * - eligible files are js, jsx, ts, tsx, mjs, cjs and sh, since those are what carry the block
- * - everything below the header belongs to `comments.sh`, and nothing here judges it
- * FORM
- * - the block opens on line 1, or on the line under a shebang or a frontmatter block
- * - frontmatter outranks the header, since the harness reads a skill's yaml only from line 1
- * - `@file`, `@description` and `@see` each appear once, in that order
- * - a banner of `=` sits above and below the `@file` line, matching its width
- * - `@file` reads `<filename> - <short, specific title>`, and the filename is the real one
- * - `@description` is a hyphen delimited list of single clause lines that never wrap
- * - `@see` is a comma separated list of ALL related internal files
- * - `lines` carry a single clause, capped at 100 characters
- * - lowercase shorthand english, favouring legibility over completeness
- * CONTENT
- * - the block says what the file is FOR and where its edges are, never how it works
- * - a tag that drifted from the file is worse than no tag, so resync it when the file changes
- * - `@see` earns its place by naming what a reader opens next, not everything the file imports
- * - group a long `@description` under uppercase headings, the way this block does
- * VERIFY
- * - `AGENTS/skills/check-wayfinders/check-wayfinders.sh` validates a header against every rule above a script can judge
- * - repo-wide reference integrity has no gate now; `AGENTS/skills/git-insights/git-insights.sh` only reports it
- * @see AGENTS.md, AGENTS/skills/check-wayfinders/check-wayfinders.sh, AGENTS/skills/check-comments/SKILL.md, AGENTS/skills/git-insights/git-insights.sh
- */
-```
-
 # wayfinder shapes
+the rules every wayfinding header holds to, each demonstrated once below.
+
+## scope
+- source files, never a `docs/` artifact; `check-comments` owns everything under the header
+- eligible extensions are js, jsx, ts, tsx, mjs, cjs and sh, since those are what carry the block
+- the block opens on line 1, or on the line under a shebang, with nothing above it
+- frontmatter outranks the header, since the harness reads a skill's yaml only from line 1
+
+## form
+- `@file`, `@description` and `@see` each appear once, in that order
+- a banner of `=` sits above and below the `@file` line, matching its width
+- `@file` reads `<filename> - <short, specific title>`, and the filename is the real one
+- `@description` is a hyphen delimited list of single clause lines that never wrap
+- `@see` is a comma separated list of ALL related internal files
+- lines carry a single clause, capped at 100 characters
+- lowercase shorthand english, favouring legibility over completeness
+
+## content
+- the block says what the file is FOR and where its edges are, never how it works
+- a tag that drifted from the file is worse than no tag, so resync it when the file changes
+- `@see` earns its place by naming what a reader opens next, not everything the file imports
+- group a long `@description` under uppercase headings once it runs past a screenful
 
 ## the js/ts form, opening line 1
 
@@ -69,26 +59,30 @@ metadata:
 > # @see Dockerfile, .github/workflows/ci.yml
 > ```
 
-## the skill form, opening under the closing frontmatter marker
+## where a skill pair keeps its header
+
+a `SKILL.md` carries no header of its own; its sidecar carries one for the pair, in the shell
+form above. the doc keeps frontmatter as its orientation, and the block names both files:
 
 *example:*
 > ```markdown
 > ---
+> name: git-backup
 > description: Snapshots history and tree, verifies it, hands over the restore.
 > disable-model-invocation: true
 > ---
->
-> ```javascript
-> /**
->  * =================================================
->  * @file SKILL.md - history and tree backup trigger
->  * =================================================
->  * @description
->  * - ran only on explicit `/git-backup` command
->  * - the frontmatter above is the gate; this block is what a reader opens first
->  * @see AGENTS/skills/check-skills/SKILL.md, git-backup.sh
->  */
+> **@git-backup:** Run ONLY on explicit `@git-backup` command
 > ```
+> ```bash
+> #!/bin/bash
+> # ====================================================
+> # @file git-backup.sh - full repo snapshot and restore
+> # ====================================================
+> # @description
+> # PAIR
+> # - sidecar for `@git-backup` — takes and verifies the snapshot, then hands the restore over
+> # - the doc holds the steps; this block holds the map for both halves of the pair
+> # @see AGENTS/skills/git-backup/SKILL.md, AGENTS/skills/check-skills/SKILL.md
 > ```
 
 ## what a drifted header looks like
@@ -105,7 +99,7 @@ metadata:
 ```text
 VERIFY - not part of the artifact
 - RUN `AGENTS/skills/check-wayfinders/check-wayfinders.sh` after adding or editing a header; pass a path to scope it
-- FIX every ERROR, since each one breaks a rule stated in the header above
+- FIX every ERROR, since each one breaks a rule this spec states outright
 - STOP on a `secret` finding and ask the user before truncating it; the key needs rotating first
 - JUSTIFY or fix every WARN; the sidecar tolerates them, the next reader may not
 - ANSWER the checklist it prints, since those rules are the ones no script can judge

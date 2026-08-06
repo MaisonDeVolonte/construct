@@ -3,14 +3,21 @@
 # @file check-wayfinders.sh - wayfinding header validator sidecar
 # ===============================================================
 # @description
-# - sidecar for `wayfinders.md` — asserts a wayfinding header matches the shape it documents
-# - one check per machine-checkable rule; every rule needing judgement prints as a human checklist
-# - ERROR breaks a rule the template states outright; WARN names a smell the template tolerates
-# - the header only; everything below it is `AGENTS/skills/check-comments/check-comments.sh`'s to judge
-# - a broken `@see` only warns here, and nothing gates references now, so the warn is all there is
+# PAIR
+# - sidecar for `check-wayfinders` — asserts a header matches the shape its SKILL.md documents
+# - the doc carries the two forms and a drifted example; this file carries what a script can judge
+# - the header only; everything below it belongs to `check-comments`, and nothing here judges it
+# SCOPE
+# - source files, never a `docs/` artifact; eligible extensions are js, jsx, ts, tsx, mjs, cjs, sh
+# - the block opens on line 1, or on the line under a shebang, and nothing sits above it
+# - frontmatter outranks the header, since the harness reads a skill's yaml only from line 1
+# - a skill doc carries no header at all; its sidecar carries the wayfinder for the whole pair
+# RUN
 # - defaults to every tracked eligible file; pass files or a directory to scope it
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
-# @see AGENTS.md, AGENTS/settings/secrets.sh, AGENTS/skills/check-wayfinders/SKILL.md, AGENTS/skills/git-insights/git-insights.sh
+# - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
+# - a broken `@see` only warns, since nothing gates references; `git-insights` reports repo-wide
+# @see AGENTS.md, AGENTS/skills/check-wayfinders/SKILL.md, AGENTS/skills/check-comments/SKILL.md, AGENTS/skills/check-comments/check-comments.sh, AGENTS/skills/git-insights/git-insights.sh, AGENTS/settings/secrets.sh
 
 set -euo pipefail
 

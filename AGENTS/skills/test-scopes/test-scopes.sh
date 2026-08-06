@@ -1,18 +1,23 @@
 #!/bin/bash
-# ==========================================================
-# @file scopes.sh - workflow tester against a settings stack
-# ==========================================================
+# ===============================================================
+# @file test-scopes.sh - script versus scope stack mapper sidecar
+# ===============================================================
 # @description
-# - maps a workflow script against a merged stack of settings files, without installing anything
-# - the script file is the unit of trust, so every finding is reported under the script it came from
+# PAIR
+# - sidecar for `/test-scopes` — maps a workflow script against a merged stack of settings files
+# - it answers what the floor cannot: what a sidecar reaches once it is already running
+# - it installs nothing, and the script file is the unit of trust every finding reports under
+# TIERS
 # - tier 1 replays the script's OWN invocation, the one string a permission rule actually sees
 # - tier 2 extracts what the script runs internally, which no permission rule is ever shown
 # - internals are judged against the sandbox alone, since that is the only layer still watching
 # - a `deny` an internal would have tripped is reported as a bypass, not as a block
+# RUN
+# - read-only: it maps and reports, and every repair is the user's to apply
 # - `--repo <name>` resolves a bare name under ~/Developer to that repo's own settings stack
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
-# @see AGENTS.md, AGENTS/settings/permissions.sh, AGENTS/settings/corpus.tsv,
-#      AGENTS/hooks/pretooluse.sh, AGENTS/settings/
+# - the slowest trigger in the family, since it spawns the hook once per extracted command
+# @see AGENTS.md, AGENTS/skills/test-scopes/SKILL.md, AGENTS/hooks/pretooluse.sh, AGENTS/settings/corpus.tsv, AGENTS/settings/settings.user.md, AGENTS/skills/test-settings/SKILL.md
 
 set -euo pipefail
 

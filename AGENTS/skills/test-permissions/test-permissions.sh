@@ -1,15 +1,22 @@
 #!/bin/bash
-# =========================================================
-# @file permissions.sh - permissions audit for this project
-# =========================================================
+# =====================================================================
+# @file test-permissions.sh - permission floor replay and audit sidecar
+# =====================================================================
 # @description
-# - replays `corpus.tsv` against the real hook, then audits the settings file structurally
+# PAIR
+# - sidecar for `/test-permissions` — replays `corpus.tsv` against the hook, then audits the rules
+# - it answers one question: does the gate actually refuse what the corpus says it must refuse
+# - a config can read perfectly and still have a dead hook, which only a replay catches
 # - NEVER executes a corpus line; every one is passed to the hook as a string and nothing more
+# TIERS
 # - tier 1 is ground truth, since the hook it feeds is the artifact under test
 # - tier 2 is structural fact: drift, dead rules, and which allow rule covers an unnamed command
-# - it deliberately does NOT model the permission matcher, so it never reports a rule as covering
+# - it never models the permission matcher, so it never claims a rule covers anything
+# RUN
+# - read-only: it replays and reports, and every repair is the user's to apply
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
-# @see AGENTS.md, AGENTS/settings/corpus.tsv, AGENTS/hooks/pretooluse.sh, .claude/settings.json
+# - `/test-settings` wraps this one, so run it directly for the detail rather than the count
+# @see AGENTS.md, AGENTS/skills/test-permissions/SKILL.md, AGENTS/settings/corpus.tsv, AGENTS/hooks/pretooluse.sh, AGENTS/skills/test-settings/SKILL.md, .claude/settings.json
 
 set -euo pipefail
 

@@ -4,24 +4,19 @@ description: Shape every skill pair must hold: the SKILL.md, its sidecar, and th
 metadata:
   kind: spec
 ---
-```javascript
-/**
- * ======================================
- * @file SKILL.md - git automation template
- * ======================================
- * @description
- * - ran only on explicit `@gitautomation` commands
- * - starts with a native shell script sidecar, which measures and never mutates
- * - every sidecar sources `AGENTS/shared/handover.sh`, so the whole family shares one output shape
- * - fail: outputs raw terminal errors
- * - success: reports the telemetry, then fences the handover for the user to paste
- * - the only template whose sidecar scans `AGENTS/skills/`, not a `docs/` artifact directory
- * - `AGENTS/skills/check-skills/check-skills.sh` validates every trigger doc and sidecar pair against the rules above
- * @see AGENTS.md, AGENTS/skills/check-skills/check-skills.sh, AGENTS/shared/handover.sh, AGENTS/skills/
- */
-```
-
 # @gitautomation
+
+## the pair
+a skill is one folder, named for its trigger, holding exactly two files:
+
+- `SKILL.md` carries the frontmatter and the numbered steps, and nothing above them
+- `<name>.sh` carries the sidecar, and the wayfinding header for the whole pair
+- the doc has no wayfinder of its own, since two headers that can disagree is worse than one
+- frontmatter opens line 1 with `name` matching the folder, and a `description` a reader sees
+- `metadata.kind` is declared rather than guessed, and decides the rest of the frontmatter
+- `kind: trigger` acts on the repo, so it sets `disable-model-invocation: true`; prose is not a gate
+- `kind: spec` describes a shape, so it stays auto-loading and never sets that flag
+
 All @gitautomations follow the following general shape:
 
 1. run the native shell command exactly as specified
@@ -84,7 +79,7 @@ git command two
 ```text
 VERIFY - not part of the trigger
 - RUN `AGENTS/skills/check-skills/check-skills.sh` after touching a trigger doc or its sidecar; pass a path to scope it
-- FIX every ERROR, since each one breaks a rule stated in the header above
+- FIX every ERROR, since each one breaks a rule this spec states outright
 - STOP on a `secret` finding and ask the user before truncating it; the key needs rotating first
 - JUSTIFY or fix every WARN; the sidecar tolerates them, the next reader may not
 - ANSWER the checklist it prints, since those rules are the ones no script can judge

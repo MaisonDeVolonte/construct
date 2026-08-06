@@ -1,13 +1,19 @@
 #!/bin/bash
-# =============================================
+# ==============================================
 # @file git-gud.sh - stale-pr ci refresh sidecar
-# =============================================
+# ==============================================
 # @description
-# - sidecar for `@git-gud` — re-runs ci on a stale pr against the default branch
-# - talks to github through curl + bearer auth since gh cannot verify tls in the sandbox
-# @see AGENTS.md, AGENTS/skills/check-skills/SKILL.md, AGENTS/skills/git-gud/SKILL.md, AGENTS/shared/handover.sh
-# - the shared file is reached by path from this skill folder, not from beside this script, since
-#   a skill owns its own directory; stage 4 moves it to `AGENTS/shared/` and this path with it
+# PAIR
+# - sidecar for `/git-gud` — re-runs ci on a stale pr against the current default branch
+# - reach for it when `/git-deliver` left a pr computed against a trunk that has since moved
+# - the frontmatter gate is what holds it to an explicit invocation
+# SIDECAR
+# - talks to github through curl + bearer auth, since gh cannot verify tls in the sandbox
+# - runs at render time, so its telemetry lands before the model reads anything
+# - reaches `handover.sh` by path from this skill folder, since a skill owns its own directory
+# - the plugin root is absolute, so no per-project symlink is needed to reach it
+# - `--watch` waits for the fresh run to finish, and runs as a tool call rather than inline
+# @see AGENTS.md, AGENTS/skills/git-gud/SKILL.md, AGENTS/skills/git-deliver/SKILL.md, AGENTS/shared/handover.sh, AGENTS/skills/check-skills/SKILL.md
 
 set -euo pipefail
 
