@@ -1,16 +1,17 @@
-# AGENTS
-**"secure agentic coding infra: sandboxed automations, workflows, and conventions"**
-- **bounded autonomy:** agents work unattended but with strict guardrails; bash hooks act as failsafes
-- **masked credentials:** agents use tokens but can't see them; @settingsaudit catches leaks
-- **self-protecting policy:** agents can't secretly change their rules; @settingsaudit verifies guards
-- **built-in security suite:** auditable permissions and settings; @settingsaudit probes live gate
-- **deterministic automations:** workflows are markdown prompts; bash sidecars work or hand back
-- **chat-native triggers:** @automations are project agnostic; bash sidecars resolve at repo root
-- **machine-checked templates:** conventions are markdown guides; bash sidecars verify conformance
-- **cross-session memory:** context is seeded with docs and logs; bash hooks enforce compliance
-- **drift detection:** installed settings are diffed against the template; nothing diverges silently
-- **centralized configuration:** one clone drives every project; symlinks stay in sync
-- **easy opt-out:** delete symlinks and revert claude settings; no packages or residue
+# OPERATOR: Claude Code Plugin
+**"secure agentic coding infra: sandboxed environments, masked credentials, deterministic automations, and more"**
+> features:
+- **battle-tested sandbox:** agents work unattended but with guardrails; `pretooluse` catches rule evasion
+- **blind authentication:** agents use your tokens freely but can't see them; `/test-credentials` flags leaks
+- **enforceable workflows:** instructions are paired with bash sidecars; `handover.sh` emits what it can't run
+> and more:
+- **tamper-proof security:** agents can't secretly change their rules; `/test-permissions` probes live gate
+- **drift detection:** installed settings are diffed against your templates; `/test-settings` flags drift
+- **machine-checked conventions:** docs skills are markdown templates; `/check-*` skills verify conformance
+- **cross-session memory:** configure sessions to start with README, AGENTS, and logs; `sessionstart` seeds context
+- **centralized configuration:** plugin edits propagate everywhere; `/AGENTS.md` can be custom or symlinked
+- **chat-native triggers:** slash commands are project agnostic; bash sidecars resolve at plugin root
+- **easy opt-out:** delete symlinks, uninstall repo and revert claude settings; `/uninstall` 
 > *requires: claude code, bash, curl, git, jq; [MIT License](LICENSE)*
 
 &nbsp;
@@ -19,7 +20,8 @@
 TABLE OF CONTENTS
 ├─ Example ─────── injected · masked · denied
 ├─ Installation ── basic · configured · advanced · managed
-├─ Workflows ───── git · hooks · templates · verifying
+├─ Hooks ───────── sessions · tools · tasks · stop
+├─ Skills ──────── git · docs · checks · tests
 ├─ Conventions ─── files · wayfinders · modules · comments · code
 ├─ Conversations ─ responses · verification · errors · modes
 └─ Settings ────── sandbox · scopes · keys · rules · clients · audits · diagnostics
@@ -28,10 +30,10 @@ TABLE OF CONTENTS
 &nbsp;
 
 ## Example: Masked Credentials
-> run /sandbox and @settingsaudit to test your credentials
+> run /sandbox and /test-settings to test your credentials
 
 ```console
-# ── INJECTED ────────────────────────────────────────────────────────────────────────────────────
+# ── INJECTED (SUCCESS) ──────────────────────────────────────────────────────────────────────────
 # unauthenticated    $ curl -o /dev/null -w "%{http_code}" https://api.github.com/user
                      401
 # authenticated      $ curl -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/user
@@ -73,7 +75,7 @@ TABLE OF CONTENTS
 # harness read tool  Read(~/.operator/.env)
                      denied by your permission settings
 ```
-> caveat: go-based clis (`gh`, `terraform`, `kubectl`) cannot reach injectHosts domains on macos
+> known issues: go-based clis (`gh`, `terraform`, `kubectl`) cannot reach injectHosts domains on macos
 > [(#26466)](https://github.com/anthropics/claude-code/issues/26466);
 > the sandbox ca never loads and there is no supported fix since `allowMachLookup` is not passed through
 > [(#82793)](https://github.com/anthropics/claude-code/issues/82793);
@@ -85,7 +87,7 @@ TABLE OF CONTENTS
 > [(#81157)](https://github.com/anthropics/claude-code/issues/81157).
 
 ## Installation (Mac)
-> note: templates come preconfigured and need to be extended to your specific services
+> see `AGENTS/settings/` for preconfigured templates (need to be extended to your specific services)
 
 ### 1. basic sandbox (automations and workflows, ~5 mins)
 - [ ] clone: `git clone https://github.com/MaisonDeVolonte/operator.git ~/.../operator`
@@ -93,13 +95,13 @@ TABLE OF CONTENTS
 - [ ] symlink workflows: `ln -s ~/.../operator/AGENTS AGENTS`
 - [ ] local settings: `cp AGENTS/settings/settings.local.json .claude/settings.local.json`
 - [ ] gitignore: `AGENTS.md`, `AGENTS`, and `.claude/settings.local.json`
-- [ ] restart: editor, start new claude session, run `/sandbox` and `@settingsaudit`
+- [ ] restart: editor, start new claude session, run `/sandbox` and `/test-settings`
 - [ ] confirm `AGENTS.md` loads into context
 
 ### 2. configured sandbox (filesystem lockdown, ~5 mins)
 - [ ] project settings: `cp AGENTS/settings/settings.project.json .claude/settings.json`
 - [ ] user settings: `cp AGENTS/settings/settings.user.json ~/.claude/settings.json`
-- [ ] restart: editor, start new claude session, run `/sandbox` and `@settingsaudit`
+- [ ] restart: editor, start new claude session, run `/sandbox` and `/test-settings`
 
 ### 3. advanced sandbox (masked credentials, ~20 mins)
 - [ ] make: secure directory for your keys `mkdir -p ~/.operator && chmod 700 ~/.operator`
@@ -110,13 +112,30 @@ TABLE OF CONTENTS
 - [ ] add: mask + injectHosts rules for each pat in `~/.operator/.env` to `sandbox.credentials.envVars`
 - [ ] add: domain rules for each injectHosts host to `sandbox.network.allowedDomains`
 - [ ] append: `[ -r ~/.operator/.env ] && source ~/.operator/.env` to `~/.zshrc`
-- [ ] restart: editor, start new claude session, run `/sandbox` and `@settingsaudit`
+- [ ] restart: editor, start new claude session, run `/sandbox` and `/test-settings`
 - [ ] confirm: `echo $GH_TOKEN` returns a sentinel (NOT raw token) when claude runs it
 
 ### 4. managed sandbox (machine lockdown, requires sudo, ~5 mins)
 - [ ] make: claude code directory `sudo mkdir -p '/Library/Application Support/ClaudeCode'`
 - [ ] managed settings: `sudo cp AGENTS/settings/settings.managed.json "/Library/Application Support/ClaudeCode/managed-settings.json"`
-- [ ] run: `@settingsaudit`
+- [ ] run: `/test-settings`
+
+## Hooks
+> see `AGENTS/hooks/`
+
+### Sessions
+- [sessionstart](AGENTS/hooks/sessionstart.sh): injects the README and the two most recent log files into context
+
+### Tools
+- [pretooluse](AGENTS/hooks/pretooluse.sh): failover for the committed deny list, reading the whole command string
+- [posttooluse](AGENTS/hooks/posttooluse.sh): lints, then reports comment and wayfinder findings, never blocking
+
+### Tasks
+- [taskcreated](AGENTS/hooks/taskcreated.sh): nudges a new thread when a task is unrelated to the last one, advisory only
+- [taskcompleted](AGENTS/hooks/taskcompleted.sh): blocks the turn to make the agent note the day's log
+
+### Stop
+- [stop](AGENTS/hooks/stop.sh): every hour, saves notes and prompts, then synthesizes the day's log
 
 ## Workflows
 - DEFAULT posture is READ-ONLY e.g. chat, brainstorm, evaluate, and plan
@@ -126,25 +145,17 @@ TABLE OF CONTENTS
 > each pairs with a matching `.sh` sidecar that measures, then hands the commands back
 > two triggers run part of their own block against narrow allows: `/git-continue`'s sync, which is
 > recoverable throughout, and `/git-fresh`'s backup stash, which is what makes its reset survivable
-- [/git-audit](AGENTS/skills/git-audit/SKILL.md): diagnostics, triage, report, summary, tasks (saved to file)
-- [/git-backup](AGENTS/skills/git-backup/SKILL.md): snapshots history and tree, verifies it, hands over the restore
-- [/git-continue](AGENTS/skills/git-continue/SKILL.md): measures the trunk delta, then runs the sync it planned
-- [/git-deliver](AGENTS/skills/git-deliver/SKILL.md): buckets changes atomically, gates the plan, hands over every block
-- [/git-empty](AGENTS/skills/git-empty/SKILL.md): prunes tracking refs, hands over the trunk sync and branch deletes
-- [/git-fresh](AGENTS/skills/git-fresh/SKILL.md): prices a hard reset, takes the backup, hands over the reset
-- [/git-gud](AGENTS/skills/git-gud/SKILL.md): query branch delta, merge remote main into it, and run fresh CI
-- [/git-honest](AGENTS/skills/git-honest/SKILL.md): brutally honest code review, progress report (saved to file)
-- [/git-insights](AGENTS/skills/git-insights/SKILL.md): points at what to work on next, from scans, docs and logs (saved to file)
-- [/git-jump](AGENTS/skills/git-jump/SKILL.md): verifies release preconditions, hands over bump/push/promote
+- [/git-audit](AGENTS/skills/git-audit/SKILL.md): READ-ONLY; diagnostics, triage, report, summary, tasks (saved to file)
+- [/git-backup](AGENTS/skills/git-backup/SKILL.md): SAFE; snapshots history and tree, verifies it, hands over the restore
+- [/git-continue](AGENTS/skills/git-continue/SKILL.md): SAFE; measures the trunk delta, then runs the sync it planned
+- [/git-deliver](AGENTS/skills/git-deliver/SKILL.md): GATED; buckets changes atomically, gates the plan, hands over every block
+- [/git-empty](AGENTS/skills/git-empty/SKILL.md): GATED; prunes tracking refs, hands over the trunk sync and branch deletes
+- [/git-fresh](AGENTS/skills/git-fresh/SKILL.md): DESTRUCTIVE; prices a hard reset, takes the backup, hands over the reset
+- [/git-gud](AGENTS/skills/git-gud/SKILL.md): SAFE; query branch delta, merge remote main into it, and run fresh CI
+- [/git-honest](AGENTS/skills/git-honest/SKILL.md): READ-ONLY; brutally honest code review, progress report (saved to file)
+- [/git-insights](AGENTS/skills/git-insights/SKILL.md): READ-ONLY; points at what to work on next, from scans, docs and logs (saved to file)
+- [/git-jump](AGENTS/skills/git-jump/SKILL.md): RELEASE; verifies release preconditions, hands over bump/push/promote
 - [handover.sh](AGENTS/shared/handover.sh): shared preflights, queries, and the telemetry/handover blocks
-
-### Hooks (see `AGENTS/hooks/`)
-- [sessionstart](AGENTS/hooks/sessionstart.sh): injects the README and the two most recent log files into context
-- [pretooluse](AGENTS/hooks/pretooluse.sh): failover for the committed deny list, reading the whole command string
-- [posttooluse](AGENTS/hooks/posttooluse.sh): lints, then reports comment and wayfinder findings, never blocking
-- [taskcreated](AGENTS/hooks/taskcreated.sh): nudges a new thread when a task is unrelated to the last one, advisory only
-- [taskcompleted](AGENTS/hooks/taskcompleted.sh): blocks the turn to make the agent note the day's log
-- [stop](AGENTS/hooks/stop.sh): every hour, saves notes and prompts, then synthesizes the day's log
 
 ### Specs (see `AGENTS/skills/`)
 > each pairs with a matching `.sh` sidecar that verifies conformance; specs auto-load, never gated
@@ -463,7 +474,7 @@ managed → cli → local → project → user (scalars override, arrays merge)
 ### Rules
 > rules are string matches, not parsers; these habits keep a rule on its intended target
 
-- `test` new rules at cli scope first, promote once proven (rerun `@settingsaudit`)
+- `test` new rules at cli scope first, promote once proven (rerun `/test-settings`)
 - `verdict` hook deny → deny → ask → hook allow → allow (specificity never reorders precedence)
 - `broad allow` with narrow denies beat enumerating safe subcommands
 - `any scope` adds a deny, none removes another's
