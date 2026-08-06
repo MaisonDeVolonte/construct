@@ -68,8 +68,8 @@ git command two
 - that is the whole reason for the rule: a sidecar running them was a silent bypass of both gates
 - where a trigger genuinely needs to mutate, the floor opens a narrow allow and the TRIGGER runs it,
   which keeps the command in front of the gate; the sidecar emits it into a `trigger` block instead
-- a step earns that block only by ADDING safety: `@gitcontinue`'s sync is recoverable at every
-  step, and `@gitfresh`'s backup is the one line that makes the rest of its handover survivable
+- a step earns that block only by ADDING safety: `@git-continue`'s sync is recoverable at every
+  step, and `@git-fresh`'s backup is the one line that makes the rest of its handover survivable
 - a step that SPENDS safety never earns it, however convenient — clean, reset and force-switch
   stay in the handover no matter how many times the same paste gets asked for
 - `AGENTS/shared/handover.sh` carries the shared preflights, queries, and block emitters

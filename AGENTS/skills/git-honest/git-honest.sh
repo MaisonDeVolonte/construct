@@ -1,11 +1,11 @@
 #!/bin/bash
 # =============================================================
-# @file githonest.sh - adversarial doc-vs-reality audit sidecar
+# @file git-honest.sh - adversarial doc-vs-reality audit sidecar
 # =============================================================
 # @description
-# - sidecar for `@githonest` — gathers telemetry for the honest scorecard
+# - sidecar for `@git-honest` — gathers telemetry for the honest scorecard
 # - reports today's honest path and scorecard count, and never creates the file itself
-# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/githonest/SKILL.md, AGENTS/templates/honest.md, docs/honest/
+# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/git-honest/SKILL.md, AGENTS/templates/honest.md, docs/honest/
 
 set -euo pipefail
 
@@ -13,7 +13,7 @@ set -euo pipefail
 if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   echo "fatal: not a git repository" >&2; exit 1; fi
 
-echo "=== @githonest telemetry ==="
+echo "=== @git-honest telemetry ==="
 
 # one file per day, many scorecards per file — reported never created, so a run that produces
 # no scorecard leaves nothing; paths anchor to the repo root, not the caller's dir

@@ -1,5 +1,5 @@
 ---
-name: githonest
+name: git-honest
 description: Adversarial read-only code review producing a graded scorecard saved to file.
 disable-model-invocation: true
 ---
@@ -9,18 +9,18 @@ disable-model-invocation: true
  * @file SKILL.md - adversarial doc-vs-reality audit trigger
  * =============================================================
  * @description
- * - ran only on explicit `@githonest` command; read-only, never mutates tracked files
- * - runs `AGENTS/skills/githonest/githonest.sh`, then reads `README.md`/`AGENTS.md` to learn the
+ * - ran only on explicit `@git-honest` command; read-only, never mutates tracked files
+ * - runs `AGENTS/skills/git-honest/git-honest.sh`, then reads `README.md`/`AGENTS.md` to learn the
  *   project's documented claims
  * - scores effort-vs-output, claim-vs-reality, test coverage, and risk hygiene against
  *   the shell telemetry
  * - outputs a harsh A-F scorecard with a one-sentence verdict; never flatters the user
  * - appends that scorecard to `docs/honest/YYYY-MM-DD.md`, one file per day, many per file
- * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/githonest/githonest.sh, README.md, AGENTS/templates/honest.md, docs/honest/
+ * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/git-honest/git-honest.sh, README.md, AGENTS/templates/honest.md, docs/honest/
  */
 ```
 
-**@githonest:** Run ONLY on explicit `@githonest` command
+**@git-honest:** Run ONLY on explicit `@git-honest` command
 - runs an adversarial, strictly read-only audit of the codebase
 - purpose: to ruthlessly compare the project's documented claims against its technical reality
 - never flatters the user; punishes hand-wavy conventions and heavily penalizes "green ci" without actual test coverage
@@ -28,7 +28,7 @@ disable-model-invocation: true
 ## telemetry
 
 ```!
-"${CLAUDE_PLUGIN_ROOT}"/skills/githonest/githonest.sh
+"${CLAUDE_PLUGIN_ROOT}"/skills/git-honest/git-honest.sh
 echo "sidecar exit: $?"
 ```
 
@@ -50,9 +50,9 @@ echo "sidecar exit: $?"
   - **risk hygiene:** are `.env` files tracked? is `.gitignore` sane? are generated files accidentally versioned?
   - **maintenance traps:** look for excessive `@mirror` usage, documented "exceptions" that mask bad design, and dead scaffolding/TODOs.
 
-4. generate the `@githonest` scorecard:
+4. generate the `@git-honest` scorecard:
   ```markdown
-  # 🩸 @githonest scorecard
+  # 🩸 @git-honest scorecard
   
   ## 1. the reality check (claim vs reality)
   - [claim from docs]: [harsh reality from telemetry]

@@ -59,8 +59,8 @@
       "Bash(git reflog)", "Bash(git reflog show*)",
       "Bash(git fetch*)", "Bash(git version*)",
 
-      "Bash(git stash push -u -m 'auto-stash: @gitcontinue')", "Bash(git stash pop)",
-      "Bash(git stash push -u -m 'gitfresh-*')",
+      "Bash(git stash push -u -m 'auto-stash: @git-continue')", "Bash(git stash pop)",
+      "Bash(git stash push -u -m 'git-fresh-*')",
       "Bash(git merge --ff-only origin/main)", "Bash(git merge --ff-only origin/master)",
       "Bash(git switch main)", "Bash(git switch master)"
     ],

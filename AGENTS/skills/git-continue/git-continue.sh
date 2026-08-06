@@ -1,14 +1,14 @@
 #!/bin/bash
 # =======================================================
-# @file gitcontinue.sh - trunk sync measure and hand over
+# @file git-continue.sh - trunk sync measure and hand over
 # =======================================================
 # @description
-# - sidecar for `@gitcontinue` — measures the trunk delta, then emits the sync commands in order
+# - sidecar for `@git-continue` — measures the trunk delta, then emits the sync commands in order
 # - read-only: it plans the sequence and the trigger runs it, so the sidecar itself stays measuring
 # - fetch is the one write it makes, and it only moves remote-tracking refs
 # - measures ahead/behind after the fetch, so the handover names the real work
 # - the earlier version ran the sequence itself and read a behind trunk as diverged
-# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/gitcontinue/SKILL.md, AGENTS/shared/handover.sh
+# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/git-continue/SKILL.md, AGENTS/shared/handover.sh
 
 set -euo pipefail
 
@@ -53,7 +53,7 @@ if [ "$AHEAD" -gt 0 ]; then SYNC_STATE="diverged"
 elif [ "$BEHIND" -gt 0 ]; then SYNC_STATE="behind, fast-forwards cleanly"
 else SYNC_STATE="up to date"; fi
 
-telemetry_open gitcontinue
+telemetry_open git-continue
 telemetry_line "default branch" "$DEFAULT_BRANCH"
 telemetry_line "current branch" "$CURRENT_BRANCH"
 telemetry_line "uncommitted files" "$CHANGED_FILES"
@@ -66,7 +66,7 @@ telemetry_line "sync state" "$SYNC_STATE"
 NEEDS_MOVE=0
 if [ "$CURRENT_BRANCH" != "$DEFAULT_BRANCH" ] || [ "$BEHIND" -gt 0 ]; then NEEDS_MOVE=1; fi
 
-handover_open gitcontinue
+handover_open git-continue
 if [ "$AHEAD" -gt 0 ]; then
   handover_note "$DEFAULT_BRANCH has $AHEAD local commit(s) origin does not — resolve before syncing"
   handover_note "inspect them first: git log --oneline origin/$DEFAULT_BRANCH..$DEFAULT_BRANCH"
@@ -78,7 +78,7 @@ elif [ "$NEEDS_MOVE" -eq 0 ]; then
 else
   handover_note "the trigger runs these in order, stopping at the first non-zero exit"
   if [ "$DIRTY" -eq 1 ]; then
-    handover_cmd "git stash push -u -m 'auto-stash: @gitcontinue'"
+    handover_cmd "git stash push -u -m 'auto-stash: @git-continue'"
   fi
   if [ "$CURRENT_BRANCH" != "$DEFAULT_BRANCH" ]; then
     handover_cmd "git switch $DEFAULT_BRANCH"

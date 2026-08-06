@@ -124,18 +124,18 @@ TABLE OF CONTENTS
 
 ### Git (see `AGENTS/skills/`)
 > each pairs with a matching `.sh` sidecar that measures, then hands the commands back
-> two triggers run part of their own block against narrow allows: `/gitcontinue`'s sync, which is
-> recoverable throughout, and `/gitfresh`'s backup stash, which is what makes its reset survivable
-- [/gitaudit](AGENTS/skills/gitaudit/SKILL.md): diagnostics, triage, report, summary, tasks (saved to file)
-- [/gitbackup](AGENTS/skills/gitbackup/SKILL.md): snapshots history and tree, verifies it, hands over the restore
-- [/gitcontinue](AGENTS/skills/gitcontinue/SKILL.md): measures the trunk delta, then runs the sync it planned
-- [/gitdeliver](AGENTS/skills/gitdeliver/SKILL.md): buckets changes atomically, gates the plan, hands over every block
-- [/gitempty](AGENTS/skills/gitempty/SKILL.md): prunes tracking refs, hands over the trunk sync and branch deletes
-- [/gitfresh](AGENTS/skills/gitfresh/SKILL.md): prices a hard reset, takes the backup, hands over the reset
-- [/gitgud](AGENTS/skills/gitgud/SKILL.md): query branch delta, merge remote main into it, and run fresh CI
-- [/githonest](AGENTS/skills/githonest/SKILL.md): brutally honest code review, progress report (saved to file)
-- [/gitinsights](AGENTS/skills/gitinsights/SKILL.md): points at what to work on next, from scans, docs and logs (saved to file)
-- [/gitjump](AGENTS/skills/gitjump/SKILL.md): verifies release preconditions, hands over bump/push/promote
+> two triggers run part of their own block against narrow allows: `/git-continue`'s sync, which is
+> recoverable throughout, and `/git-fresh`'s backup stash, which is what makes its reset survivable
+- [/git-audit](AGENTS/skills/git-audit/SKILL.md): diagnostics, triage, report, summary, tasks (saved to file)
+- [/git-backup](AGENTS/skills/git-backup/SKILL.md): snapshots history and tree, verifies it, hands over the restore
+- [/git-continue](AGENTS/skills/git-continue/SKILL.md): measures the trunk delta, then runs the sync it planned
+- [/git-deliver](AGENTS/skills/git-deliver/SKILL.md): buckets changes atomically, gates the plan, hands over every block
+- [/git-empty](AGENTS/skills/git-empty/SKILL.md): prunes tracking refs, hands over the trunk sync and branch deletes
+- [/git-fresh](AGENTS/skills/git-fresh/SKILL.md): prices a hard reset, takes the backup, hands over the reset
+- [/git-gud](AGENTS/skills/git-gud/SKILL.md): query branch delta, merge remote main into it, and run fresh CI
+- [/git-honest](AGENTS/skills/git-honest/SKILL.md): brutally honest code review, progress report (saved to file)
+- [/git-insights](AGENTS/skills/git-insights/SKILL.md): points at what to work on next, from scans, docs and logs (saved to file)
+- [/git-jump](AGENTS/skills/git-jump/SKILL.md): verifies release preconditions, hands over bump/push/promote
 - [handover.sh](AGENTS/shared/handover.sh): shared preflights, queries, and the telemetry/handover blocks
 
 ### Hooks (see `AGENTS/hooks/`)
@@ -148,12 +148,12 @@ TABLE OF CONTENTS
 
 ### Templates (see `AGENTS/templates/`)
 > each pairs with a matching `.sh` sidecar that verifies conformance
-- [audits](AGENTS/templates/audits.md): `@gitaudit` appends findings and resolutions
+- [audits](AGENTS/templates/audits.md): `@git-audit` appends findings and resolutions
 - [comments](AGENTS/templates/comments.md): inline comment shape in every source file
 - [git](AGENTS/templates/git.md): `@git*` triggers and sidecars follow this shape
 - [graphs](AGENTS/templates/graphs.md): `@graphspec` writes graph spec prompt files
-- [honest](AGENTS/templates/honest.md): `@githonest` adversarial graded scorecards
-- [insights](AGENTS/templates/insights.md): `@gitinsights` searches repo for opportunities
+- [honest](AGENTS/templates/honest.md): `@git-honest` adversarial graded scorecards
+- [insights](AGENTS/templates/insights.md): `@git-insights` searches repo for opportunities
 - [logs](AGENTS/templates/logs.md): `@logthread`, `@lognote` and `@logsynth` maintain agent logs
 - [plans](AGENTS/templates/plans.md): `@graphspec --execute` detailed fanout plan generation
 - [study](AGENTS/templates/study.md): `@studyguide` writes detailed retrospective with graded quiz

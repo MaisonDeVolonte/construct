@@ -1,12 +1,12 @@
 #!/bin/bash
 # =====================================================
-# @file gitaudit.sh - read-only git diagnostics sidecar
+# @file git-audit.sh - read-only git diagnostics sidecar
 # =====================================================
 # @description
-# - sidecar for `@gitaudit` — probes repo/branch state for telemetry
+# - sidecar for `@git-audit` — probes repo/branch state for telemetry
 # - reports today's audit path and audit count, and never creates the file itself
 # - team probes ride curl + Bearer against the github rest api, the one path the sandbox serves
-# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/gitaudit/SKILL.md, AGENTS/templates/audits.md, docs/audits/, README.md
+# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/git-audit/SKILL.md, AGENTS/templates/audits.md, docs/audits/, README.md
 
 # probes: echo "key: $(git some command 2>/dev/null || echo n/a)"
 
@@ -27,7 +27,7 @@ CURRENT_BRANCH=$(git_current_branch)
 PROTECTED="$DEFAULT_BRANCH|production"
 git fetch --prune origin >/dev/null 2>&1 || true
 
-# audit: one file per day, many audits per file — reported never created, since @gitempty runs
+# audit: one file per day, many audits per file — reported never created, since @git-empty runs
 # this sidecar for branch classification alone; paths anchor to the repo root, not the caller's dir
 echo "--- audit ---"
 ROOT=$(git rev-parse --show-toplevel)
@@ -113,7 +113,7 @@ if [ -n "$GH_LOGIN" ]; then
     | jq '[.[] | select(.pull_request == null)] | length' 2>/dev/null || echo n/a)"
 else echo "github: api unavailable (team probes skipped)"; fi
 
-# is_absorbed now lives in handover.sh, since @gitempty needs the same deletion gate
+# is_absorbed now lives in handover.sh, since @git-empty needs the same deletion gate
 
 # branches: last commit, ahead/behind, upstream tracking, reachable, remote, merged, absorbed
 echo "--- branches ---"

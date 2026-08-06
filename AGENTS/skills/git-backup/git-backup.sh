@@ -1,17 +1,17 @@
 #!/bin/bash
 # ==================================================
-# @file gitbackup.sh - full repo snapshot and restore
+# @file git-backup.sh - full repo snapshot and restore
 # ==================================================
 # @description
-# - sidecar for `@gitbackup` — takes the snapshot itself, then hands the restore over
+# - sidecar for `@git-backup` — takes the snapshot itself, then hands the restore over
 # - the only sidecar that mutates on its own, since a copy adds safety and spends none
 # - history and working tree are captured separately: a `.git` copy alone loses uncommitted work
 # - the tree copy is tracked plus untracked-not-ignored, the exact set `clean -fd` can destroy
-# - ignored files are skipped on purpose, the same reason `@gitfresh` stashes with -u not -a
+# - ignored files are skipped on purpose, the same reason `@git-fresh` stashes with -u not -a
 # - the destination is fixed and takes no argument, so this never becomes a copy-anywhere tool
 # - `cp` here is invisible to the deny list and the hook, since script lines are not tool calls
 # - that gap is the design: a reviewed sidecar holds a capability the loose agent never gets
-# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/gitbackup/SKILL.md, AGENTS/shared/handover.sh
+# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/git-backup/SKILL.md, AGENTS/shared/handover.sh
 
 set -euo pipefail
 
@@ -23,7 +23,7 @@ if [ ! -f "$SHARED/handover.sh" ]; then
 . "$SHARED/handover.sh"
 
 if [ "$#" -gt 0 ]; then
-  echo "fatal: gitbackup takes no arguments; the destination is fixed at tmp/backups/" >&2
+  echo "fatal: git-backup takes no arguments; the destination is fixed at tmp/backups/" >&2
   exit 1
 fi
 
@@ -89,7 +89,7 @@ BACKUP_COUNT=$(find tmp/backups -mindepth 1 -maxdepth 1 -type d | grep -c . || t
 # ==============
 # written into the backup so it explains itself months later, without this sidecar to read it
 {
-  printf 'gitbackup %s\n' "$STAMP"
+  printf 'git-backup %s\n' "$STAMP"
   printf 'head: %s\n' "$HEAD_SHA"
   printf 'branch: %s\n' "${CURRENT_BRANCH:-detached}"
   printf 'tracked files: %s\n' "$TRACKED_COUNT"
@@ -102,7 +102,7 @@ BACKUP_COUNT=$(find tmp/backups -mindepth 1 -maxdepth 1 -type d | grep -c . || t
   printf 'restore one file: cp %s/worktree/<path> <path>\n' "$DEST"
 } > "$DEST/MANIFEST.txt"
 
-telemetry_open gitbackup
+telemetry_open git-backup
 telemetry_line "backup location" "$DEST"
 telemetry_line "head" "$HEAD_SHA"
 telemetry_line "branch" "${CURRENT_BRANCH:-detached}"
@@ -118,7 +118,7 @@ telemetry_line "verified" "object counts match at $SOURCE_OBJECTS"
 
 # the restore is handed over rather than run: putting files back overwrites whatever sits there
 # now, which is the one thing a backup tool must never decide on the user's behalf
-handover_open gitbackup
+handover_open git-backup
 handover_note "the snapshot is already taken; nothing below runs unless you paste it"
 handover_note "restore the full history into a fresh directory, then look before you swap:"
 handover_cmd "git clone $DEST/git restored-$STAMP"

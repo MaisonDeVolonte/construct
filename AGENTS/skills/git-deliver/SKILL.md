@@ -1,5 +1,5 @@
 ---
-name: gitdeliver
+name: git-deliver
 description: Bucket uncommitted work into atomic PRs, gate the plan, then hand over every block.
 argument-hint: [--first]
 disallowed-tools: Write Edit
@@ -11,7 +11,7 @@ disable-model-invocation: true
  * @file SKILL.md - gated atomic delivery trigger
  * ===================================================
  * @description
- * - ran only on explicit `@gitdeliver` command
+ * - ran only on explicit `@git-deliver` command
  * - drains uncommitted work in atomic `type(scope)` buckets:
  *   branch → commit → push → pr → auto-merge on green → back to trunk
  * - plans EVERY bucket first and gates on approval, then emits every block in one pass
@@ -20,11 +20,11 @@ disable-model-invocation: true
  * - gated: never delivers; every block is the user's to paste, in the order given
  * - the preflight is read-only too, so even floating changes onto trunk is handed over
  * - push authenticates only outside the sandbox, so the whole bucket is the user's to run
- * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/gitdeliver/gitdeliver.sh, AGENTS/shared/handover.sh
+ * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/git-deliver/git-deliver.sh, AGENTS/shared/handover.sh
  */
 ```
 
-**@gitdeliver:** Run ONLY on explicit `@gitdeliver` command
+**@git-deliver:** Run ONLY on explicit `@git-deliver` command
 - floats uncommitted changes onto the trunk, then drains them in atomic buckets
 - each atomic bucket: branch → commit → push → PR → auto-merge on green, then back to the trunk
 - the reasoning is the automation: bucketing, ordering, and message drafting are what it does for you
@@ -40,7 +40,7 @@ disable-model-invocation: true
 ## telemetry
 
 ```!
-"${CLAUDE_PLUGIN_ROOT}"/skills/gitdeliver/gitdeliver.sh
+"${CLAUDE_PLUGIN_ROOT}"/skills/git-deliver/git-deliver.sh
 echo "sidecar exit: $?"
 ```
 
@@ -130,7 +130,7 @@ git switch -c "$ATOMIC_BRANCH" "$DEFAULT_BRANCH"
 - buckets marked INDEPENDENT may be pasted without waiting; say which, and never guess
 - close with: paste them in order, and tell me if any CI goes red
 - a red bucket invalidates the rest of the plan, since it was computed against a trunk that never
-  landed — say so, and re-run `@gitdeliver` rather than pasting on
+  landed — say so, and re-run `@git-deliver` rather than pasting on
 - a commit message naming a destructive command trips `pretooluse.sh`, so reword rather than quote
 
 6. check conditions before continuing:

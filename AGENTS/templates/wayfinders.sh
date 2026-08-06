@@ -10,7 +10,7 @@
 # - a broken `@see` only warns here, and nothing gates references now, so the warn is all there is
 # - defaults to every tracked eligible file; pass files or a directory to scope it
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
-# @see AGENTS.md, AGENTS/settings/secrets.sh, AGENTS/templates/wayfinders.md, AGENTS/skills/gitinsights/gitinsights.sh
+# @see AGENTS.md, AGENTS/settings/secrets.sh, AGENTS/templates/wayfinders.md, AGENTS/skills/git-insights/git-insights.sh
 
 set -euo pipefail
 
@@ -106,7 +106,7 @@ err()  { printf 'ERROR|%s|%s|%s|%s\n' "$1" "$2" "$3" "$4" >> "$FINDINGS"; }
 warn() { printf 'WARN|%s|%s|%s|%s\n' "$1" "$2" "$3" "$4" >> "$FINDINGS"; }
 
 # a reference that only resolves once this repo is symlinked into a host project; the same two
-# lists gitinsights.sh keeps, since both tools answer "is this path missing or just elsewhere"
+# lists git-insights.sh keeps, since both tools answer "is this path missing or just elsewhere"
 is_host_only() {
   case "$1" in
     AGENTS.md) return 0;;

@@ -1,14 +1,14 @@
 #!/bin/bash
 # =================================================
-# @file gitjump.sh - release preflight and handover
+# @file git-jump.sh - release preflight and handover
 # =================================================
 # @description
-# - sidecar for `@gitjump` — verifies every release precondition, then hands the sequence over
+# - sidecar for `@git-jump` — verifies every release precondition, then hands the sequence over
 # - read-only: the bump, both pushes and the promotion merge are all denied as tool calls
 # - computes the next version from package.json rather than running `npm version` to learn it
 # - the release api call ships in the handover too, since the tag must reach origin first
 # - auth preflights through curl + bearer since gh cannot verify tls in the sandbox
-# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/gitjump/SKILL.md, AGENTS/shared/handover.sh
+# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/git-jump/SKILL.md, AGENTS/shared/handover.sh
 
 set -euo pipefail
 
@@ -56,7 +56,7 @@ if [ -z "$CURRENT_BRANCH" ]; then
 if [ "$CURRENT_BRANCH" != "$DEFAULT_BRANCH" ]; then
   echo "fatal: must be on default branch ($DEFAULT_BRANCH) to release" >&2; exit 1; fi
 if git_is_dirty; then
-  echo "fatal: working tree has uncommitted changes; run @gitdeliver first" >&2; exit 1; fi
+  echo "fatal: working tree has uncommitted changes; run @git-deliver first" >&2; exit 1; fi
 
 if ! git show-ref --verify --quiet "refs/heads/$PRODUCTION_BRANCH" \
   && ! git ls-remote --exit-code --heads origin "$PRODUCTION_BRANCH" >/dev/null 2>&1; then
@@ -86,7 +86,7 @@ else NEXT_VERSION="v$MAJOR.$((MINOR + 1)).0"; fi
 
 PROMOTE_COUNT=$(git rev-list --count "origin/$PRODUCTION_BRANCH..origin/$DEFAULT_BRANCH" 2>/dev/null || echo 0)
 
-telemetry_open gitjump
+telemetry_open git-jump
 telemetry_line "repo" "$REPO_SLUG"
 telemetry_line "github auth" "ok (http $AUTH_CODE)"
 telemetry_line "default branch" "$DEFAULT_BRANCH"
@@ -96,7 +96,7 @@ telemetry_line "current version" "$CURRENT_VERSION"
 telemetry_line "next version" "$NEXT_VERSION"
 telemetry_line "commits promoting to production" "$PROMOTE_COUNT"
 
-handover_open gitjump
+handover_open git-jump
 handover_note "run these in order; the bump, both pushes and the merge are denied as tool calls"
 handover_cmd "npm version $TYPE"
 handover_cmd "git push origin $DEFAULT_BRANCH --follow-tags"

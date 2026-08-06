@@ -1,5 +1,5 @@
 ---
-name: gitempty
+name: git-empty
 description: Prune dead tracking refs and hand over the trunk sync and every branch delete.
 disallowed-tools: Write Edit
 disable-model-invocation: true
@@ -10,17 +10,17 @@ disable-model-invocation: true
  * @file SKILL.md - gated post-merge cleanup trigger
  * ====================================================
  * @description
- * - ran only on explicit `@gitempty` command; typically post-merge, but safe anytime
- * - READ-ONLY: `AGENTS/skills/gitempty/gitempty.sh` prunes tracking refs and measures, deleting nothing
- * - runs `AGENTS/skills/gitaudit/gitaudit.sh` to classify branches (local/remote/ghost/zombie) for deletion
+ * - ran only on explicit `@git-empty` command; typically post-merge, but safe anytime
+ * - READ-ONLY: `AGENTS/skills/git-empty/git-empty.sh` prunes tracking refs and measures, deleting nothing
+ * - runs `AGENTS/skills/git-audit/git-audit.sh` to classify branches (local/remote/ghost/zombie) for deletion
  * - the sidecar classifies each spent branch itself and emits `-d` or `-D` to match
  * - a gone branch that is neither merged nor absorbed is kept, never offered for deletion
  * - every branch delete is denied, so the whole block stays the user's to run in order
- * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/gitempty/gitempty.sh, AGENTS/skills/gitaudit/gitaudit.sh
+ * @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/git-empty/git-empty.sh, AGENTS/skills/git-audit/git-audit.sh
  */
 ```
 
-**@gitempty:** Run ONLY on explicit `@gitempty` command
+**@git-empty:** Run ONLY on explicit `@git-empty` command
 - typically ran post-merge but safe to run anytime
 - prunes dead tracking refs, then reports the trunk delta and every branch that is spent
 - preserves unmerged branches and identifies the merged ones eligible for deletion
@@ -29,17 +29,17 @@ disable-model-invocation: true
 ## telemetry
 
 ```!
-"${CLAUDE_PLUGIN_ROOT}"/skills/gitempty/gitempty.sh
+"${CLAUDE_PLUGIN_ROOT}"/skills/git-empty/git-empty.sh
 echo "sidecar exit: $?"
 ```
 
 1. read the block above; it already ran, so there is no command to issue
   - fail (`sidecar exit` > 0) → abort and report: "<raw terminal error>"
-  - success (`sidecar exit` = 0) → report "@gitempty telemetry" and continue to step 2
+  - success (`sidecar exit` = 0) → report "@git-empty telemetry" and continue to step 2
 
 2. run the native shell command exactly as specified
   ```bash
-  AGENTS/skills/gitaudit/gitaudit.sh
+  AGENTS/skills/git-audit/git-audit.sh
   ```
   - fail (`sidecar exit` > 0) → abort and report: "<raw terminal error>"
   - success (`sidecar exit` = 0): merge its classification into the handover, then STOP

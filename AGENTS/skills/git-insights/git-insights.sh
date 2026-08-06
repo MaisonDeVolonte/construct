@@ -1,14 +1,14 @@
 #!/bin/bash
 # ===============================================
-# @file gitinsights.sh - opportunity-scan sidecar
+# @file git-insights.sh - opportunity-scan sidecar
 # ===============================================
 # @description
-# - sidecar for `@gitinsights` — deterministic checks for broken refs and code markers
+# - sidecar for `@git-insights` — deterministic checks for broken refs and code markers
 # - one of three streams the trigger merges; reconciliation and the logs carry the judgement
 # - report-only by contract: it exits 0 on findings, since a lead is not a failure
 # - reports today's insights path and report count, and never creates the file itself
 # - `--keep` preserves the tmp/ scratch file, which a failed run preserves anyway
-# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/gitinsights/SKILL.md, AGENTS/templates/insights.md, docs/insights/
+# @see AGENTS.md, AGENTS/templates/git.md, AGENTS/skills/git-insights/SKILL.md, AGENTS/templates/insights.md, docs/insights/
 
 set -euo pipefail
 
@@ -88,7 +88,7 @@ check_mirror_pointers() {
   while IFS= read -r hit; do
     [ -z "$hit" ] && continue
     file=${hit%%:*}
-    target=$(printf '%s' "$hit" | sed -n 's/.*@mirror[[:space:]]\{1,\}\([^[:space:]]\{1,\}\).*/\1/p')
+    target=$(printf '%s' "$hit" | sed -n 's/.*@mirror[[:space:]]\{1,\}\([^[:space:]]\{1,\}\).*//git-audit1/p')
     [ -z "$target" ] && continue
     case "$target" in */*|*.*) ;; *) continue;; esac   # only real path-shaped targets, not prose words
     [ -e "$target" ] && continue
@@ -104,7 +104,7 @@ check_markdown_links() {
   while IFS= read -r hit; do
     [ -z "$hit" ] && continue
     file=${hit%%:*}
-    target=$(printf '%s' "$hit" | sed -n 's/.*](\([^)]*\)).*/\1/p')
+    target=$(printf '%s' "$hit" | sed -n 's/.*](\([^)]*\)).*//git-audit1/p')
     [ -z "$target" ] && continue
     case "$target" in
       http://*|https://*|mailto:*|\#*) continue;;
@@ -134,7 +134,7 @@ check_see_paths() {
   while IFS= read -r hit; do
     [ -z "$hit" ] && continue
     file=${hit%%:*}
-    paths=$(printf '%s' "$hit" | sed -n 's/.*@see[[:space:]]\{1,\}\(.*\)/\1/p')
+    paths=$(printf '%s' "$hit" | sed -n 's/.*@see[[:space:]]\{1,\}\(.*\)//git-audit1/p')
     [ -z "$paths" ] && continue
     case "$paths" in *"{@link"*|*http*) continue;; esac   # a linked url, not a path list
     for token in $(printf '%s' "$paths" | tr ',' ' '); do
@@ -180,7 +180,7 @@ total=$(grep -c . "$FINDINGS" || true)
 
 cat <<EOF
 
-=== @gitinsights sidecar ===
+=== @git-insights sidecar ===
 insights_file: $TODAYS_INSIGHTS
 insights_time: $INSIGHTS_TIME
 insights_count: $INSIGHTS_COUNT

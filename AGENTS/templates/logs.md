@@ -74,7 +74,7 @@ generate a list of potential tasks to work on next
 
 *example:*
 > - [ ] test agent memory logs:
->   - [ ] test generation: start thread, run `@gitaudit`, close thread, verify log
+>   - [ ] test generation: start thread, run `@git-audit`, close thread, verify log
 >   - [ ] test review: start thread, prompt "continue where we left off", verify context pickup
 
 #### NOTE: YYYY-MM-DD HH:MM

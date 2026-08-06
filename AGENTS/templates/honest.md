@@ -6,7 +6,7 @@
  * @description
  * - tracked in git, one honest file per day, appended across runs
  * - scrub client names, tokens, and other sensitive detail before it lands in a commit
- * - written by `@githonest` only, appended each run, many scorecards per file
+ * - written by `@git-honest` only, appended each run, many scorecards per file
  * - `scorecards` capture the doc-vs-reality gap at a moment in time, never edited after the fact
  * - `grades` are A-F per lane; strong infra grades CANNOT mask weak app/test ones
  * - `lines` should contain a single clause/fact/action, limited to 100 characters
@@ -15,7 +15,7 @@
  * - never soften a written scorecard, and never re-grade an older one to match a newer mood
  * - grade drift across dated files is the point; a lane stuck at D is the signal
  * - `AGENTS/templates/honest.sh` validates a scorecard against every rule above a script can judge
- * @see AGENTS.md, AGENTS/templates/honest.sh, AGENTS/skills/githonest/SKILL.md, docs/honest/
+ * @see AGENTS.md, AGENTS/templates/honest.sh, AGENTS/skills/git-honest/SKILL.md, docs/honest/
  */
 ```
 
@@ -41,7 +41,7 @@ where the time actually went, in one or two lines
 specific files, ignored rules, or architectural landmines
 
 *example:*
-> `githonest.sh` greps `content/**` for mirrors, a path that no longer exists
+> `git-honest.sh` greps `content/**` for mirrors, a path that no longer exists
 > 6 unresolved TODOs, oldest is 41 days
 
 ### grades
@@ -54,7 +54,7 @@ specific files, ignored rules, or architectural landmines
 *example:*
 > **verdict:** an immaculate build system wrapped around software nobody has proven works
 
-## Honest #2: repeat the above format for each `@githonest` run on the same day
+## Honest #2: repeat the above format for each `@git-honest` run on the same day
 never edit an earlier scorecard; a grade that has not moved in a week is the finding
 
 ```text
