@@ -53,7 +53,7 @@
       "strictAllowlist": true,
       "tlsTerminate": {},
       "allowedDomains": [
-        "code.claude.com", "docs.claude.com",
+        "code.claude.com", "docs.claude.com", "zed.dev",
         "github.com", "api.github.com",
         "registry.npmjs.org"
       ]
@@ -68,13 +68,13 @@
       "Bash(bash AGENTS/**/*.sh* | sed *)", "Bash(bash AGENTS/**/*.sh* | grep *)",
 
       "Bash(ls)", "Bash(ls *)", "Bash(pwd)", "Bash(cd *)",
-      "Bash(stat *)", "Bash(file *)", "Bash(du *)", "Bash(df *)", "Bash(wc *)",
+      "Bash(stat *)", "Bash(file *)", "Bash(du *)", "Bash(df *)", "Bash(wc *)", "Bash(md5 *)",
       "Bash(which *)", "Bash(command -v *)", "Bash(realpath *)", "Bash(basename *)", "Bash(dirname *)",
       "Bash(cat *)", "Bash(head *)", "Bash(tail *)", "Bash(diff *)",
-      "Bash(grep *)", "Bash(rg *)", "Bash(awk *)", "Bash(sed -n *)", "Bash(find *)",
+      "Bash(grep *)", "Bash(/usr/bin/grep *)", "Bash(rg *)", "Bash(awk *)", "Bash(sed -n *)", "Bash(find *)",
       "Bash(sort *)", "Bash(uniq *)", "Bash(cut *)", "Bash(tr *)", "Bash(comm *)",
       "Bash(jq *)", "Bash(echo *)", "Bash(printf *)", "Bash(date*)", "Bash(env)",
-      "Bash(uname *)", "Bash(whoami)", "Bash(mkdir *)", "Bash(touch *)", "Bash(cp *)",
+      "Bash(uname *)", "Bash(whoami)", "Bash(top -l 1*)", "Bash(mkdir *)", "Bash(touch *)", "Bash(cp *)",
 
       "Bash(npm run*)", "Bash(npm test*)", "Bash(npm ls*)", "Bash(npm list*)",
       "Bash(npm ci --ignore-scripts*)", "Bash(npm install --ignore-scripts*)",
@@ -102,12 +102,16 @@
       "Bash(git remote)", "Bash(git remote -v*)", "Bash(git remote show*)", "Bash(git remote get-url*)",
       "Bash(git stash list*)", "Bash(git stash show*)",
       "Bash(git reflog)", "Bash(git reflog show*)",
-      "Bash(git fetch*)", "Bash(git version*)"
+      "Bash(git fetch*)", "Bash(git version*)",
+
+      "Bash(git stash push -u -m 'auto-stash: @gitcontinue')", "Bash(git stash pop)",
+      "Bash(git stash push -u -m 'gitfresh-*')",
+      "Bash(git merge --ff-only origin/main)", "Bash(git merge --ff-only origin/master)",
+      "Bash(git switch main)", "Bash(git switch master)"
     ],
 
     "ask": [
       "Bash(dangerouslyDisableSandbox:true)",
-      "Write(.claude/**)", "Edit(.claude/**)",
       "Edit(AGENTS/**)", "Write(AGENTS/**)",
 
       "Bash(npx*)",
@@ -124,6 +128,7 @@
 
     "deny": [
       "Write(~/.claude/**)", "Edit(~/.claude/**)",
+      "Write(.claude/**)", "Edit(.claude/**)",
 
       "Bash(sudo *)",
       "Bash(mkfs*)", "Bash(dd *)",
@@ -158,13 +163,18 @@
       "Bash(git rebase*)", "Bash(git cherry-pick*)", "Bash(git revert*)", "Bash(git replace*)",
       "Bash(git am*)", "Bash(git apply*)", "Bash(git quiltimport*)",
       "Bash(git commit)", "Bash(git commit *)", "Bash(git commit-tree*)",
-      "Bash(git merge)", "Bash(git merge *)", "Bash(git merge-file*)", "Bash(git pull*)",
-      "Bash(git reset*)", "Bash(git restore*)", "Bash(git checkout*)", "Bash(git switch*)",
+      "Bash(git merge)", "Bash(git merge-file*)", "Bash(git pull*)",
+      "Bash(git reset*)", "Bash(git restore*)", "Bash(git checkout*)",
+      "Bash(git switch)", "Bash(git switch -c*)", "Bash(git switch -C*)", "Bash(git switch -d*)",
+      "Bash(git switch -f*)", "Bash(git switch -t*)", "Bash(git switch --create*)",
+      "Bash(git switch --force-create*)", "Bash(git switch --force*)", "Bash(git switch --detach*)",
+      "Bash(git switch --discard-changes*)", "Bash(git switch --orphan*)", "Bash(git switch --track*)",
+      "Bash(git switch --guess*)", "Bash(git switch --ignore-other-worktrees*)",
       "Bash(git clean*)", "Bash(git rm*)", "Bash(git mv*)", "Bash(git add*)",
       "Bash(git bisect*)", "Bash(git sparse-checkout*)", "Bash(git worktree*)",
       "Bash(git submodule*)", "Bash(git rerere*)",
-      "Bash(git stash)", "Bash(git stash push*)", "Bash(git stash save*)",
-      "Bash(git stash pop*)", "Bash(git stash apply*)", "Bash(git stash drop*)",
+      "Bash(git stash)", "Bash(git stash save*)",
+      "Bash(git stash apply*)", "Bash(git stash drop*)",
       "Bash(git stash clear*)", "Bash(git stash branch*)", "Bash(git stash create*)",
       "Bash(git stash store*)",
       "Bash(git branch -d*)", "Bash(git branch -D*)", "Bash(git branch -f*)",

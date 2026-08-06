@@ -12,6 +12,7 @@
 # - blocks force pushes and force branch deletes, silent (exit 0) for everything else
 # - also guards the narrow allows `@gitcontinue` opens: ff-only merge, plain switch, stash halves
 # - also refuses bash writes into the policy dirs, which the Edit and Write rules never see
+# - asks, never denies, when a move lands outside the repo, since a rename is ordinary work
 # @see AGENTS.md, .claude/settings.json, .claude/settings.local.json, AGENTS/settings/
 
 command -v jq >/dev/null 2>&1 || { echo "pretooluse: jq missing, refusing to run unguarded" >&2; exit 2; }
@@ -21,16 +22,20 @@ CMD=$(jq -r '.tool_input.command // .toolInput.command // empty')
 # nothing to inspect
 [ -z "$CMD" ] && exit 0
 
-deny() {
-  jq -n --arg reason "$1" '{
+decide() {
+  jq -n --arg d "$1" --arg reason "$2" '{
     hookSpecificOutput: {
       hookEventName: "PreToolUse",
-      permissionDecision: "deny",
+      permissionDecision: $d,
       permissionDecisionReason: $reason
     }
   }'
   exit 0
 }
+
+deny() { decide deny "$1"; }
+# ask returns the prompt the mode may have removed, so the user judges the call rather than the rule
+ask()  { decide ask  "$1"; }
 
 # force push: `git push` present AND a -f / --force[...] flag token anywhere
 if printf '%s' "$CMD" | grep -Eq '(^|[[:space:]])git[[:space:]]+push([[:space:]]|$)'; then
@@ -87,6 +92,25 @@ while IFS= read -r segment; do
       deny "blocked by pretooluse hook: redirects into a deny-listed path. run it yourself if you really mean to."
     fi
   done < <(printf '%s' "$segment" | grep -oE '>>?[[:space:]]*[^[:space:]]+' | sed -E 's/^>>?[[:space:]]*//' || true)
+done < <(printf '%s\n' "$CMD" | tr '&|;' '\n')
+
+# a move out of the repo is `rm` by another name: nothing is staged, so no git object holds it
+# an in-repo rename is ordinary work, so this asks for the destination rather than denying it
+REPO=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+while IFS= read -r segment; do
+  if ! printf '%s' "$segment" | grep -qE '(^|[[:space:]])mv([[:space:]]|$)'; then continue; fi
+  # the destination is the last token, since `mv` takes no trailing option
+  dest=$(printf '%s' "$segment" | awk '{print $NF}')
+  dest=${dest%\"}; dest=${dest#\"}; dest=${dest%\'}; dest=${dest#\'}
+  case "$dest" in
+    '~'*|'$TMPDIR'*|'${TMPDIR}'*|..|../*)
+      ask "pretooluse hook: this move lands outside the repo, where git cannot recover it. confirm the destination." ;;
+    /*)
+      case "$dest" in
+        "$REPO"|"$REPO"/*) ;;
+        *) ask "pretooluse hook: this move lands outside the repo, where git cannot recover it. confirm the destination." ;;
+      esac ;;
+  esac
 done < <(printf '%s\n' "$CMD" | tr '&|;' '\n')
 
 exit 0

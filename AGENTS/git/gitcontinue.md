@@ -36,6 +36,10 @@
 - a conflicted `git stash pop` leaves the stash entry intact, so say so and let the user resolve it
 - close by reporting the new state: branch, ahead/behind, and whether the tree came back dirty
 
-    The floor allows exactly four forms: `git stash push -u -m 'auto-stash: @gitcontinue'`,
-    `git switch <branch>`, `git merge --ff-only origin/<trunk>`, and `git stash pop`. Anything the
-    sidecar prints beyond those is handed over, never reshaped to fit through the gate.
+    The floor allows this trigger four forms: `git stash push -u -m 'auto-stash: @gitcontinue'`,
+    `git switch main|master`, `git merge --ff-only origin/main|master`, and `git stash pop`.
+    Anything the sidecar prints beyond those is handed over, never reshaped to fit through the gate.
+
+    The branch names are literal because settings.json cannot read the trunk the sidecar resolved.
+    A repo whose trunk is neither prompts instead of running, which is the safe direction: approve
+    it once for that repo, or add the name to the allow in both project and user scope.
