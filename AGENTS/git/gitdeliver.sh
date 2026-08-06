@@ -81,7 +81,7 @@ if [ "$AHEAD" -gt 0 ]; then
 elif [ "$CURRENT_BRANCH" = "$DEFAULT_BRANCH" ] && [ "$BEHIND" -eq 0 ] && [ "$STAGED_FILES" -eq 0 ]; then
   handover_note "state is ready — no prep needed before the atomic loop"
 else
-  handover_note "run these first; each is denied as a tool call, so they are yours"
+  handover_note "run these first; the staged restore is denied, so the block stays yours"
   if [ "$CURRENT_BRANCH" != "$DEFAULT_BRANCH" ]; then
     handover_note "changes float across a switch, so your work follows you to $DEFAULT_BRANCH"
     handover_cmd "git switch $DEFAULT_BRANCH"
