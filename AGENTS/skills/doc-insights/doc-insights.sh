@@ -7,7 +7,7 @@
 # - sidecar for `doc-insights` — asserts a report archive matches the shape its SKILL.md documents
 # - the doc carries the four sections and the matrix; this file carries what a script can judge
 # ARTIFACT
-# - `docs/insights/YYYY-MM-DD.md`, tracked in git, one file per day, appended across runs
+# - `docs/insights/YYYY-MM-DD.md`, one file per day, appended across runs
 # - written by `@git-insights` only, so one file holds many reports
 # - a report captures the opportunity surface at a moment in time, never edited after the fact
 # - `observations` are what the three streams found; `opportunities` are what to do about it
@@ -136,13 +136,6 @@ check_filename() {
   esac
 }
 
-# "tracked in git"
-check_tracked() {
-  local file=$1
-  if ! git ls-files --error-unmatch "$file" >/dev/null 2>&1; then
-    warn "$file" 1 untracked "reports are tracked in git; this one is not committed yet"
-  fi
-}
 
 # the agent opens the file with its own path as the h1, so a mismatch means the file was copied
 # from another day — and a recurring opportunity is invisible once two days share a file
@@ -346,7 +339,6 @@ check_placeholders() {
 # --- run list (add new checks here) ---
 for report in "${REPORTS[@]}"; do
   check_filename      "$report"
-  check_tracked       "$report"
   check_header        "$report"
   check_entries       "$report"
   check_subsections   "$report"

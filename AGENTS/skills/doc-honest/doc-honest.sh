@@ -7,7 +7,7 @@
 # - sidecar for `doc-honest` — asserts a scorecard archive matches the shape its SKILL.md documents
 # - the doc carries the four sections and the grade lanes; this file carries what a script can judge
 # ARTIFACT
-# - `docs/honest/YYYY-MM-DD.md`, tracked in git, one file per day, appended across runs
+# - `docs/honest/YYYY-MM-DD.md`, one file per day, appended across runs
 # - written by `@git-honest` only, so one file holds many scorecards
 # - a scorecard captures the doc-vs-reality gap at a moment in time, never edited after the fact
 # - grades are A-F per lane, and strong infra grades cannot mask weak app or test ones
@@ -135,13 +135,6 @@ check_filename() {
   esac
 }
 
-# "tracked in git"
-check_tracked() {
-  local file=$1
-  if ! git ls-files --error-unmatch "$file" >/dev/null 2>&1; then
-    warn "$file" 1 untracked "scorecards are tracked in git; this one is not committed yet"
-  fi
-}
 
 # the agent opens the file with its own path as the h1, so a mismatch means the file was copied
 # from another day — and grade drift across dates is unreadable once two days share a file
@@ -347,7 +340,6 @@ check_placeholders() {
 # --- run list (add new checks here) ---
 for honest in "${HONESTS[@]}"; do
   check_filename    "$honest"
-  check_tracked     "$honest"
   check_header      "$honest"
   check_entries     "$honest"
   check_subsections "$honest"

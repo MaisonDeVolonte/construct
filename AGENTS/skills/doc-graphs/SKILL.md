@@ -4,7 +4,7 @@ description: Shape of a graph spec prompt file in docs/graphs/.
 metadata:
   kind: spec
 ---
-**the file:** `docs/graphs/YYYY-MM-DD-operation-<title>.md`, tracked in git, one per spec
+**the file:** `docs/graphs/YYYY-MM-DD-operation-<title>.md`, one per spec
 - written on explicit `@graphspec --<artifact> <goal>`, where the flag defaults to `--plan`
 - the flag names what executing the spec must produce, so `--plan` yields a plan file
 - `--plan` is the only flag; the dated archives stay owned by their own triggers

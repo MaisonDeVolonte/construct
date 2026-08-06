@@ -5,7 +5,7 @@ metadata:
   kind: spec
 ---
 # docs/audits/YYYY-MM-DD-<kind>.md
-tracked in git, one file per day and per kind, appended to by every auditing trigger:
+one file per day and per kind, appended to by every auditing trigger:
 
 - the kind in the filename and the kind in each heading match, so one archive reads as one
 - an audit captures repo state at a moment in time, so it is never edited after the fact

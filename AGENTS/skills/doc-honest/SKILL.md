@@ -5,7 +5,7 @@ metadata:
   kind: spec
 ---
 # docs/honest/YYYY-MM-DD.md
-tracked in git, one file per day, appended to by `@git-honest` and nothing else:
+one file per day, appended to by `@git-honest` and nothing else:
 
 - a scorecard captures the doc-vs-reality gap at a moment in time, never edited after the fact
 - grades are A-F per lane, and strong infra grades CANNOT mask weak app or test ones
