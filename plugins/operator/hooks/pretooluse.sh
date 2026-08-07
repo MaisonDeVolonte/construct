@@ -10,10 +10,10 @@
 # - keep both: deny rules are committed, while this hook's wiring is gitignored
 # - neither layer sees inside `plugins/*/*.sh`, since a script's commands are not tool calls
 # - blocks force pushes and force branch deletes, silent (exit 0) for everything else
-# - also guards the narrow allows `/gitgud:continue` opens: ff-only merge, plain switch, stash halves
+# - also guards the allows `/gitgud:continue` opens: ff-only merge, plain switch, stash halves
 # - also refuses bash writes into the policy dirs, which the Edit and Write rules never see
 # - asks, never denies, when a move lands outside the repo, since a rename is ordinary work
-# @see AGENTS.md, .claude/settings.json, .claude/settings.local.json, plugins/operator/settings/
+# @see .claude/settings.json, .claude/settings.local.json, plugins/operator/settings/
 
 command -v jq >/dev/null 2>&1 || { echo "pretooluse: jq missing, refusing to run unguarded" >&2; exit 2; }
 
