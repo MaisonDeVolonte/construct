@@ -1,7 +1,7 @@
 ---
 name: check-wayfinders
 description: The jsdoc wayfinding header every source file opens with, and where it sits. Validates them.
-paths: **/*.ts, **/*.tsx, **/*.js, **/*.jsx, **/*.mjs, **/*.cjs, **/*.sh
+paths: "**/*.ts, **/*.tsx, **/*.js, **/*.jsx, **/*.mjs, **/*.cjs, **/*.sh"
 metadata:
   kind: spec
 ---

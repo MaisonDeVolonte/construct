@@ -1,7 +1,7 @@
 ---
 name: check-comments
-description: Inline comment shape for every source file: why over how, sparingly, lowercase shorthand. Validates them.
-paths: **/*.ts, **/*.tsx, **/*.js, **/*.jsx, **/*.mjs, **/*.cjs, **/*.sh
+description: "Inline comment shape for every source file: why over how, sparingly, lowercase shorthand. Validates them."
+paths: "**/*.ts, **/*.tsx, **/*.js, **/*.jsx, **/*.mjs, **/*.cjs, **/*.sh"
 metadata:
   kind: spec
 ---

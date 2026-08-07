@@ -1,6 +1,6 @@
 ---
 name: doc-logs
-description: Shape of a daily agent log in docs/logs/: threads, notes, and prompts.
+description: "Shape of a daily agent log in docs/logs/: threads, notes, and prompts."
 metadata:
   kind: spec
 ---

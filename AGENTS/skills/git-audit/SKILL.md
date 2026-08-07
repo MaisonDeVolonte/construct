@@ -1,6 +1,6 @@
 ---
 name: git-audit
-description: Read-only git diagnostics: branch triage, team probes, and a dated audit saved to file.
+description: "Read-only git diagnostics: branch triage, team probes, and a dated audit saved to file."
 disable-model-invocation: true
 metadata:
   kind: trigger
