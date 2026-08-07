@@ -2,12 +2,12 @@
 **"secure agentic coding infra: sandboxed environments, masked credentials, deterministic automations, and more"**
 > features:
 - **battle-tested sandbox:** agents work unattended but with guardrails; `pretooluse` catches rule evasion
-- **blind authentication:** agents use your tokens freely but can't see them; `/test-credentials` flags leaks
+- **blind authentication:** agents use your tokens freely but can't see them; `/operator:credentials` flags leaks
 - **enforceable workflows:** instructions are paired with bash sidecars; `handover.sh` emits what it can't run
 > and more:
-- **tamper-proof security:** agents can't secretly change their rules; `/test-permissions` probes live gate
-- **drift detection:** installed settings are diffed against your templates; `/test-settings` flags drift
-- **machine-checked conventions:** docs skills are markdown templates; `/check-*` skills verify conformance
+- **tamper-proof security:** agents can't secretly change their rules; `/operator:permissions` probes live gate
+- **drift detection:** installed settings are diffed against your templates; `/operator:settings` flags drift
+- **machine-checked conventions:** docs skills are markdown templates; `/retardify-*` skills verify conformance
 - **cross-session memory:** configure sessions to start with README, AGENTS, and logs; `sessionstart` seeds context
 - **centralized configuration:** plugin edits propagate everywhere; `/AGENTS.md` can be custom or symlinked
 - **chat-native triggers:** slash commands are project agnostic; bash sidecars resolve at plugin root
@@ -18,22 +18,24 @@
 
 ```
 TABLE OF CONTENTS
-├─ Example ─────── injected · masked · denied
+├─ Example ─────── masked credentials: success · masked · denied
 ├─ Installation ── basic · configured · advanced · managed
-├─ Hooks ───────── sessions · tools · tasks · stop
-├─ Skills ──────── git · docs · checks · tests
-├─ Conventions ─── files · wayfinders · modules · comments · code
+├─ Hooks ───────── sessionstart · pretooluse · posttooluse · taskcreated · taskcompleted · stop
+├─ Operator ────── credentials · permissions · scopes · settings
+├─ Gitgud ──────── audit · backup · continue · deliver · prune · nuke · rerun · ship
+├─ Retardify ───── files · wayfinders · modules · comments · code · graph · plan · guide · log · todo
 ├─ Conversations ─ responses · verification · errors · modes
-└─ Settings ────── sandbox · scopes · keys · rules · clients · audits · diagnostics
+├─ Settings ────── cli · local · project · user · managed
+└─ Sandbox ─────── scopes · keys · rules · clients · audits · diagnostics
 ```
 
 &nbsp;
 
 ## Example: Masked Credentials
-> run /sandbox and /test-settings to test your credentials
+> run /sandbox and /operator:credentials to generate a detailed report
 
 ```console
-# ── INJECTED (SUCCESS) ──────────────────────────────────────────────────────────────────────────
+# ── SUCCESS ─────────────────────────────────────────────────────────────────────────────────────
 # unauthenticated    $ curl -o /dev/null -w "%{http_code}" https://api.github.com/user
                      401
 # authenticated      $ curl -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/user
@@ -87,21 +89,23 @@ TABLE OF CONTENTS
 > [(#81157)](https://github.com/anthropics/claude-code/issues/81157).
 
 ## Installation (Mac)
-> see `AGENTS/settings/` for preconfigured templates (need to be extended to your specific services)
+> see `plugins/operator/settings/` for preconfigured templates (need to be extended to your specific services)
+> the sandbox is not installable: a plugin `settings.json` accepts only `agent` and `subagentStatusLine`,
+> so steps 2-4 stay manual copies whether you install by symlink or by `/plugin install`
 
 ### 1. basic sandbox (automations and workflows, ~5 mins)
 - [ ] clone: `git clone https://github.com/MaisonDeVolonte/operator.git ~/.../operator`
 - [ ] symlink rules: `ln -s ~/.../operator/README.md AGENTS.md`
-- [ ] symlink workflows: `ln -s ~/.../operator/AGENTS AGENTS`
-- [ ] local settings: `cp AGENTS/settings/settings.local.json .claude/settings.local.json`
+- [ ] symlink plugins: `ln -s ~/.../operator/plugins/operator ~/.claude/skills/operator`
+- [ ] local settings: `cp plugins/operator/settings/settings.local.json .claude/settings.local.json`
 - [ ] gitignore: `AGENTS.md`, `AGENTS`, and `.claude/settings.local.json`
-- [ ] restart: editor, start new claude session, run `/sandbox` and `/test-settings`
+- [ ] restart: editor, start new claude session, run `/sandbox` and `/operator:settings`
 - [ ] confirm `AGENTS.md` loads into context
 
 ### 2. configured sandbox (filesystem lockdown, ~5 mins)
-- [ ] project settings: `cp AGENTS/settings/settings.project.json .claude/settings.json`
-- [ ] user settings: `cp AGENTS/settings/settings.user.json ~/.claude/settings.json`
-- [ ] restart: editor, start new claude session, run `/sandbox` and `/test-settings`
+- [ ] project settings: `cp plugins/operator/settings/settings.project.json .claude/settings.json`
+- [ ] user settings: `cp plugins/operator/settings/settings.user.json ~/.claude/settings.json`
+- [ ] restart: editor, start new claude session, run `/sandbox` and `/operator:settings`
 
 ### 3. advanced sandbox (masked credentials, ~20 mins)
 - [ ] make: secure directory for your keys `mkdir -p ~/.operator && chmod 700 ~/.operator`
@@ -112,71 +116,69 @@ TABLE OF CONTENTS
 - [ ] add: mask + injectHosts rules for each pat in `~/.operator/.env` to `sandbox.credentials.envVars`
 - [ ] add: domain rules for each injectHosts host to `sandbox.network.allowedDomains`
 - [ ] append: `[ -r ~/.operator/.env ] && source ~/.operator/.env` to `~/.zshrc`
-- [ ] restart: editor, start new claude session, run `/sandbox` and `/test-settings`
+- [ ] restart: editor, start new claude session, run `/sandbox` and `/operator:settings`
 - [ ] confirm: `echo $GH_TOKEN` returns a sentinel (NOT raw token) when claude runs it
 
 ### 4. managed sandbox (machine lockdown, requires sudo, ~5 mins)
 - [ ] make: claude code directory `sudo mkdir -p '/Library/Application Support/ClaudeCode'`
-- [ ] managed settings: `sudo cp AGENTS/settings/settings.managed.json "/Library/Application Support/ClaudeCode/managed-settings.json"`
-- [ ] run: `/test-settings`
+- [ ] managed settings: `sudo cp plugins/operator/settings/settings.managed.json "/Library/Application Support/ClaudeCode/managed-settings.json"`
+- [ ] run: `/operator:settings`
 
 ## Hooks
-> see `AGENTS/hooks/`
+> see `plugins/operator/hooks/`
 
 ### Sessions
-- [sessionstart](AGENTS/hooks/sessionstart.sh): injects the README and the two most recent log files into context
+- [sessionstart](plugins/operator/hooks/sessionstart.sh): injects the README and the two most recent log files into context
 
 ### Tools
-- [pretooluse](AGENTS/hooks/pretooluse.sh): failover for the committed deny list, reading the whole command string
-- [posttooluse](AGENTS/hooks/posttooluse.sh): lints, then reports comment and wayfinder findings, never blocking
+- [pretooluse](plugins/operator/hooks/pretooluse.sh): failover for the committed deny list, reading the whole command string
+- [posttooluse](plugins/operator/hooks/posttooluse.sh): lints, then reports comment and wayfinder findings, never blocking
 
 ### Tasks
-- [taskcreated](AGENTS/hooks/taskcreated.sh): nudges a new thread when a task is unrelated to the last one, advisory only
-- [taskcompleted](AGENTS/hooks/taskcompleted.sh): blocks the turn to make the agent note the day's log
+- [taskcreated](plugins/operator/hooks/taskcreated.sh): nudges a new thread when a task is unrelated to the last one, advisory only
+- [taskcompleted](plugins/operator/hooks/taskcompleted.sh): blocks the turn to make the agent note the day's log
 
 ### Stop
-- [stop](AGENTS/hooks/stop.sh): every hour, saves notes and prompts, then synthesizes the day's log
+- [stop](plugins/operator/hooks/stop.sh): every hour, saves notes and prompts, then synthesizes the day's log
 
 ## Workflows
 - DEFAULT posture is READ-ONLY e.g. chat, brainstorm, evaluate, and plan
 - DO NOT write code, edit files, or run commands without explicit approval
 
-### Git (see `AGENTS/skills/`)
-> each pairs with a matching `.sh` sidecar that measures, then hands the commands back
-> two triggers run part of their own block against narrow allows: `/git-continue`'s sync, which is
-> recoverable throughout, and `/git-fresh`'s backup stash, which is what makes its reset survivable
-- [/git-audit](AGENTS/skills/git-audit/SKILL.md): READ-ONLY; diagnostics, triage, report, summary, tasks (saved to file)
-- [/git-backup](AGENTS/skills/git-backup/SKILL.md): SAFE; snapshots history and tree, verifies it, hands over the restore
-- [/git-continue](AGENTS/skills/git-continue/SKILL.md): SAFE; measures the trunk delta, then runs the sync it planned
-- [/git-deliver](AGENTS/skills/git-deliver/SKILL.md): GATED; buckets changes atomically, gates the plan, hands over every block
-- [/git-empty](AGENTS/skills/git-empty/SKILL.md): GATED; prunes tracking refs, hands over the trunk sync and branch deletes
-- [/git-fresh](AGENTS/skills/git-fresh/SKILL.md): DESTRUCTIVE; prices a hard reset, takes the backup, hands over the reset
-- [/git-gud](AGENTS/skills/git-gud/SKILL.md): SAFE; query branch delta, merge remote main into it, and run fresh CI
-- [/git-honest](AGENTS/skills/git-honest/SKILL.md): READ-ONLY; brutally honest code review, progress report (saved to file)
-- [/git-insights](AGENTS/skills/git-insights/SKILL.md): READ-ONLY; points at what to work on next, from scans, docs and logs (saved to file)
-- [/git-jump](AGENTS/skills/git-jump/SKILL.md): RELEASE; verifies release preconditions, hands over bump/push/promote
-- [handover.sh](AGENTS/shared/handover.sh): shared preflights, queries, and the telemetry/handover blocks
+### Gitgud (see `plugins/gitgud/`)
+> the whole git dance; each pairs with a `.sh` sidecar that measures, then hands the commands back
+> two run part of their own block against narrow allows: `/gitgud:continue`'s sync, which is
+> recoverable throughout, and `/gitgud:nuke`'s backup stash, which is what makes its reset survivable
+- [/gitgud:audit](plugins/gitgud/skills/audit/SKILL.md): READ-ONLY; whole-repo condition: composition, pairing, manifests, artifacts
+- [/gitgud:backup](plugins/gitgud/skills/backup/SKILL.md): SAFE; snapshots history and tree, verifies it, hands over the restore
+- [/gitgud:continue](plugins/gitgud/skills/continue/SKILL.md): SAFE; measures the trunk delta, then runs the sync it planned
+- [/gitgud:deliver](plugins/gitgud/skills/deliver/SKILL.md): GATED; buckets changes atomically, gates the plan, hands over every block
+- [/gitgud:prune](plugins/gitgud/skills/prune/SKILL.md): GATED; prunes tracking refs, hands over the trunk sync and branch deletes
+- [/gitgud:nuke](plugins/gitgud/skills/nuke/SKILL.md): DESTRUCTIVE; prices a hard reset, takes the backup itself, hands over the rest
+- [/gitgud:rerun](plugins/gitgud/skills/rerun/SKILL.md): SAFE; merges remote main into a stale branch, which re-runs its CI
+- [/gitgud:ship](plugins/gitgud/skills/ship/SKILL.md): RELEASE; verifies release preconditions, hands over bump/push/promote
+- [triage.sh](plugins/gitgud/shared/triage.sh): shared branch triage and team probes, run by three siblings
+- [handover.sh](plugins/gitgud/shared/handover.sh): shared preflights, queries, and the telemetry/handover blocks
 
-### Specs (see `AGENTS/skills/`)
-> each pairs with a matching `.sh` sidecar that verifies conformance; specs auto-load, never gated
-- [/check-comments](AGENTS/skills/check-comments/SKILL.md): inline comment shape in every source file
-- [/check-skills](AGENTS/skills/check-skills/SKILL.md): the shape every skill pair holds
-- [/check-wayfinders](AGENTS/skills/check-wayfinders/SKILL.md): the header every source file opens with
-- [/doc-audits](AGENTS/skills/doc-audits/SKILL.md): `/git-audit` appends findings and resolutions
-- [/doc-credentials](AGENTS/skills/doc-credentials/SKILL.md): `/test-credentials` proves the mask, never quoting a value
-- [/doc-graphs](AGENTS/skills/doc-graphs/SKILL.md): `/write-graph` writes fan-out spec prompt files
-- [/doc-guides](AGENTS/skills/doc-guides/SKILL.md): `/write-guide` writes a retrospective build guide
-- [/doc-honest](AGENTS/skills/doc-honest/SKILL.md): `/git-honest` adversarial graded scorecards
-- [/doc-insights](AGENTS/skills/doc-insights/SKILL.md): `/git-insights` searches repo for opportunities
-- [/doc-logs](AGENTS/skills/doc-logs/SKILL.md): the daily agent log, created and gated by the hooks
-- [/doc-plans](AGENTS/skills/doc-plans/SKILL.md): `/write-plan` staged checklist with readiness tables
+### Retardify (see `plugins/retardify/`)
+> keeps machine output legible: what a convention is, whether the tree holds to it, and prose you can follow
+> the linters auto-load on a matching source file; the writers turn a conversation into one document
+- [/retardify:comments](plugins/retardify/skills/comments/SKILL.md): inline comment shape in every source file
+- [/retardify:wayfinders](plugins/retardify/skills/wayfinders/SKILL.md): the header every source file opens with
+- [/retardify:plan](plugins/retardify/skills/plan/SKILL.md): SAFE; writes a staged plan to `docs/plans/`
+- [/retardify:graph](plugins/retardify/skills/graph/SKILL.md): SAFE; writes a fan-out spec to `docs/graphs/`
+- [/retardify:guide](plugins/retardify/skills/guide/SKILL.md): SAFE; writes a build guide to `docs/guides/`
+- [/retardify:review](plugins/retardify/skills/review/SKILL.md): READ-ONLY; brutally honest code review, saved to `docs/honest/`
+- [/retardify:log](plugins/retardify/skills/log/SKILL.md): the daily agent log, created and gated by the hooks
+- [/retardify:todo](plugins/retardify/skills/todo/SKILL.md): READ-ONLY; scans repo, docs and logs for what to work on next
 
-### Writing (see `AGENTS/skills/`)
-> each turns a conversation into one document, then validates it against the spec that shapes it
-> nothing is measured here; the input is the user, which is what separates these from the git family
-- [/write-graph](AGENTS/skills/write-graph/SKILL.md): SAFE; writes a fan-out spec to `docs/graphs/`
-- [/write-plan](AGENTS/skills/write-plan/SKILL.md): SAFE; writes a staged plan to `docs/plans/`
-- [/write-guide](AGENTS/skills/write-guide/SKILL.md): SAFE; writes a build guide to `docs/guides/`
+### Operator (see `plugins/operator/`)
+> the bundle: it carries the hooks, the settings templates, and the probes that test them
+> each probe reads the live gate rather than the template, so it reports what is installed
+- [/operator:credentials](plugins/operator/skills/credentials/SKILL.md): GATED; proves the mask holds, never quoting a value
+- [/operator:permissions](plugins/operator/skills/permissions/SKILL.md): GATED; replays the corpus against the live hook
+- [/operator:scopes](plugins/operator/skills/scopes/SKILL.md): GATED; maps every script against the merged settings stack
+- [/operator:settings](plugins/operator/skills/settings/SKILL.md): GATED; diffs installed settings against the templates
 
 ### Verifying
 - `test what you deploy`: a passing local run is not a shipped artifact
@@ -219,7 +221,7 @@ TABLE OF CONTENTS
  *   - @see: comma, separated, list, of, ALL, related, internal, files
  * - write maximally concise, shorthand, lowercase english, favoring legibility over completeness
  * - read this block to understand the file's context and boundaries before modifying it
- * @see AGENTS/, .claude/, eslint.config.mjs
+ * @see plugins/, .claude/, eslint.config.mjs
  */
 ```
 
@@ -376,7 +378,7 @@ export function writeCode(requirements: Requirement[], request: string) {
  - `adversarial`: rate against evidence and lead with what is broken
 
 ## Settings
-> see [AGENTS/settings](AGENTS/settings)
+> see [plugins/operator/settings](plugins/operator/settings)
 
 > claude docs: 
 > [hooks](https://code.claude.com/docs/en/hooks), 
@@ -413,12 +415,12 @@ false ○─● STRICT MODE: commands that fail are not retried at all
   - `gh` is the measured case: cgo tls needs a trustd lookup only `enableWeakerNetworkIsolation` re-permits
 
 ### Scopes
-> each pairs with a `.json` template carrying the baseline settings (see `AGENTS/settings/`)
-- [settings.cli.md](AGENTS/settings/settings.cli.md): one session, no file
-- [settings.local.md](AGENTS/settings/settings.local.md): this repo, just you
-- [settings.project.md](AGENTS/settings/settings.project.md): this repo, committed
-- [settings.user.md](AGENTS/settings/settings.user.md): every repo, just you
-- [settings.managed.md](AGENTS/settings/settings.managed.md): this machine, sudo
+> each pairs with a `.json` template carrying the baseline settings (see `plugins/operator/settings/`)
+- [settings.cli.md](plugins/operator/settings/settings.cli.md): one session, no file
+- [settings.local.md](plugins/operator/settings/settings.local.md): this repo, just you
+- [settings.project.md](plugins/operator/settings/settings.project.md): this repo, committed
+- [settings.user.md](plugins/operator/settings/settings.user.md): every repo, just you
+- [settings.managed.md](plugins/operator/settings/settings.managed.md): this machine, sudo
 ```
 precedence: 
 managed → cli → local → project → user (scalars override, arrays merge)
@@ -447,34 +449,34 @@ managed → cli → local → project → user (scalars override, arrays merge)
 ### Keys
 > settings keys used across all scopes linked to docs explaining each one
 
-[settings.managed.json](AGENTS/settings/settings.managed.json)
+[settings.managed.json](plugins/operator/settings/settings.managed.json)
 - `sandbox`: enabled, allowManagedDomainsOnly
 - `sandbox.filesystem`: disabled, allowManagedReadPathsOnly
 
-[settings.user.json](AGENTS/settings/settings.user.json)
+[settings.user.json](plugins/operator/settings/settings.user.json)
 - `sandbox`: failIfUnavailable, allowUnsandboxesCommands, enableWeakerNetworkIsolation
 - `sandbox.filesystem`: allowWrite, denyRead, denyWrite
 - `sandbox.credentials`: file denies, env unsets and the mask
 - `sandbox.network`: strictAllowlist, tlsTerminate, allowedDomains
 - `permissions`: allow, ask, deny
 
-[settings.project.json](AGENTS/settings/settings.project.json)
+[settings.project.json](plugins/operator/settings/settings.project.json)
 - `sandbox`: enabled, failIfUnavailable, allowUnsandboxesCommands, excludedCommands
 - `sandbox.network`: allowedDomains
 - `permissions`: allow, ask, deny
 
-[settings.local.json](AGENTS/settings/settings.local.json)
+[settings.local.json](plugins/operator/settings/settings.local.json)
 - `sandbox`: enabled
 - `permissions`: ask
 - `hooks`: sessionStart, PreToolUse, PostToolUse, TaskCreated, TaskCompleted, Stop
 
-[settings.cli.md](AGENTS/settings/settings.cli.md)
+[settings.cli.md](plugins/operator/settings/settings.cli.md)
 - `claude --settings`
 
 ### Rules
 > rules are string matches, not parsers; these habits keep a rule on its intended target
 
-- `test` new rules at cli scope first, promote once proven (rerun `/test-settings`)
+- `test` new rules at cli scope first, promote once proven (rerun `/operator:settings`)
 - `verdict` hook deny → deny → ask → hook allow → allow (specificity never reorders precedence)
 - `broad allow` with narrow denies beat enumerating safe subcommands
 - `any scope` adds a deny, none removes another's
@@ -516,12 +518,12 @@ managed → cli → local → project → user (scalars override, arrays merge)
 ### Audits
 > `/sandbox`: claude command that prints the merged config (the 'source of truth')
 - `/fewer-permission-prompts`: claude skill that proposes new allow entries from real transcript usage
-- [/test-credentials](AGENTS/skills/test-credentials/SKILL.md): READ-ONLY; probes every masked and denied credential live (saved to file)
-- [/test-permissions](AGENTS/skills/test-permissions/SKILL.md): READ-ONLY; replays the corpus through the real hook, then audits the live rules
-- [/test-scopes](AGENTS/skills/test-scopes/SKILL.md): READ-ONLY; maps every sidecar against the merged scope stack
-- [/test-settings](AGENTS/skills/test-settings/SKILL.md): READ-ONLY; audits every scope, probes the boundary live (saved to file)
-- [secrets.sh](AGENTS/settings/secrets.sh): shared credential patterns, sourced by every validator
-- [corpus.tsv](AGENTS/settings/corpus.tsv): labeled command corpus for the audits; never executed
+- [/operator:credentials](plugins/operator/skills/credentials/SKILL.md): READ-ONLY; probes every masked and denied credential live (saved to file)
+- [/operator:permissions](plugins/operator/skills/permissions/SKILL.md): READ-ONLY; replays the corpus through the real hook, then audits the live rules
+- [/operator:scopes](plugins/operator/skills/scopes/SKILL.md): READ-ONLY; maps every sidecar against the merged scope stack
+- [/operator:settings](plugins/operator/skills/settings/SKILL.md): READ-ONLY; audits every scope, probes the boundary live (saved to file)
+- [secrets.sh](plugins/operator/shared/secrets.sh): shared credential patterns, sourced by every validator
+- [corpus.tsv](plugins/operator/shared/corpus.tsv): labeled command corpus for the audits; never executed
 
 ### Diagnostics
 > start from the symptom: the layer that blocked a call is rarely the one you were watching
