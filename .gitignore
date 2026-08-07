@@ -6,3 +6,6 @@ tmp/
 
 # docs
 docs/
+
+# artifacts
+audits/
