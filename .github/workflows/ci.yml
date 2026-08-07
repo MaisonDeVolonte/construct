@@ -9,7 +9,7 @@
 # - a report shaped for judgement makes a poor required check, so its replacement is its own tool
 # - until that checker lands nothing gates references, and a broken `@see` reaches main unblocked
 # - this is the required check that lets `gh pr merge --auto` engage (see plugins/gitgud/skills/deliver/SKILL.md)
-# @see AGENTS.md, plugins/gitgud/skills/deliver/SKILL.md, plugins/retardify/skills/wayfinders/SKILL.md
+# @see README.md, plugins/gitgud/skills/deliver/SKILL.md, plugins/retardify/skills/files/SKILL.md
 
 name: ci
 
