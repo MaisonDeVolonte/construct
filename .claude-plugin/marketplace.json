@@ -1,0 +1,51 @@
+{
+  "name": "MaisonDeVolonte",
+  "owner": {
+    "name": "MaisonDeVolonte",
+    "url": "https://github.com/MaisonDeVolonte"
+  },
+  "description": "Secure agentic coding infra for Claude Code: sandboxed environments, masked credentials, and deterministic automations.",
+  "plugins": [
+    {
+      "name": "operator",
+      "source": "./plugins/operator",
+      "description": "The bundle: session hooks, the deny floor, the sandbox probes, and both plugins below.",
+      "category": "security",
+      "keywords": [
+        "sandbox",
+        "security",
+        "permissions",
+        "credentials",
+        "hooks",
+        "agents"
+      ]
+    },
+    {
+      "name": "gitgud",
+      "source": "./plugins/gitgud",
+      "description": "The whole git dance: atomic delivery, branch triage, backup, sync and release.",
+      "category": "workflow",
+      "keywords": [
+        "git",
+        "trunk-based",
+        "pull-request",
+        "release",
+        "workflow"
+      ]
+    },
+    {
+      "name": "retardify",
+      "source": "./plugins/retardify",
+      "description": "Keeps machine output legible: conventions, linters, and prose a human can follow.",
+      "category": "documentation",
+      "keywords": [
+        "linter",
+        "readability",
+        "conventions",
+        "documentation",
+        "code-review",
+        "planning"
+      ]
+    }
+  ]
+}
