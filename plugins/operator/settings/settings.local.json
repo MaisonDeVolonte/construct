@@ -1,0 +1,14 @@
+{
+  "sandbox": { "enabled": true },
+
+  "permissions": { "ask": [ "Bash(dangerouslyDisableSandbox:true)" ] },
+
+  "hooks": {
+    "SessionStart": [{ "hooks": [{ "type": "command", "command": "plugins/operator/hooks/sessionstart.sh" }] }],
+    "PreToolUse": [{ "matcher": "Bash", "hooks": [{ "type": "command", "command": "plugins/operator/hooks/pretooluse.sh" }] }],
+    "PostToolUse": [{ "matcher": "Write|Edit", "hooks": [{ "type": "command", "command": "plugins/operator/hooks/posttooluse.sh", "timeout": 120 }] }],
+    "TaskCreated": [{ "hooks": [{ "type": "command", "command": "plugins/operator/hooks/taskcreated.sh" }] }],
+    "TaskCompleted": [{ "hooks": [{ "type": "command", "command": "plugins/operator/hooks/taskcompleted.sh" }] }],
+    "Stop": [{ "hooks": [{ "type": "command", "command": "plugins/operator/hooks/stop.sh" }] }]
+  }
+}
