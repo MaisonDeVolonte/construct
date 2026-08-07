@@ -6,18 +6,24 @@
 # PAIR
 # - sidecar for `check-skills` — asserts every skill doc and its sidecar still hold together
 # - the doc carries the shape a trigger follows; this file carries what a script can judge
-# - the only spec whose sidecar scans `plugins/*/skills/`, not a `docs/` artifact directory
+# - the only spec whose sidecar scans `plugins/*/skills/`, not a `.operator/` artifact directory
 # SHAPE
 # - a pair is one `SKILL.md` and one `<name>.sh`, sharing a folder named for the trigger
 # - the doc keeps frontmatter as its orientation; the wayfinder lives in the sidecar, here
 # - a trigger runs only when invoked; a spec loads whenever the model touches what it describes
 # - the sidecar measures and never mutates, and sources `gitgud/shared/handover.sh` for its blocks
 # - a sidecar needing to mutate emits the command into a block instead of running it
+# BUDGET
+# - only `description` and `when_to_use` reach the listing, and the harness caps the pair at 1536
+# - past the cap the tail is dropped silently, so a skill loses what says when it fires
+# - nothing in the harness reports that loss, which is why the cap is measured here
+# - the body costs nothing until the skill loads, so long prose belongs below the frontmatter
+# - `metadata` is free-form and the harness ignores it, so it never counts against the cap
 # RUN
 # - defaults to every pair in `plugins/*/skills/`; pass a doc, a sidecar, or a directory to scope it
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
 # - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
-# @see AGENTS.md, tools/check-skills/README.md, plugins/gitgud/shared/handover.sh, plugins/, plugins/operator/shared/secrets.sh, .github/workflows/ci.yml
+# @see tools/check-skills/README.md, plugins/gitgud/shared/handover.sh, plugins/, plugins/operator/shared/secrets.sh, .github/workflows/ci.yml
 
 set -euo pipefail
 
@@ -39,6 +45,11 @@ TRIGGERS="plugins"
 
 # the postures the index assigns; a trigger nobody can tell the blast radius of is a trap
 POSTURES='READ-ONLY|SAFE|GATED|DESTRUCTIVE|RELEASE'
+
+# the harness truncates `description` + `when_to_use` at this many characters in the skill listing
+LISTING_CAP=1536
+# 80% of the cap: near enough that the next edit is the one that drops text without saying so
+LISTING_WARN=1228
 
 PAIRS=()
 for arg in "$@"; do
@@ -80,7 +91,7 @@ is_trigger_name() {
 # listing them beats guessing, since nothing in the filename says which kind a script is
 is_subtool() {
   case "$(basename "$1")" in
-    permissions.sh|scopes.sh|secrets.sh|handover.sh) return 0;;
+    permissions.sh|scopes.sh|secrets.sh|handover.sh|triage.sh) return 0;;
     *) return 1;;
   esac
 }
@@ -108,11 +119,10 @@ done
 if [ ${#EXPANDED[@]} -eq 0 ]; then echo "fatal: no skill pairs found under ${PAIRS[*]}" >&2; exit 1; fi
 PAIRS=("${EXPANDED[@]}")
 
-# the index that documents each trigger: a host project reaches it through the AGENTS.md symlink,
-# and this repo is the one place where the same file is called README.md
+# the index that documents each trigger: README is the only one now, since the AGENTS.md symlink
+# that used to shadow it is retired and a plugin ships its instructions through skills instead
 INDEX=''
-if [ -f AGENTS.md ]; then INDEX=AGENTS.md
-elif [ -f README.md ]; then INDEX=README.md; fi
+if [ -f README.md ]; then INDEX=README.md; fi
 
 # repo-local scratch: the sandbox denies writes outside cwd, and macos mktemp ignores TMPDIR
 TMPROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tmp"
@@ -122,8 +132,11 @@ mkdir -p "$TMPROOT"
 # findings collect as "SEV|file|line|category|detail" — line is its own field so the report can
 # sort numerically; joining it to the path first sorts 121 above 31. the run fails on ERROR only
 FINDINGS=$(mktemp "$TMPROOT/$TMPTAG-findings.XXXXXX")
+# every skill's listing spend, collected as "chars|file" so the telemetry can name the widest one:
+# a clean run still reports headroom, since the cap is worth watching before anything crosses it
+BUDGETS=$(mktemp "$TMPROOT/$TMPTAG-budgets.XXXXXX")
 # a failed run leaves scratch behind to read; --keep does the same after a clean one
-cleanup() { st=$?; if [ "$KEEP" -eq 0 ] && [ "$st" -eq 0 ]; then rm -f "$FINDINGS"; fi; }
+cleanup() { st=$?; if [ "$KEEP" -eq 0 ] && [ "$st" -eq 0 ]; then rm -f "$FINDINGS" "$BUDGETS"; fi; }
 trap cleanup EXIT
 
 err()  { printf 'ERROR|%s|%s|%s|%s\n' "$1" "$2" "$3" "$4" >> "$FINDINGS"; }
@@ -134,6 +147,31 @@ where() {
   local hit
   hit=$(grep -nE "$2" "$1" 2>/dev/null | head -n 1 | cut -d: -f1 || true)
   printf '%s' "${hit:-1}"
+}
+
+# one frontmatter value, read only between the opening and closing `---`: a body line starting with
+# the same key is prose, and charging it to the budget would fail a doc for text nothing ever lists
+frontmatter_field() {
+  local doc=$1 key=$2 value
+  value=$(awk -v key="$key" '
+    NR == 1 && $0 == "---" { open = 1; next }
+    !open { exit }
+    $0 == "---" { exit }
+    # `>` and `|` push the value onto the lines below, so keep reading until the indent ends
+    folded && /^[[:space:]]/ { sub(/^[[:space:]]+/, ""); buffer = buffer " " $0; next }
+    folded { exit }
+    $0 ~ "^" key ":" {
+      buffer = $0
+      sub("^" key ":[[:space:]]*", "", buffer)
+      if (buffer ~ /^[>|][-+]?$/) { folded = 1; buffer = ""; next }
+      exit
+    }
+    END { print buffer }
+  ' "$doc")
+  # a quoted scalar is the same string once parsed, so its quotes never count against the cap
+  value=${value#\"}; value=${value%\"}
+  value=${value#\'}; value=${value%\'}
+  printf '%s' "$value"
 }
 
 # ==============
@@ -175,6 +213,27 @@ check_doc_wayfinding() {
   fi
   if ! grep -qE '^description:[[:space:]]*\S' "$doc"; then
     err "$doc" 1 frontmatter "frontmatter needs a description; it is the only listing a reader sees"
+  fi
+}
+
+# the listing a model reads before opening anything is `description` plus `when_to_use`, and the
+# harness truncates that pair at 1536 characters. past the cap the tail is dropped with no warning,
+# which is `silent trigger loss`: the skill still lists, and the clause naming when to fire is gone
+check_listing_budget() {
+  local doc=$1 description when_to_use total line
+  description=$(frontmatter_field "$doc" description)
+  when_to_use=$(frontmatter_field "$doc" when_to_use)
+  total=$(( ${#description} + ${#when_to_use} ))
+  line=$(where "$doc" '^description:')
+
+  printf '%s|%s\n' "$total" "$doc" >> "$BUDGETS"
+
+  if [ "$total" -gt "$LISTING_CAP" ]; then
+    err "$doc" "$line" listing_cap \
+      "description + when_to_use is $total chars; the listing truncates at $LISTING_CAP"
+  elif [ "$total" -gt "$LISTING_WARN" ]; then
+    warn "$doc" "$line" listing_budget \
+      "description + when_to_use is $total chars, inside $LISTING_WARN of a $LISTING_CAP cap"
   fi
 }
 
@@ -221,15 +280,12 @@ check_branches() {
 # agent writing it has nothing to follow
 check_artifact() {
   local doc=$1 type root
-  # audits moved to their own root, one directory per kind; the write family still lives in docs/
-  for type in graphs guides honest insights logs plans comments wayfinders permissions scopes settings credentials git; do
-    case "$type" in
-      graphs|guides|honest|insights|logs|plans) root="docs/$type/";;
-      *) root="audits/$type/";;
-    esac
+  # one directory per kind, all at one level, so the root is the kind and needs no lookup
+  for type in graphs guides logs plans reviews todos files permissions scopes settings credentials git; do
+    root=".operator/$type/"
     if ! grep -q "$root" "$doc"; then continue; fi
     # a cross-plugin reference is an invocation, since CLAUDE_PLUGIN_ROOT never leaves its plugin
-    if ! grep -qE "plugins/[a-z]+/skills/(doc-)?${type%s}s?/SKILL\.md|/[a-z]+:(doc-)?${type%s}s?([^a-z-]|$)" "$doc"; then
+    if ! grep -qE "plugins/[a-z]+/skills/${type%s}s?/SKILL\.md|/[a-z]+:${type%s}s?([^a-z-]|$)" "$doc"; then
       warn "$doc" "$(where "$doc" "$root")" artifact \
         "writes $root without naming the skill that owns that shape"
     fi
@@ -334,6 +390,7 @@ for pair in "${PAIRS[@]}"; do
   # every skill earns the shape checks; only a trigger earns the ones about being invoked
   check_pair            "$pair"
   check_doc_wayfinding  "$pair"
+  check_listing_budget  "$pair"
   check_sidecar_header  "$pair"
   check_sidecar_lint    "$pair"
   check_scrub           "$pair"
@@ -358,12 +415,23 @@ ERRORS=$(grep -c '^ERROR|' "$FINDINGS" || true)
 WARNINGS=$(grep -c '^WARN|' "$FINDINGS" || true)
 SECRETS=$(grep -c '|secret|' "$FINDINGS" || true)
 
+# the widest listing, reported whether or not it crossed anything: the useful number is headroom,
+# and by the time a finding fires the text is already being dropped
+LISTING_PEAK=0
+LISTING_PEAK_DOC='none'
+if [ -s "$BUDGETS" ]; then
+  PEAK_ROW=$(sort -t'|' -k1,1nr "$BUDGETS" | head -n 1)
+  LISTING_PEAK=${PEAK_ROW%%|*}
+  LISTING_PEAK_DOC=${PEAK_ROW#*|}
+fi
+
 cat <<EOF
 
-=== git.sh sidecar ===
+=== check-skills telemetry ===
 template: $TEMPLATE
 scanned: ${#PAIRS[@]} pair(s)
 index: ${INDEX:-none found}
+listing: $LISTING_PEAK/$LISTING_CAP chars at its widest ($LISTING_PEAK_DOC)
 errors: $ERRORS
 warnings: $WARNINGS
 secrets: $SECRETS
