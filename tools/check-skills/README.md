@@ -1,6 +1,7 @@
 ---
 name: check-skills
 description: "Shape every skill pair must hold: the SKILL.md, its sidecar, and the frontmatter that gates it. Validates them."
+when_to_use: "Authoring or editing any SKILL.md or its sidecar, adding a skill to a plugin, or deciding whether a skill is a trigger or a spec. Also when a listing looks truncated or a skill fails to load."
 metadata:
   kind: spec
 ---
@@ -16,6 +17,17 @@ a skill is one folder, named for its trigger, holding exactly two files:
 - `metadata.kind` is declared rather than guessed, and decides the rest of the frontmatter
 - `kind: trigger` acts on the repo, so it sets `disable-model-invocation: true`; prose is not a gate
 - `kind: spec` describes a shape, so it stays auto-loading and never sets that flag
+
+## the listing budget
+`description` and `when_to_use` are the whole listing; everything else loads only once a skill does:
+
+- the harness truncates the two of them, combined, at 1536 characters, and says nothing when it does
+- past the cap the tail is dropped, so a skill can lose the clause naming when it fires and still list
+- put the use case first, since a truncated listing keeps its opening and loses its end
+- `description` says what the skill does; `when_to_use` carries trigger phrases and example requests
+- the body is charged only when the skill loads, so long reference prose belongs under the frontmatter
+- longer still belongs in a sibling file the body names, which costs nothing until it is read
+- `metadata` is free-form and the harness ignores it, so it never counts against the cap
 
 All @gitautomations follow the following general shape:
 
