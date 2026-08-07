@@ -1,0 +1,10 @@
+{
+  "sandbox": {
+    "enabled": true,
+    "allowManagedDomainsOnly": false,
+    "filesystem": {
+      "allowManagedReadPathsOnly": false,
+      "disabled": false
+    }
+  }
+}
