@@ -1,7 +1,7 @@
 ---
 name: deliver
 description: Bucket uncommitted work into atomic PRs, gate the plan, then hand over every block.
-argument-hint: [--first]
+argument-hint: "[--debug] [--finished]"
 disable-model-invocation: true
 metadata:
   kind: trigger
@@ -17,7 +17,15 @@ metadata:
 - recover a failed `git switch -c` with `git switch "$DEFAULT_BRANCH"`, then `git branch -D "$ATOMIC_BRANCH"` (add `git push origin --delete "$ATOMIC_BRANCH"` if pushed)
 
 **FLAGS:**
-- `--first`: plans every bucket as normal, but emits only the FIRST block
+- `--debug`: plans every bucket as normal, but emits only the FIRST block
+- `--finished`: buckets ONLY work that reads as finished, and leaves the rest in the tree
+  - finished means: no `TODO`/`FIXME`/`XXX`/`WIP` added by the change, no commented-out block left
+    behind, no empty function body or `throw new Error("not implemented")`, no debug logging, and
+    no file whose diff is imports-only or scaffolding with no caller
+  - a file that only a finished file imports counts as finished, since shipping without it breaks
+  - anything you cannot place with confidence stays UNFINISHED; the flag drains the tree partially
+    on purpose, and a wrong call here ships half a feature
+  - report what was left and why, one line each, before the first block
 
 ## telemetry
 
@@ -116,5 +124,6 @@ git switch -c "$ATOMIC_BRANCH" "$DEFAULT_BRANCH"
 - a commit message naming a destructive command trips `pretooluse.sh`, so reword rather than quote
 
 6. check conditions before continuing:
-- IF `--first` → emit only bucket 1's block and report what the remaining plan holds
+- IF `--debug` → emit only bucket 1's block and report what the remaining plan holds
+- IF `--finished` → bucket only finished work, then report every file left behind and why
 - ELSE wait for the user, re-read `git status -s`, and repeat from step 2 until the tree is clean

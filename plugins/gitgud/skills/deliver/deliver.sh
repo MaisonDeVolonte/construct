@@ -10,14 +10,15 @@
 # - the reasoning is the automation: bucketing, ordering and message drafting are what it does
 # GATE
 # - it plans EVERY bucket first and stops there, since a wrong bucket is free to fix before a branch
-# - `--first` plans everything the same way, but emits only the first block
+# - `--debug` plans everything the same way, but emits only the first block
+# - `--finished` buckets only work that reads as finished, leaving unfinished files in the tree
 # - gated: it never delivers, and every block is the user's to paste in the order given
 # SIDECAR
 # - read-only: switch, merge and restore are denied, so the preflight measures rather than moves
 # - github auth preflights through curl + bearer, since gh cannot verify tls in the sandbox
 # - github's git endpoints take only basic auth, which base64s past the proxy, so push needs a tty
 # - a delivered `.claude/settings.json` strands its checkout, so the pull after needs the hatch
-# @see AGENTS.md, plugins/gitgud/skills/deliver/SKILL.md, plugins/gitgud/skills/rerun/SKILL.md, plugins/gitgud/shared/handover.sh, tools/check-skills/README.md
+# @see plugins/gitgud/skills/deliver/SKILL.md, plugins/gitgud/skills/rerun/SKILL.md, plugins/gitgud/shared/handover.sh, tools/check-skills/README.md
 
 set -euo pipefail
 
