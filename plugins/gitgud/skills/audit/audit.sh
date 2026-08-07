@@ -14,7 +14,7 @@
 # - an unpaired doc or sidecar is the shape error `tools/check-skills` grades in detail
 # - a stale artifact directory means a writer skill stopped being run, not that it broke
 # - shared drift is the check `secrets.sh` names in its own header, since duplication needs one
-# @see AGENTS.md, plugins/gitgud/skills/audit/SKILL.md, plugins/gitgud/shared/triage.sh, plugins/gitgud/shared/handover.sh, tools/check-skills/README.md
+# @see plugins/gitgud/skills/audit/SKILL.md, plugins/gitgud/shared/triage.sh, plugins/gitgud/shared/handover.sh, tools/check-skills/README.md
 
 set -euo pipefail
 
@@ -96,11 +96,13 @@ fi
 
 # artifacts: a directory whose newest file is old means its writer stopped being run
 echo "--- artifacts ---"
-for d in docs/*/; do
+# one directory per artifact kind, all at one level, so the walk needs no special case
+for d in .operator/*/; do
   [ -d "$d" ] || continue
+  label=${d#.operator/}; label=${label%/}
   count=$({ find "$d" -name '*.md' 2>/dev/null || true; } | wc -l | tr -d ' ')
   latest=$({ find "$d" -name '*.md' 2>/dev/null || true; } | sort | tail -1)
-  telemetry_line "$(basename "$d")" "files: $count | latest: ${latest:-none}"
+  telemetry_line "$label" "files: $count | latest: ${latest:-none}"
 done
 
 echo "--- end ---"
