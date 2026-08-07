@@ -4,20 +4,20 @@
 # ==========================================
 # @description
 # PAIR
-# - sidecar for `doc-logs` — asserts a day's log matches the shape its SKILL.md documents
+# - sidecar for `logs` — asserts a day's log matches the shape its SKILL.md documents
 # - the doc carries threads, notes and prompts; this file carries what a script can judge
 # ARTIFACT
-# - `docs/logs/YYYY-MM-DD.md`, one file per day, holding the work and the prompts that drove it
+# - `.operator/logs/YYYY-MM-DD.md`, one file per day, holding the work and the prompts that drove it
 # - gitignored in this repo; host projects decide for themselves whether to track it
 # - `sessionstart.sh` creates the day's file and `stop.sh` gates the session on it being written
 # - no trigger wraps it: a thread, a note or a synthesis is asked for in plain words
 # - a thread groups work by task or topic; notes and prompts append under the thread they belong to
 # - notes get absorbed into the thread's prose on synthesis; prompts stay a list and get pruned
 # RUN
-# - defaults to every file in `docs/logs/`; pass files or a directory to scope it
+# - defaults to every file in `.operator/logs/`; pass files or a directory to scope it
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
 # - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
-# @see AGENTS.md, plugins/retardify/skills/log/SKILL.md, plugins/operator/hooks/sessionstart.sh, plugins/operator/hooks/stop.sh, docs/logs/, plugins/retardify/shared/secrets.sh
+# @see plugins/retardify/skills/log/SKILL.md, plugins/operator/hooks/sessionstart.sh, plugins/operator/hooks/stop.sh, .operator/logs/, plugins/retardify/shared/secrets.sh
 
 set -euo pipefail
 
@@ -41,7 +41,7 @@ MAX_WIDTH=100
 STRICT=0
 KEEP=0
 TEMPLATE="plugins/retardify/skills/log/SKILL.md"
-ARTIFACTS="docs/logs"
+ARTIFACTS=".operator/logs"
 
 # the subsections every thread carries, which is the one thing every thread must agree on
 EXPECTED_SECTIONS=$'context\nchanges\ninsights\nadvice'
@@ -49,12 +49,26 @@ EXPECTED_SECTIONS=$'context\nchanges\ninsights\nadvice'
 # "`threads` group work by task/topic, limited to 50 lines of prose, prompts excluded"
 MAX_PROSE_LINES=50
 
+# the budget the whole design rests on: a thread is bounded, so the readers never truncate. lines
+# govern how a thread reads, bytes govern what it costs a session to carry, and the two agree at
+# roughly this ratio today. `--budget` prints both for the hooks, which own neither
+THREAD_MAX_BYTES=5000
+INJECT_THREADS=4
+
 # "`notes` are appended after taskcomplete or every 30 minutes, limited to 5 bullets"
 MAX_NOTE_BULLETS=5
 
 # a comma chain is the template's own example of superfluous formatting; three is where a line
 # stops being one clause and starts being a list that should have been written as one
 MAX_COMMAS=3
+
+# asked by sessionstart and stop on every run, so it answers before any file is opened
+if [ "${1:-}" = "--budget" ]; then
+  echo "thread_max_bytes: $THREAD_MAX_BYTES"
+  echo "inject_threads: $INJECT_THREADS"
+  echo "max_prose_lines: $MAX_PROSE_LINES"
+  exit 0
+fi
 
 LOGS=()
 for arg in "$@"; do
@@ -201,7 +215,7 @@ check_subsections() {
 # "`threads` group work by task/topic, limited to 50 lines of prose, prompts excluded" — over the
 # cap means either two topics in one thread, or notes nobody ever synthesized
 check_prose() {
-  local file=$1 start end heading count
+  local file=$1 start end heading count bytes
   while IFS=$'\t' read -r start end heading; do
     count=$(awk -v s="$start" -v e="$end" '
       NR < s || NR > e { next }
@@ -215,6 +229,10 @@ check_prose() {
     ' "$file")
     if [ "$count" -gt "$MAX_PROSE_LINES" ]; then
       err "$file" "$start" thread_length "$count lines of prose; the cap is $MAX_PROSE_LINES, so split or synthesize"
+    fi
+    bytes=$(awk -v s="$start" -v e="$end" 'NR >= s && NR <= e { n += length($0) + 1 } END { print n + 0 }' "$file")
+    if [ "$bytes" -gt "$THREAD_MAX_BYTES" ]; then
+      err "$file" "$start" thread_bytes "$bytes bytes; the cap is $THREAD_MAX_BYTES, so synthesize this thread"
     fi
   done < <(entries "$file")
 }
