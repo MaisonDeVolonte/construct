@@ -84,7 +84,7 @@ echo "sidecar exit: $?"
 ## the shape
 > the spec this skill appends against; the validator below grades what landed
 
-# audits/<kind>/YYYY-MM-DD.md
+# .operator/<kind>/YYYY-MM-DD.md
 one file per day and per kind, appended to by every auditing trigger:
 
 - the kind in the filename and the kind in each heading match, so one archive reads as one
