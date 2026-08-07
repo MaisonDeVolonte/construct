@@ -10,7 +10,10 @@
 # - CONTRACT: the caller defines `err SEV file line category detail` and `warn` the same way
 # - an unambiguous provider token is an ERROR, so the run stops and a human decides what happens
 # - a merely credential-shaped string is a WARN, since most of them here are commit shas
-# @see AGENTS.md, plugins/gitgud/skills/audit/audit.sh, .github/workflows/ci.yml
+# - a suspect value opening with `$` or a backtick is skipped, since a literal credential never does
+# - without that, every `token=${VAR}` a sidecar declares would warn on every run forever
+# - edit this copy only; `tools/sync-secrets/sync-secrets.sh --write` propagates it to the siblings
+# @see tools/sync-secrets/sync-secrets.sh, plugins/gitgud/skills/audit/audit.sh, .github/workflows/ci.yml
 
 # sourcing is the only supported use: run directly and it would define functions into a shell that
 # exits immediately afterwards, which looks like it worked and does nothing
@@ -24,7 +27,7 @@ SECRET_PATTERNS='AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{20,}|gi
 
 # shapes that are a commit sha or a digest nine times out of ten here, and a secret the tenth,
 # so they only ever warn; matched case-insensitively, since a sha reads the same in either case
-SUSPECT_PATTERNS='[0-9a-f]{32,}|(api[_-]?key|secret|token|password|passwd|credential)[[:space:]]*[:=][[:space:]]*[^[:space:]]{8,}'
+SUSPECT_PATTERNS='[0-9a-f]{32,}|(api[_-]?key|secret|token|password|passwd|credential)[[:space:]]*[:=][[:space:]]*[^$`[:space:]][^[:space:]]{7,}'
 
 # a finding names what it matched, so it truncates first: this report gets pasted into logs and prs
 preview() {
