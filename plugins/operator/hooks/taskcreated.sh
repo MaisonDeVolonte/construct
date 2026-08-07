@@ -8,13 +8,13 @@
 # - confirmed live: a blocked test task never got created, so this uses additionalContext
 # - creates today's log file if missing
 # - nudges the agent to check thread-relatedness, not enforced
-# @see AGENTS.md, plugins/retardify/skills/log/SKILL.md, plugins/operator/hooks/taskcompleted.sh, docs/logs/
+# @see plugins/retardify/skills/log/SKILL.md, plugins/operator/hooks/taskcompleted.sh, .operator/logs/
 
-TODAYS_LOG="docs/logs/$(date +%Y-%m-%d).md"
+TODAYS_LOG=".operator/logs/$(date +%Y-%m-%d).md"
 
 # make today's log file if one doesn't exist
 if [ ! -f "$TODAYS_LOG" ];
-then mkdir -p docs/logs; echo "# $TODAYS_LOG" > "$TODAYS_LOG"; fi
+then mkdir -p .operator/logs; echo "# $TODAYS_LOG" > "$TODAYS_LOG"; fi
 
 jq -n --arg ctx "check the most recent thread in $TODAYS_LOG; if this new task is unrelated to it, start a new thread before continuing (see plugins/retardify/skills/log/SKILL.md)" \
   '{hookSpecificOutput: {hookEventName: "TaskCreated", additionalContext: $ctx}}'

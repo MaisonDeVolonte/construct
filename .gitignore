@@ -4,8 +4,5 @@
 # scratch
 tmp/
 
-# docs
-docs/
-
-# artifacts
-audits/
+# artifacts: one namespaced root, so a host project's own docs/ is never touched
+.operator/
