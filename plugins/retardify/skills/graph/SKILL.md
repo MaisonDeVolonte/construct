@@ -1,6 +1,6 @@
 ---
 name: graph
-description: Turn a goal into a fan-out spec prompt in docs/graphs/, then validate it against its spec.
+description: Turn a goal into a fan-out spec prompt in .operator/graphs/, then validate it against its spec.
 argument-hint: <goal>
 disable-model-invocation: true
 metadata:
@@ -37,7 +37,7 @@ echo "sidecar exit: $?"
 
 4. validate what landed, then show it and STOP
   ```bash
-  plugins/retardify/skills/graph/doc-graphs.sh [target]
+  plugins/retardify/skills/graph/graph.sh --check [target]
   ```
   - FIX every ERROR and re-run; a spec that fails its own validator is not saved work
   - show the saved spec inline, then STOP
@@ -48,10 +48,10 @@ echo "sidecar exit: $?"
 ## the shape
 > the spec this skill writes against; the validator below grades what landed
 
-**the file:** `docs/graphs/YYYY-MM-DD-operation-<title>.md`, one per spec
+**the file:** `.operator/graphs/YYYY-MM-DD-operation-<title>.md`, one per spec
 - written on explicit `@graphspec --<artifact> <goal>`, where the flag defaults to `--plan`
 - the flag names what executing the spec must produce, so `--plan` yields a plan file
-- `--plan` is the only flag; the dated archives stay owned by their own triggers
+- `--plan` is the only flag; the dated artifacts stay owned by their own triggers
 - scrub client names, tokens, and other sensitive detail before it lands in a commit
 
 **the form:** seven fields, each appearing exactly once, in the order below
@@ -68,7 +68,7 @@ echo "sidecar exit: $?"
 
 **the pipeline:** show the saved spec and STOP; fan out begins only on the user's explicit go
 - a fresh session executes the saved spec and writes whatever `output` names
-- `--plan` means `docs/plans/<same-basename>.md` per `doc-plans`, and it must pass its sidecar
+- `--plan` means `.operator/plans/<same-basename>.md` per `/retardify:plan`, and it must pass its sidecar
 
 ▸ GRAPH SPEC
 
@@ -88,7 +88,7 @@ VERIFY:       describe a fresh agent that attacks each finding against DONE WHEN
               dropping whatever fails
 
 OUTPUT:       name the artifact executing this spec must produce, taken from the flag
-              --plan means docs/plans/<same-basename>.md per doc-plans, passing its sidecar
+              --plan means .operator/plans/<same-basename>.md per the plan spec, passing its sidecar
 
 *example:*
 ```
@@ -133,13 +133,13 @@ RULES:        1. a finding without evidence does not survive verify
 VERIFY:       a fresh agent attacks each finding against DONE WHEN and CONTEXT
               evidence that fails to reproduce, or contradicts a known fact, kills the finding
 
-OUTPUT:       docs/plans/2026-07-30-operation-monorepo.md, per doc-plans, passing its sidecar
+OUTPUT:       .operator/plans/2026-07-30-operation-monorepo.md, per the plan spec, passing its sidecar
 
 ```
 
 ```
 VERIFY - not part of the artifact
-- RUN `plugins/retardify/skills/graph/doc-graphs.sh` once the spec is written; pass a path to scope the run
+- RUN `plugins/retardify/skills/graph/graph.sh --check` once the spec is written; pass a path to scope the run
 - FIX every ERROR, since each one breaks a rule this spec states outright
 - STOP on a `secret` finding and ask the user before truncating it; the key needs rotating first
 - JUSTIFY or fix every WARN; the sidecar tolerates them, the next reader may not

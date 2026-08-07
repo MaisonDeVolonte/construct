@@ -1,6 +1,6 @@
 ---
 name: plan
-description: Turn work into a staged plan in docs/plans/, with readiness tables, then validate it.
+description: Turn work into a staged plan in .operator/plans/, with readiness tables, then validate it.
 argument-hint: <goal>
 disable-model-invocation: true
 metadata:
@@ -38,7 +38,7 @@ echo "sidecar exit: $?"
 
 4. validate what landed, then show it and STOP
   ```bash
-  plugins/retardify/skills/plan/doc-plans.sh [target]
+  plugins/retardify/skills/plan/plan.sh --check [target]
   ```
   - FIX every ERROR and re-run; a plan that fails its own validator is not saved work
   - show the saved plan inline, then STOP
@@ -49,7 +49,7 @@ echo "sidecar exit: $?"
 ## the shape
 > the spec this skill writes against; the validator below grades what landed
 
-**the file:** `docs/plans/YYYY-MM-DD-operation-<title>.md`, one per plan
+**the file:** `.operator/plans/YYYY-MM-DD-operation-<title>.md`, one per plan
 - written before complex or architectural work, never after it
 - sections run in this order: context, goal, solution, risks, checklist, readiness, notes
 - a completed plan closes with a summary in `notes`; a `## Summary` section breaks that order

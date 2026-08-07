@@ -1,6 +1,6 @@
 ---
 name: guide
-description: Turn a shipped feature into a build guide in docs/guides/, then validate it.
+description: Turn a shipped feature into a build guide in .operator/guides/, then validate it.
 argument-hint: <feature>
 disable-model-invocation: true
 metadata:
@@ -36,7 +36,7 @@ echo "sidecar exit: $?"
 
 4. validate what landed, then show it and STOP
   ```bash
-  plugins/retardify/skills/guide/doc-guides.sh [target]
+  plugins/retardify/skills/guide/guide.sh --check [target]
   ```
   - FIX every ERROR and re-run; a guide that fails its own validator is not saved work
   - show the saved guide inline, then STOP
@@ -47,7 +47,7 @@ echo "sidecar exit: $?"
 ## the shape
 > the spec this skill writes against; the validator below grades what landed
 
-**the file:** `docs/guides/<feature>.md`, kebab-case, one per feature or workflow
+**the file:** `.operator/guides/<feature>.md`, kebab-case, one per feature or workflow
 - written on request, after a feature ships, to build a mental model of how it works
 - files are listed in ideal-build order, never alphabetical and never touched-order
 - maximally concise, roadmap-style language — a map, not a textbook

@@ -48,7 +48,7 @@ echo "sidecar exit: $?"
   ## 3. risk & maintenance traps
   - list specific files, ignored rules, or architectural landmines
 
-  ## 4. the honest grade
+  ## 4. the review grade
   - **infra/tooling:** A-F
   - **app/features:** A-F 
   - **tests/reality:** A-F (grade harshly: strong infra grades CANNOT mask weak app/test ones)
@@ -56,13 +56,13 @@ echo "sidecar exit: $?"
   **verdict:** [one unapologetic, brutally honest sentence summarizing the actual state of the codebase]
   ```
 
-5. THEN append the same scorecard to the honest file (see `plugins/retardify/skills/review/SKILL.md`)
+5. THEN append the same scorecard to the review file (see `plugins/retardify/skills/review/SKILL.md`)
   ```text
-  - the sidecar reports the target but never creates it; take it from `--- HONEST ARCHIVE ---`:
-  - CREATE the file first if it does not exist, with `# <honest_file>` as its only line
-    - `honest_file` is the path, `honest_time` is the heading timestamp
-    - `honest_count` is how many scorecards the file already holds, so this one is #(honest_count + 1)
-  - append a new `## Honest #N: YYYY-MM-DD HH:MM` section, never overwrite an earlier scorecard
+  - the sidecar reports the target but never creates it; take it from `--- REVIEW ARTIFACT ---`:
+  - CREATE the file first if it does not exist, with `# <review_file>` as its only line
+    - `review_file` is the path, `review_time` is the heading timestamp
+    - `review_count` is how many scorecards the file already holds, so this one is #(review_count + 1)
+  - append a new `## Review #N: YYYY-MM-DD HH:MM` section, never overwrite an earlier scorecard
   - write the scorecard as delivered to the user, minus the raw telemetry dump
   - never soften the written record; a scorecard the user disputes stays as written
   ```
@@ -70,7 +70,7 @@ echo "sidecar exit: $?"
 ## the shape
 > the spec this skill writes against; the validator below grades what landed
 
-# docs/honest/YYYY-MM-DD.md
+# .operator/reviews/YYYY-MM-DD.md
 one file per day, appended to by `/retardify:review` and nothing else:
 
 - a scorecard captures the doc-vs-reality gap at a moment in time, never edited after the fact
@@ -82,7 +82,7 @@ one file per day, appended to by `/retardify:review` and nothing else:
 - lines hold a single clause, fact or action, capped at 100 characters
 - scrub client names, tokens, and other sensitive detail before it lands in a commit
 
-## Honest #1: YYYY-MM-DD HH:MM
+## Review #1: YYYY-MM-DD HH:MM
 
 ### reality check
 each documented claim, followed by what the telemetry actually shows:
@@ -115,5 +115,5 @@ specific files, ignored rules, or architectural landmines
 *example:*
 > **verdict:** an immaculate build system wrapped around software nobody has proven works
 
-## Honest #2: repeat the above format for each `/retardify:review` run on the same day
+## Review #2: repeat the above format for each `/retardify:review` run on the same day
 never edit an earlier scorecard; a grade that has not moved in a week is the finding
