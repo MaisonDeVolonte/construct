@@ -1,7 +1,7 @@
 ---
 name: test-scopes
 description: Map every workflow script against the merged settings stack, separating what a permission rule sees from what a script runs internally, where only the sandbox is still watching.
-argument-hint: [--repo <name>] [--strict]
+argument-hint: "[--repo <name>] [--strict]"
 disable-model-invocation: true
 metadata:
   kind: trigger

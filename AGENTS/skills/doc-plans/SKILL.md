@@ -1,6 +1,6 @@
 ---
 name: doc-plans
-description: Shape of a plan in docs/plans/: context, goal, solution, risks, checklist, readiness, notes.
+description: "Shape of a plan in docs/plans/: context, goal, solution, risks, checklist, readiness, notes."
 metadata:
   kind: spec
 ---

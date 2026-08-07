@@ -1,6 +1,6 @@
 ---
 name: check-skills
-description: Shape every skill pair must hold: the SKILL.md, its sidecar, and the frontmatter that gates it. Validates them.
+description: "Shape every skill pair must hold: the SKILL.md, its sidecar, and the frontmatter that gates it. Validates them."
 metadata:
   kind: spec
 ---
