@@ -14,7 +14,7 @@
 # TRIGGER
 # - the doc folds in `git-audit.sh`, whose local/remote/ghost/zombie split catches the rebased ones
 # - stash and branch deletes are denied, so the whole block stays the user's to run in order
-# @see AGENTS.md, plugins/gitgud/skills/prune/SKILL.md, plugins/gitgud/shared/triage.sh, plugins/gitgud/shared/handover.sh, tools/check-skills/README.md
+# @see plugins/gitgud/skills/prune/SKILL.md, plugins/gitgud/shared/triage.sh, plugins/gitgud/shared/handover.sh, tools/check-skills/README.md
 
 set -euo pipefail
 

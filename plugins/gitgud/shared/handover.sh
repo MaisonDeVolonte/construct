@@ -9,7 +9,7 @@
 # - the handover block is the deliverable: measured here, pasted and run by the user
 # - the trigger block is the narrow exception: measured here, run by the trigger as a tool call
 # - a sidecar that needs to mutate emits the command instead of running it, into either block
-# @see AGENTS.md, tools/check-skills/README.md, plugins/operator/settings/settings.user.md, plugins/
+# @see tools/check-skills/README.md, plugins/operator/settings/settings.user.md, plugins/
 
 # ==============
 # PREFLIGHT

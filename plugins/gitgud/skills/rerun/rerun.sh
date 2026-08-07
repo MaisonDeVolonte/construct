@@ -13,7 +13,7 @@
 # - reaches `handover.sh` by path from this skill folder, since a skill owns its own directory
 # - the plugin root is absolute, so no per-project symlink is needed to reach it
 # - `--watch` waits for the fresh run to finish, and runs as a tool call rather than inline
-# @see AGENTS.md, plugins/gitgud/skills/rerun/SKILL.md, plugins/gitgud/skills/deliver/SKILL.md, plugins/gitgud/shared/handover.sh, tools/check-skills/README.md
+# @see plugins/gitgud/skills/rerun/SKILL.md, plugins/gitgud/skills/deliver/SKILL.md, plugins/gitgud/shared/handover.sh, tools/check-skills/README.md
 
 set -euo pipefail
 

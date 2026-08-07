@@ -17,7 +17,7 @@
 # - the restore is handed over, never run: putting files back overwrites what sits there now
 # - `cp` here is invisible to the deny list and the hook, since script lines are not tool calls
 # - that gap is the design: a reviewed sidecar holds a capability the loose agent never gets
-# @see AGENTS.md, plugins/gitgud/skills/backup/SKILL.md, plugins/gitgud/skills/nuke/SKILL.md, plugins/gitgud/shared/handover.sh, tools/check-skills/README.md
+# @see plugins/gitgud/skills/backup/SKILL.md, plugins/gitgud/skills/nuke/SKILL.md, plugins/gitgud/shared/handover.sh, tools/check-skills/README.md
 
 set -euo pipefail
 
