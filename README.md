@@ -7,9 +7,9 @@
 > and more:
 - **tamper-proof security:** agents can't secretly change their rules; `/operator:permissions` probes live gate
 - **drift detection:** installed settings are diffed against your templates; `/operator:settings` flags drift
-- **machine-checked conventions:** docs skills are markdown templates; `/retardify-*` skills verify conformance
-- **cross-session memory:** configure sessions to start with README, AGENTS, and logs; `sessionstart` seeds context
-- **centralized configuration:** plugin edits propagate everywhere; `/AGENTS.md` can be custom or symlinked
+- **machine-checked conventions:** docs skills are markdown templates; `/retardify:*` skills verify conformance
+- **cross-session memory:** configure sessions to start with your README and logs; `sessionstart` seeds context
+- **centralized configuration:** plugin edits propagate everywhere; skills carry their own instructions
 - **chat-native triggers:** slash commands are project agnostic; bash sidecars resolve at plugin root
 - **easy opt-out:** delete symlinks, uninstall repo and revert claude settings; `/uninstall` 
 > *requires: claude code, bash, curl, git, jq; [MIT License](LICENSE)*
@@ -18,15 +18,17 @@
 
 ```
 TABLE OF CONTENTS
-├─ Example ─────── masked credentials: success · masked · denied
+├─ Example ─────── masked credentials: injected · masked · denied
 ├─ Installation ── basic · configured · advanced · managed
-├─ Hooks ───────── sessionstart · pretooluse · posttooluse · taskcreated · taskcompleted · stop
-├─ Operator ────── credentials · permissions · scopes · settings
-├─ Gitgud ──────── audit · backup · continue · deliver · prune · nuke · rerun · ship
-├─ Retardify ───── files · wayfinders · modules · comments · code · graph · plan · guide · log · todo
-├─ Conversations ─ responses · verification · errors · modes
-├─ Settings ────── cli · local · project · user · managed
-└─ Sandbox ─────── scopes · keys · rules · clients · audits · diagnostics
+├─ Sandbox ─────── scopes · keys · rules · clients · audits · diagnostics
+├─ Plugins ─────── operator · gitgud · retardify
+├─ /operator ───── credentials · permissions · scopes · settings
+├── /hooks ─────── sessions · tools · tasks · turns
+├── /settings ──── cli · local · project · user · managed
+├─ /gitgud ─────── audit · backup · continue · deliver · prune · nuke · rerun · ship
+├─ /retardify ──── files · code · graph · plan · review · guide · log · todo
+└─ Conversations ─ responses · verification · errors · modes
+
 ```
 
 &nbsp;
@@ -35,7 +37,7 @@ TABLE OF CONTENTS
 > run /sandbox and /operator:credentials to generate a detailed report
 
 ```console
-# ── SUCCESS ─────────────────────────────────────────────────────────────────────────────────────
+# ── INJECTED ────────────────────────────────────────────────────────────────────────────────────
 # unauthenticated    $ curl -o /dev/null -w "%{http_code}" https://api.github.com/user
                      401
 # authenticated      $ curl -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/user
@@ -95,12 +97,11 @@ TABLE OF CONTENTS
 
 ### 1. basic sandbox (automations and workflows, ~5 mins)
 - [ ] clone: `git clone https://github.com/MaisonDeVolonte/operator.git ~/.../operator`
-- [ ] symlink rules: `ln -s ~/.../operator/README.md AGENTS.md`
 - [ ] symlink plugins: `ln -s ~/.../operator/plugins/operator ~/.claude/skills/operator`
 - [ ] local settings: `cp plugins/operator/settings/settings.local.json .claude/settings.local.json`
-- [ ] gitignore: `AGENTS.md`, `AGENTS`, and `.claude/settings.local.json`
+- [ ] gitignore: `.claude/settings.local.json`
 - [ ] restart: editor, start new claude session, run `/sandbox` and `/operator:settings`
-- [ ] confirm `AGENTS.md` loads into context
+- [ ] confirm the skills list: `/retardify:` and `/gitgud:` both complete
 
 ### 2. configured sandbox (filesystem lockdown, ~5 mins)
 - [ ] project settings: `cp plugins/operator/settings/settings.project.json .claude/settings.json`
@@ -163,12 +164,11 @@ TABLE OF CONTENTS
 ### Retardify (see `plugins/retardify/`)
 > keeps machine output legible: what a convention is, whether the tree holds to it, and prose you can follow
 > the linters auto-load on a matching source file; the writers turn a conversation into one document
-- [/retardify:comments](plugins/retardify/skills/comments/SKILL.md): inline comment shape in every source file
-- [/retardify:wayfinders](plugins/retardify/skills/wayfinders/SKILL.md): the header every source file opens with
-- [/retardify:plan](plugins/retardify/skills/plan/SKILL.md): SAFE; writes a staged plan to `docs/plans/`
-- [/retardify:graph](plugins/retardify/skills/graph/SKILL.md): SAFE; writes a fan-out spec to `docs/graphs/`
-- [/retardify:guide](plugins/retardify/skills/guide/SKILL.md): SAFE; writes a build guide to `docs/guides/`
-- [/retardify:review](plugins/retardify/skills/review/SKILL.md): READ-ONLY; brutally honest code review, saved to `docs/honest/`
+- [/retardify:files](plugins/retardify/skills/files/SKILL.md): naming, wayfinder, module order and comments
+- [/retardify:plan](plugins/retardify/skills/plan/SKILL.md): SAFE; writes a staged plan to `.operator/plans/`
+- [/retardify:graph](plugins/retardify/skills/graph/SKILL.md): SAFE; writes a fan-out spec to `.operator/graphs/`
+- [/retardify:guide](plugins/retardify/skills/guide/SKILL.md): SAFE; writes a build guide to `.operator/guides/`
+- [/retardify:review](plugins/retardify/skills/review/SKILL.md): READ-ONLY; brutally honest code review, saved to `.operator/reviews/`
 - [/retardify:log](plugins/retardify/skills/log/SKILL.md): the daily agent log, created and gated by the hooks
 - [/retardify:todo](plugins/retardify/skills/todo/SKILL.md): READ-ONLY; scans repo, docs and logs for what to work on next
 
@@ -190,7 +190,7 @@ TABLE OF CONTENTS
 
 ## Conventions
 > `@retardify` applies all conventions in this section to target files or code:
-- rename the file if its casing/extension violates `Files`
+- rename the file if its casing/extension violates `Naming`
 - resync the `Wayfinders` @description/@see with the file as it now stands
 - reorder imports/exports per `Modules` order
 - rewrite or prune `Comments` that explain how instead of why
@@ -199,7 +199,7 @@ TABLE OF CONTENTS
 - verify live before/after via tsc, tests, builds etc
 - stop once further changes are diminishing returns
 
-### Files
+### Naming
 - `PascalCase.tsx` — ui-rendering components
 - `camelCase.tsx` — logic and behavior components
 - `camelCase.ts` — utilities and helpers
@@ -210,18 +210,17 @@ TABLE OF CONTENTS
 ```javascript
 /**
  * ====================================================
- * @file AGENTS.md - jsdoc wayfinding header guidelines
+ * @file widget.ts - jsdoc wayfinding header guidelines
  * ====================================================
  * @description
- * - automatically add this block to executable files (js, ts, tsx, jsx) not ignored by eslint.config.mjs
- * - can be triggered manually via @wayfind
+ * - automatically add this block to executable files (js, ts, tsx, jsx)
  * - continuously update tags to reflect the file's contents, purpose, and dependencies
  *   - @file: the filename - short, specific title
  *   - @description: - hyphen delimited list of single clause descriptions, avoid wrapping text
  *   - @see: comma, separated, list, of, ALL, related, internal, files
  * - write maximally concise, shorthand, lowercase english, favoring legibility over completeness
  * - read this block to understand the file's context and boundaries before modifying it
- * @see plugins/, .claude/, eslint.config.mjs
+ * @see README.md
  */
 ```
 
@@ -371,11 +370,41 @@ export function writeCode(requirements: Requirement[], request: string) {
 - theirs: contradict a wrong premise on contact, before anything builds on top of it
 
 ### Modes
-- default: state facts outright, execute on contact, and hold the mode until it is changed
- - `suggestive`: grades and alternatives, never an edit
- - `socratic`: return the question they should have asked instead of the conclusion
- - `eli5`: one concept, no jargon, a concrete example before the rule
- - `adversarial`: rate against evidence and lead with what is broken
+> named in conversation, never configured: no file, no setting, no restart, no `/clear`
+
+a mode is named in conversation and needs no restart: adopt it on the turn it is named, hold it
+until the user names another or asks for `default`, and never announce the switch. the `@` is
+optional, since it may open a file picker before the name lands.
+
+a mode changes the SHAPE of an answer, never its standards. everything above still binds: no
+filler, no closures, no unverified claim. a fact the user must act on is stated plainly in every
+mode, and no persona is a reason to withhold it.
+
+- `default` — state facts outright, execute on contact
+
+- `@socrates` — learning: return the question they should have asked instead of the conclusion
+  - one question per reply, each narrowing the gap between what they expect and what is true
+  - profess ignorance of their intent rather than assuming it; the question is genuine, not rhetorical
+  - never supply the answer they are two questions from reaching themselves
+  - drop it the moment they ask outright, or a wrong belief is about to cost them something
+
+- `@machiavelli` — adversarial: rate against evidence and lead with what is broken
+  - judge what will actually happen, never what the design intends
+  - assume the adversary is competent, the maintainer is absent, and the edge case lands on a friday
+  - name the failure, price it, and say which choice survives contact
+  - unsentimental, never gratuitous: contempt is noise, consequence is signal
+
+- `@aristotle` — suggestive: grades and alternatives, never an edit
+  - name the category the problem sits in before naming options inside it
+  - give three: the excess, the deficiency, and the mean between them
+  - grade against a stated standard, so the ranking can be argued with rather than taken on trust
+  - stop at the recommendation; writing it is the user's move, not yours
+
+- `@epictetus` — eli5: one concept, no jargon, a concrete example before the rule
+  - open with something they already handle daily, then name the principle it illustrates
+  - one concept per reply; a second concept is a second reply
+  - separate what they control from what they do not, and spend the words on the first
+  - short declaratives; never use a term before it has been earned
 
 ## Settings
 > see [plugins/operator/settings](plugins/operator/settings)
