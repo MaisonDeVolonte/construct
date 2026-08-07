@@ -19,8 +19,8 @@
     "allow": [
       "Read", "Write", "Edit", "WebSearch",
 
-      "Bash(AGENTS/**/*.sh*)", "Bash(bash AGENTS/**/*.sh*)",
-      "Bash(bash AGENTS/**/*.sh* | sed *)", "Bash(bash AGENTS/**/*.sh* | grep *)",
+      "Bash(plugins/**/*.sh*)", "Bash(bash plugins/**/*.sh*)",
+      "Bash(bash plugins/**/*.sh* | sed *)", "Bash(bash plugins/**/*.sh* | grep *)",
 
       "Bash(ls)", "Bash(ls *)", "Bash(pwd)", "Bash(cd *)",
       "Bash(stat *)", "Bash(file *)", "Bash(du *)", "Bash(df *)", "Bash(wc *)", "Bash(md5 *)",
@@ -67,7 +67,12 @@
 
     "ask": [
       "Bash(dangerouslyDisableSandbox:true)",
-      "Edit(AGENTS/**)", "Write(AGENTS/**)",
+
+      "Edit(README.md)", "Write(README.md)",
+      "Edit(AGENTS.md)", "Write(AGENTS.md)",
+      "Edit(plugins/**)", "Write(plugins/**)",
+
+      "Bash(git mv *)", "Bash(git rm *)",
 
       "Bash(npx*)",
       "Bash(bunx*)", "Bash(uvx*)",
@@ -125,7 +130,8 @@
       "Bash(git switch --force-create*)", "Bash(git switch --force*)", "Bash(git switch --detach*)",
       "Bash(git switch --discard-changes*)", "Bash(git switch --orphan*)", "Bash(git switch --track*)",
       "Bash(git switch --guess*)", "Bash(git switch --ignore-other-worktrees*)",
-      "Bash(git clean*)", "Bash(git rm*)", "Bash(git mv*)", "Bash(git add*)",
+      "Bash(git clean*)", "Bash(git add*)",
+      "Bash(git rm -f*)", "Bash(git rm --force*)",
       "Bash(git bisect*)", "Bash(git sparse-checkout*)", "Bash(git worktree*)",
       "Bash(git submodule*)", "Bash(git rerere*)",
       "Bash(git stash)", "Bash(git stash save*)",
