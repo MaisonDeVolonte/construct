@@ -33,7 +33,7 @@ echo "sidecar exit: $?"
   - **AGENTS.md** — do its prose rules still hold (naming, css, imports, mirroring, etc.)?
   - **plugins/\*/** — does each skill's doc still match its own sidecar's flags and behavior?
 
-3. read the 5 most recent agent logs in `docs/logs/`, the shape `/retardify:log` defines
+3. read the 5 most recent agent logs in `.operator/logs/`, the shape `/retardify:log` defines
   - extract observations, pain points, unfinished tasks, recurring bugs, or architectural ideas
 
 4. merge all three streams, dedupe, and evaluate against the urgent/important matrix:
@@ -78,7 +78,7 @@ echo "sidecar exit: $?"
 ## the shape
 > the spec this skill writes against; the validator below grades what landed
 
-# docs/insights/YYYY-MM-DD.md
+# .operator/todos/YYYY-MM-DD.md
 one file per day, appended to by `/retardify:todo` and nothing else:
 
 - a report captures the opportunity surface at a moment in time, never edited after the fact
