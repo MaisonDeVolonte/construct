@@ -1,15 +1,19 @@
 ---
 name: log
-description: "Shape of a daily agent log in docs/logs/: threads, notes, and prompts."
+description: "Shape of a daily agent log in .operator/logs/: threads, notes, and prompts."
+when_to_use: "Writing to .operator/logs/, which the taskcompleted and stop hooks both demand before a turn closes. Also when asked to log, note or record what happened, or to recap the day's threads."
 metadata:
   kind: spec
 ---
-# docs/logs/YYYY-MM-DD.md
+# .operator/logs/YYYY-MM-DD.md
 one file per day, holding both the work and the prompts that drove it:
 
 - gitignored in this repo; host projects decide for themselves whether to track it
 - `logs` are written in MAXIMALLY clear, concise, casual language, skipping trivial details
 - `threads` group work by task or topic, limited to 50 lines of prose, prompts excluded
+- a thread also holds to 5000 bytes whole, prompts included, since sessionstart injects it entire
+- that cap is why nothing truncates a log: the writer spends the budget, the reader never guesses
+- sessionstart carries the 4 most recent threads forward, taken across days rather than per file
 - `sections` lead with the main idea, followed by supporting ideas
 - `lines` hold a single clause, fact or action, capped at 100 characters
 - `notes` are appended after taskcomplete or every 30 minutes, limited to 5 bullets
