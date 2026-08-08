@@ -16,7 +16,7 @@ TODAYS_LOG=".operator/logs/$(date +%Y-%m-%d).md"
 if [ ! -f "$TODAYS_LOG" ];
 then mkdir -p .operator/logs; echo "# $TODAYS_LOG" > "$TODAYS_LOG"; fi
 
-jq -n --arg ctx "check the most recent thread in $TODAYS_LOG; if this new task is unrelated to it, start a new thread before continuing (see plugins/retardify/skills/log/SKILL.md)" \
+jq -n --arg ctx "check the most recent thread in $TODAYS_LOG; if this new task is unrelated to it, start a new thread before continuing (see /retardify:log)" \
   '{hookSpecificOutput: {hookEventName: "TaskCreated", additionalContext: $ctx}}'
 
 exit 0
