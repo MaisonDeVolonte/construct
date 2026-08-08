@@ -4,9 +4,10 @@
 ```
 TABLE OF CONTENTS
 ├─ Examples ─────── operator:credentials · gitgud:deliver · retardify:graph
-├─ Installation ─── basic · configured · advanced · managed
+├─ Installation ─── plugin marketplace · cloned repo
+├─ Sandbox ──────── basic · configured · advanced · managed
 ├─ Plugins & Skills
-├─ /operator ────── credentials · permissions · scopes · settings
+├─ /operator ────── credentials · permissions · sandbox · scopes · settings
 ├─ /gitgud ──────── audit · backup · continue · deliver · prune · nuke · rerun · ship
 ├─ /retardify ───── file · code · graph · plan · review · guide · todo · log
 ├─ Hooks ────────── sessions · tools · tasks · turns
@@ -42,7 +43,7 @@ TABLE OF CONTENTS
 ## Examples
 
 <details>
-<summary><code>/operator:credentials</code></summary>
+<summary>/operator:credentials</summary>
 
 ```
 # ── INJECTED ────────────────────────────────────────────────────────────────────────────────────
@@ -91,7 +92,7 @@ TABLE OF CONTENTS
 </details>
 
 <details>
-<summary><code>/gitgud:deliver</code></summary>
+<summary>/gitgud:deliver</summary>
 
 ```bash
 # BUCKET 1 of 3
@@ -127,7 +128,7 @@ git switch "main"
 </details>
 
 <details>
-<summary><code>/retardify:graph combine backend and frontend into monorepo</code></summary>
+<summary>/retardify:graph combine backend and frontend into monorepo</summary>
 
 ```
 ▸ GRAPH SPEC
@@ -173,27 +174,140 @@ OUTPUT:       retardify/plans/2026-07-31-operation-monorepo.md
 
 </details>
 
-## Installation (Mac)
-> see `plugins/operator/settings/` for preconfigured templates (need to be extended to your specific services)
-> the sandbox is not installable: a plugin `settings.json` accepts only `agent` and `subagentStatusLine`,
-> so steps 2-4 stay manual copies whether you install by symlink or by `/plugin install`
+## Installation
+> see claude plugin
+> [security](https://code.claude.com/docs/en/discover-plugins#security),
+> [scopes](https://code.claude.com/docs/en/settings#configuration-scopes),
+> [updates](https://code.claude.com/docs/en/discover-plugins#configure-auto-updates),
+> [troubleshooting](https://code.claude.com/docs/en/discover-plugins#troubleshooting)
 
-### 1. basic sandbox (automations and workflows, ~5 mins)
-- [ ] clone: `git clone https://github.com/MaisonDeVolonte/operator.git ~/.../operator`
-- [ ] symlink operator: `ln -s ~/.../operator/plugins/operator ~/.claude/skills/operator`
-- [ ] symlink gitgud: `ln -s ~/.../operator/plugins/gitgud ~/.claude/skills/gitgud`
-- [ ] symlink retardify: `ln -s ~/.../operator/plugins/retardify ~/.claude/skills/retardify`
-- [ ] local settings: `cp plugins/operator/settings/settings.local.json .claude/settings.local.json`
+<details>
+<summary>
+
+### Option A: Plugin Marketplace (mix and match, manual/auto updates, ~5 mins)
+
+</summary>
+
+```bash
+# install TheConstruct plugin marketplace
+claude plugin marketplace add MaisonDeVolonte/construct --scope user --sparse .claude-plugin plugins
+```
+```bash
+# install /operator bundle (all plugins)
+claude plugin install operator@TheConstruct --scope user
+# OR install individual plugins only (skip the bundle)
+claude plugin install gitgud@TheConstruct --scope user
+claude plugin install retardify@TheConstruct --scope user
+```
+```bash
+# confirm install
+claude plugin list
+# show inventory and token costs
+claude plugin details operator@TheConstruct
+```
+```bash
+# start claude tui
+claude
+```
+```
+# reload, if needed (use --force if you get a prompt cache warning)
+/reload-plugins
+```
+```
+# update manually
+/plugin marketplace update TheConstruct
+# OR update automatically
+/plugin # > marketplaces > TheConstruct > enable auto-update
+```
+```bash
+# disable plugins
+claude plugin disable <name>@TheConstruct
+# OR uninstall plugins (use --prune to remove dependencies)
+claude plugin uninstall <name>@TheConstruct
+# OR uninstall TheConstruct marketplace (everything)
+claude plugin marketplace remove TheConstruct
+```
+
+</details>
+
+<details>
+<summary>
+
+### Option B: Cloned Repo (customizable, manual-updates only, ~5 mins)
+
+</summary>
+
+```bash
+# clone
+git clone https://github.com/MaisonDeVolonte/construct.git ~/Developer/construct
+```
+```bash
+# symlinks (required for all plugins)
+mkdir -p ~/.claude/skills
+ln -sfn ~/Developer/construct/plugins/operator ~/.claude/skills/operator
+ln -sfn ~/Developer/construct/plugins/gitgud ~/.claude/skills/gitgud
+ln -sfn ~/Developer/construct/plugins/retardify ~/.claude/skills/retardify
+```
+```bash
+# confirm install (symlinks formatted as `operator@skills-dir`)
+claude plugin list
+# show inventory and token costs
+claude plugin details operator@skills-dir
+```
+```bash
+# start claude tui
+claude
+```
+```
+# reload, if needed (use --force if you get a prompt cache warning)
+/reload-plugins
+```
+```bash
+# update manually (requires reloading session)
+git -C ~/Developer/construct pull
+```
+```bash
+# validate customizations
+claude plugin validate ~/Developer/construct/plugins/operator --strict
+```
+```bash
+# disable plugins
+claude plugin disable <name>@skills-dir
+# OR uninstall plugins (symlinks)
+unlink ~/.claude/skills/<name>
+# OR uninstall the construct repo (everything)
+unlink ~/.claude/skills/operator ~/.claude/skills/gitgud ~/.claude/skills/retardify
+rm -rf ~/Developer/construct
+```
+
+</details>
+
+## Sandbox
+
+### 3. basic sandbox (local test environment, ~5 mins)
+> https://code.claude.com/docs/en/security
+```bash
+# basic sandbox
+/operator:sandbox --local
+```
+> see `plugins/operator/settings/` for preconfigured templates (need to be extended to your specific services)
+> the skill resolves both paths for whichever way you installed, since a marketplace install keeps
+> the templates nowhere near your project; it emits the copy and never runs it
+- [ ] local settings: run the copy it emits, into `.claude/settings.local.json`
 - [ ] gitignore: `.claude/settings.local.json`
 - [ ] restart: editor, start new claude session, run `/sandbox` and `/operator:settings`
 - [ ] confirm the skills list: `/retardify:` and `/gitgud:` both complete
 
-### 2. configured sandbox (filesystem lockdown, ~5 mins)
-- [ ] project settings: `cp plugins/operator/settings/settings.project.json .claude/settings.json`
-- [ ] user settings: `cp plugins/operator/settings/settings.user.json ~/.claude/settings.json`
+### 4. configured sandbox (filesystem lockdown, ~5 mins)
+```bash
+# configured sandbox
+/operator:sandbox --project --user
+```
+- [ ] project settings: run the copy it emits, into `.claude/settings.json`
+- [ ] user settings: run the copy it emits, into `~/.claude/settings.json`
 - [ ] restart: editor, start new claude session, run `/sandbox` and `/operator:settings`
 
-### 3. advanced sandbox (masked credentials, ~20 mins)
+### 5. advanced sandbox (masked credentials, ~20 mins)
 - [ ] make: secure directory for your keys `mkdir -p ~/.operator && chmod 700 ~/.operator`
 - [ ] add: non-exposed credentials to `~/.operator/.env` (e.g. `export GH_TOKEN="github_pat_123"`)
 - [ ] add: your package-manager caches to `sandbox.filesystem.allowWrite`
@@ -205,9 +319,12 @@ OUTPUT:       retardify/plans/2026-07-31-operation-monorepo.md
 - [ ] restart: editor, start new claude session, run `/sandbox` and `/operator:settings`
 - [ ] confirm: `echo $GH_TOKEN` returns a sentinel (NOT raw token) when claude runs it
 
-### 4. managed sandbox (machine lockdown, requires sudo, ~5 mins)
-- [ ] make: claude code directory `sudo mkdir -p '/Library/Application Support/ClaudeCode'`
-- [ ] managed settings: `sudo cp plugins/operator/settings/settings.managed.json "/Library/Application Support/ClaudeCode/managed-settings.json"`
+### 6. managed sandbox (machine lockdown, requires sudo, ~5 mins)
+```bash
+# managed sandbox
+/operator:sandbox --managed
+```
+- [ ] make: claude code directory, and copy `settings.managed.json` in; both commands need sudo
 - [ ] run: `/operator:settings`
 
 ## Plugins & Skills
@@ -246,6 +363,23 @@ metadata:
 - answers one question: does the gate actually refuse what the corpus says it must refuse
 - a config can read perfectly and still have a dead hook, which only a replay catches
 - `/operator:settings` wraps this, so run it directly when you want the detail rather than the count
+
+#### Sandbox [/operator:sandbox](plugins/operator/skills/sandbox/SKILL.md) · READ-ONLY
+```yaml
+---
+name: sandbox
+description: Emit the sandbox setup this plugin cannot perform itself, resolving every template and target path on the disk it runs on, then hand the commands back for the user to run.
+argument-hint: "[--local] [--project] [--user] [--managed]"
+disable-model-invocation: true
+metadata:
+  kind: trigger
+---
+```
+**/operator:sandbox:** the frontmatter blocks every path except an explicit invocation
+- answers one question: which commands set this sandbox up, on this disk, for this install
+- the templates ship inside the plugin, so a marketplace install holds them nowhere near the project
+- reports each target's state beside its command, since a copy onto a populated scope is a merge
+- emits and never applies: the deny floor stops any sidecar from writing a settings file
 
 #### Scopes [/operator:scopes](plugins/operator/skills/scopes/SKILL.md) · GATED
 ```yaml
