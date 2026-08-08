@@ -1,18 +1,15 @@
 #!/bin/bash
-# ==============================================
-# @file pretooluse.sh - pretooluse hook script
-# ==============================================
+# ========================================
+# @file pretooluse.sh - deny list failover
+# ========================================
 # @description
-# - runs before a Bash tool call executes, can block it
-# - FAILOVER for the deny list in `.claude/settings.json`, never the primary gate
-# - deny rules are prefix anchored, so a trailing `--force` walks straight past them
-# - this reads the FULL command string, so the flag gets caught wherever it sits
-# - keep both: deny rules are committed, while this hook's wiring is gitignored
-# - neither layer sees inside `plugins/*/*.sh`, since a script's commands are not tool calls
-# - blocks force pushes and force branch deletes, silent (exit 0) for everything else
-# - also guards the allows `/gitgud:continue` opens: ff-only merge, plain switch, stash halves
-# - also refuses bash writes into the policy dirs, which the Edit and Write rules never see
-# - asks, never denies, when a move lands outside the repo, since a rename is ordinary work
+# - failover for the deny list in `.claude/settings.json`
+# - runs before a Bash tool call executes, reads full command string, can block it
+# - designed to catch trailing `--evil` flags (deny rules are prefix anchored)
+# - neither deny list nor pretooluse catch commands inside `.sh` scripts (only work on tool calls)
+# - blocks force pushes, branch deletes, etc; silent (exit 0) for everything else
+# - blocks bash writes into policy directories (Edit/Write rules don't see bash)
+# - asks when moving files outside the repo root (renames are ordinary work)
 # @see .claude/settings.json, .claude/settings.local.json, plugins/operator/settings/
 
 command -v jq >/dev/null 2>&1 || { echo "pretooluse: jq missing, refusing to run unguarded" >&2; exit 2; }
@@ -71,20 +68,40 @@ fi
 
 # the Edit and Write deny rules are tool-scoped, so they say nothing about `cp`, `tee` or a
 # redirect; the same paths get a second gate here, since bash reaches what those tools cannot
-PROTECTED='\.claude/|\.git/|\.husky/|\.devin/|\.cursor/|webflow/|\.tfstate|docker-compose\.prod'
+# a directory is protected as itself, not only as a prefix of its contents: every pattern used to
+# end in `/`, so removing `plugins/operator/hooks` was allowed where removing a file inside it was
+# denied, and taking the directory neutralises all six hooks at once (see #33). the boundary keeps
+# a bare prefix from matching a longer name, so `.git` never matches `.gitignore`
+B='([/[:space:]"'"'"']|$)'
+PROTECTED="\.claude$B|\.git$B|\.husky$B|\.devin$B|\.cursor$B|webflow$B"
+PROTECTED="$PROTECTED"'|\.tfstate|docker-compose\.prod'
 PROTECTED="$PROTECTED"'|(^|[/[:space:]])\.env'
 # the policy directories: settings rules gate the Edit and Write tools, and this gates the bash
 # verbs those rules never see, since an agent that can rewrite either one can regrant itself
-PROTECTED="$PROTECTED"'|plugins/operator/settings/|plugins/operator/hooks/'
+PROTECTED="$PROTECTED|plugins/operator/settings$B|plugins/operator/hooks$B"
 # the probes read the live gate, so editing one lets an agent fake its own clean bill of health
-PROTECTED="$PROTECTED"'|plugins/operator/skills/(credentials|permissions|scopes|settings)/'
+PROTECTED="$PROTECTED|plugins/operator/skills/(credentials|permissions|scopes|settings)$B"
 WRITERS='(^|[[:space:]])(cp|mv|rm|tee|ln|install|rsync|truncate|shred|chmod|chown|dd|touch)([[:space:]]|$)'
-INPLACE='(sed|perl|awk|python[0-9]?|ruby)[^|;&]*[[:space:]]-i'
+# an interpreter writes as its ordinary work, so `-i` was never the shape to catch: a heredoc
+# reaches every policy path the hook guards and `WRITERS` never fires, since no cp, mv or tee
+# appears in the command string (see #47). the segment already named a policy path to get here,
+# so any interpreter in it is treated as a writer. that over-blocks a read through python and
+# leaves cat and grep untouched, and `bash` stays off the list so running a sidecar still works
+INTERPRETER='(^|[[:space:]])(sed|perl|awk|python[0-9]?|ruby|node|deno|bun)([[:space:]]|$)'
+
+# a heredoc puts the interpreter on one line and its program on the next, and the split below is by
+# line, so the two never meet in one segment and the per-segment test cannot see them together
+# that is the exact shape #47 called the worst case, so it is judged against the WHOLE command
+if printf '%s' "$CMD" | grep -q '<<' \
+   && printf '%s' "$CMD" | grep -qE "$INTERPRETER" \
+   && printf '%s' "$CMD" | grep -qE "$PROTECTED"; then
+  deny "blocked by pretooluse hook: heredoc into a deny-listed path. run it yourself if you really mean to."
+fi
 
 # a compound command splits first, so `cat .git/config > /tmp/x` is not misread as writing to .git
 while IFS= read -r segment; do
   if ! printf '%s' "$segment" | grep -qE "$PROTECTED"; then continue; fi
-  if printf '%s' "$segment" | grep -qE "$WRITERS" || printf '%s' "$segment" | grep -qE "$INPLACE"; then
+  if printf '%s' "$segment" | grep -qE "$WRITERS" || printf '%s' "$segment" | grep -qE "$INTERPRETER"; then
     deny "blocked by pretooluse hook: writes into a deny-listed path. run it yourself if you really mean to."
   fi
   # only a redirect TARGET counts, since reading a protected file out to somewhere else is fine

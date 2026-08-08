@@ -92,3 +92,8 @@ safe	none	mkdir -p .operator/logs
 safe	none	bash plugins/retardify/skills/files/files.sh
 safe	none	npm test
 safe	none	npx tsc --noEmit
+policy-dir-remove	hook	rm -rf plugins/operator/hooks
+policy-dir-move	hook	mv plugins/operator/settings /tmp/stash
+policy-probe-move	hook	mv plugins/operator/skills/scopes /tmp/stash
+policy-heredoc-write	hook	python3 - <<< "open('.claude/settings.json','w').write('')"
+policy-interpreter-write	hook	node write.js plugins/operator/hooks/stop.sh
