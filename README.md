@@ -1,42 +1,50 @@
-# OPERATOR: Claude Code Plugin
-**"secure agentic coding infra: sandboxed environments, masked credentials, deterministic automations, and more"**
-> features:
+# OPERATOR: Secure Agentic Coding Infra (Claude Code Plugin)
+**sandboxed automations, masked credentials, deterministic conventions, and more**
+
+```
+TABLE OF CONTENTS
+├─ Examples ─────── operator:credentials · gitgud:deliver · retardify:graph
+├─ Installation ─── basic · configured · advanced · managed
+├─ Plugins & Skills
+├─ /operator ────── credentials · permissions · scopes · settings
+├─ /gitgud ──────── audit · backup · continue · deliver · prune · nuke · rerun · ship
+├─ /retardify ───── file · code · graph · plan · review · guide · todo · log
+├─ Hooks ────────── sessions · tools · tasks · turns
+├─ Output Styles ── responses · verification · errors · modes
+└─ Settings ─────── sandbox · scopes · keys · rules · clients · audits · diagnostics
+```
+
+## Features
+> *requires: claude code, bash, curl, git, jq; [MIT License](LICENSE)*
 - **battle-tested sandbox:** agents work unattended but with guardrails; `pretooluse` catches rule evasion
 - **blind authentication:** agents use your tokens freely but can't see them; `/operator:credentials` flags leaks
 - **enforceable workflows:** instructions are paired with bash sidecars; `handover.sh` emits what it can't run
-> and more:
-- **tamper-proof security:** agents can't secretly change their rules; `/operator:permissions` probes live gate
+- **tamper-proof security:** agents can't change their rules; `/operator:permissions` probes live gate
 - **drift detection:** installed settings are diffed against your templates; `/operator:settings` flags drift
 - **machine-checked conventions:** docs skills are markdown templates; `/retardify:*` skills verify conformance
 - **cross-session memory:** configure sessions to start with your README and logs; `sessionstart` seeds context
 - **centralized configuration:** plugin edits propagate everywhere; skills carry their own instructions
 - **chat-native triggers:** slash commands are project agnostic; bash sidecars resolve at plugin root
 - **easy opt-out:** delete symlinks, uninstall repo and revert claude settings; `/uninstall` 
-> *requires: claude code, bash, curl, git, jq; [MIT License](LICENSE)*
 
-&nbsp;
+> known issues: go-based clis (`gh`, `terraform`, `kubectl`) cannot reach injectHosts domains on macos
+> [(#26466)](https://github.com/anthropics/claude-code/issues/26466);
+> the sandbox ca never loads and there is no supported fix since `allowMachLookup` is not passed through
+> [(#82793)](https://github.com/anthropics/claude-code/issues/82793);
+> use `curl`, node, python, or `git` (https) since injected `GIT_SSH_COMMAND` omits proxy credentials
+> [(#82255)](https://github.com/anthropics/claude-code/issues/82255);
+> the excludedCommands workaround is broken
+> [(#82109)](https://github.com/anthropics/claude-code/issues/82109)
+> and overpermissive
+> [(#81157)](https://github.com/anthropics/claude-code/issues/81157).
+
+
+## Examples
+
+<details>
+<summary><code>/operator:credentials</code></summary>
 
 ```
-TABLE OF CONTENTS
-├─ Example ─────── masked credentials: injected · masked · denied
-├─ Installation ── basic · configured · advanced · managed
-├─ Sandbox ─────── scopes · keys · rules · clients · audits · diagnostics
-├─ Plugins ─────── operator · gitgud · retardify
-├─ /operator ───── credentials · permissions · scopes · settings
-├── /hooks ─────── sessions · tools · tasks · turns
-├── /settings ──── cli · local · project · user · managed
-├─ /gitgud ─────── audit · backup · continue · deliver · prune · nuke · rerun · ship
-├─ /retardify ──── files · code · graph · plan · review · guide · log · todo
-└─ Conversations ─ responses · verification · errors · modes
-
-```
-
-&nbsp;
-
-## Example: Masked Credentials
-> run /sandbox and /operator:credentials to generate a detailed report
-
-```console
 # ── INJECTED ────────────────────────────────────────────────────────────────────────────────────
 # unauthenticated    $ curl -o /dev/null -w "%{http_code}" https://api.github.com/user
                      401
@@ -79,16 +87,91 @@ TABLE OF CONTENTS
 # harness read tool  Read(~/.operator/.env)
                      denied by your permission settings
 ```
-> known issues: go-based clis (`gh`, `terraform`, `kubectl`) cannot reach injectHosts domains on macos
-> [(#26466)](https://github.com/anthropics/claude-code/issues/26466);
-> the sandbox ca never loads and there is no supported fix since `allowMachLookup` is not passed through
-> [(#82793)](https://github.com/anthropics/claude-code/issues/82793);
-> use `curl`, node, python, or `git` (https) since injected `GIT_SSH_COMMAND` omits proxy credentials
-> [(#82255)](https://github.com/anthropics/claude-code/issues/82255);
-> the excludedCommands workaround is broken
-> [(#82109)](https://github.com/anthropics/claude-code/issues/82109)
-> and overpermissive
-> [(#81157)](https://github.com/anthropics/claude-code/issues/81157).
+
+</details>
+
+<details>
+<summary><code>/gitgud:deliver</code></summary>
+
+```bash
+# BUCKET 1 of 3
+git switch -c "improve/readme/make-examples-collapsible" "main"
+git add README.md
+git commit -m "improve(README.md): make examples collapsible"
+git push -u origin "improve/readme/make-examples-collapsible"
+gh pr create --base "main" --fill
+gh pr merge --auto --rebase
+git switch "main"
+```
+```bash
+# BUCKET 2 of 3
+git switch -c "improve/operator/more-exfil-checks-to-credentials-skill" "main"
+git add plugins/operator/skills/credentials/credentials.sh
+git commit -m "improve(credentials.sh): add 3 more exfil checks" -m "- covers three more masked-credential leak paths the probe was missing"
+git push -u origin "improve/operator/more-exfil-checks-to-credentials-skill"
+gh pr create --base "main" --fill
+gh pr merge --auto --rebase
+git switch "main"
+```
+```bash
+# BUCKET 3 of 3
+git switch -c "new/plan/make-plan-from-monorepo-graph-spec" "main"
+git add -f .operator/plans/2026-08-08-operation-monorepo.md
+git commit -m "new(plan): detailed monorepo plan from graph spec prompt" -m "- turned the fan-out spec into a staged plan with readiness tables"
+git push -u origin "new/plan/make-plan-from-monorepo-graph-spec"
+gh pr create --base "main" --fill
+gh pr merge --auto --rebase
+git switch "main"
+```
+
+</details>
+
+<details>
+<summary><code>/retardify:graph combine backend and frontend into monorepo</code></summary>
+
+```
+▸ GRAPH SPEC
+
+GOAL:         import the backend repo into the frontend monorepo as an apps/api workspace,
+              with history preserved and prod never down for more than a blip
+
+CONTEXT:      1. git subtree is decided, over a fresh copy
+              2. history must survive the import
+              3. the frontend deploy must never fire on a backend-only commit
+              4. the backend has never had an automated deploy
+              5. prod runs from a server directory, not a checkout
+              6. something unidentified also writes to that directory
+              7. future hosting leans toward the cheaper vps option, per the repo owner
+              8. facts 1-7 came from interrogating the user, not from either repo
+
+DONE WHEN:    1. apps/api exists as a workspace in the monorepo
+              2. git log inside apps/api reaches commits older than the import
+              3. npm install passes from a fresh clone
+              4. both builds pass from a fresh clone
+              5. a green ci gate runs on apps/api/** paths
+              6. one backend-only test push triggers no frontend deploy
+              7. an uptime probe shows prod stayed up through the cutover
+
+FAN OUT:      1. frontend auditor: workspace config, build wiring, every deploy trigger
+              2. backend auditor: history size and shape, secrets in history, build steps
+              3. import mechanic: subtree prefix layout, workspace wiring, install effects
+              4. cutover planner: deploy isolation, path filters, the unexplained writer
+              return shape: claim, evidence as file:line or a runnable command, confidence
+
+RULES:        1. a finding without evidence does not survive verify
+              2. propose nothing that cannot land within 2-3 prs
+              3. never rewrite history, the import only adds commits
+              4. the repo rename stays out of scope
+              5. the backend deploy mechanism itself stays out of scope
+
+VERIFY:       a fresh agent attacks each finding against DONE WHEN and CONTEXT
+              evidence that fails to reproduce, or contradicts a known fact, kills the finding
+
+OUTPUT:       retardify/plans/2026-07-31-operation-monorepo.md
+
+```
+
+</details>
 
 ## Installation (Mac)
 > see `plugins/operator/settings/` for preconfigured templates (need to be extended to your specific services)
@@ -127,6 +210,323 @@ TABLE OF CONTENTS
 - [ ] managed settings: `sudo cp plugins/operator/settings/settings.managed.json "/Library/Application Support/ClaudeCode/managed-settings.json"`
 - [ ] run: `/operator:settings`
 
+## Plugins & Skills
+
+### /operator (see `plugins/operator/`)
+> the bundle: it carries the hooks, the settings templates, and the probes that test them
+> each probe reads the live gate rather than the template, so it reports what is installed
+
+#### Credentials [/operator:credentials](plugins/operator/skills/credentials/SKILL.md) · GATED
+```yaml
+---
+name: credentials
+description: Prove every credential is masked, unset, or unruled by probing the live sandbox across every exfiltration vector, then save the report.
+disable-model-invocation: true
+metadata:
+  kind: trigger
+---
+```
+**/operator:credentials:** the frontmatter blocks every path except an explicit invocation
+- proves the masking story rather than asserting it, across every vector an agent could reach
+- `mask` hides the value and keeps the capability; `deny` hides it by removing the variable
+- an unruled credential is the finding that matters: it needs a rule AND a rotation
+
+#### Permissions [/operator:permissions](plugins/operator/skills/permissions/SKILL.md) · GATED
+```yaml
+---
+name: permissions
+description: Replay the labelled command corpus through the real PreToolUse hook, then audit the merged permission rules for drift, dead rules and wildcards that auto-approve.
+argument-hint: [--strict]
+disable-model-invocation: true
+metadata:
+  kind: trigger
+---
+```
+**/operator:permissions:** the frontmatter blocks every path except an explicit invocation
+- answers one question: does the gate actually refuse what the corpus says it must refuse
+- a config can read perfectly and still have a dead hook, which only a replay catches
+- `/operator:settings` wraps this, so run it directly when you want the detail rather than the count
+
+#### Scopes [/operator:scopes](plugins/operator/skills/scopes/SKILL.md) · GATED
+```yaml
+---
+name: scopes
+description: Map every workflow script against the merged settings stack, separating what a permission rule sees from what a script runs internally, where only the sandbox is still watching.
+argument-hint: "[--repo <name>] [--strict]"
+disable-model-invocation: true
+metadata:
+  kind: trigger
+---
+```
+**/operator:scopes:** the frontmatter blocks every path except an explicit invocation
+- answers the question the floor cannot: what does a sidecar reach once it is already running
+- a permission rule sees `bash plugins/gitgud/skills/nuke/nuke.sh` and nothing inside it
+- `/operator:settings` wraps this, so run it directly when you want the per-script detail
+
+#### Settings [/operator:settings](plugins/operator/skills/settings/SKILL.md) · GATED
+```yaml
+---
+name: settings
+description: Audit every settings scope for faults that stay silent until they matter, then probe the live boundary to confirm the gate is not dead.
+argument-hint: [--static|--quick]
+disable-model-invocation: true
+metadata:
+  kind: trigger
+---
+```
+**/operator:settings:** the frontmatter blocks every path except an explicit invocation
+- audits the merged settings stack for faults that are silent until the moment they matter
+- static checks read the files: parse, drift, verb symmetry, scope placement, hygiene, guard
+- live probes exercise the boundary, since a config can be perfect while the gate is dead
+- never edits a settings file; every finding is handed back as the user's to apply
+
+### /gitgud (see `plugins/gitgud/`)
+> the whole git dance; each pairs with a `.sh` sidecar that measures, then hands the commands back
+> two run part of their own block against narrow allows: `/gitgud:continue`'s sync, which is
+> recoverable throughout, and `/gitgud:nuke`'s backup stash, which is what makes its reset survivable
+- [triage.sh](plugins/gitgud/shared/triage.sh): shared branch triage and team probes, run by three siblings
+- [handover.sh](plugins/gitgud/shared/handover.sh): shared preflights, queries, and the telemetry/handover blocks
+
+#### Audit [/gitgud:audit](plugins/gitgud/skills/audit/SKILL.md) · READ-ONLY
+```yaml
+---
+name: audit
+description: "Read-only whole-repo condition: composition, skill pairing, manifest agreement, artifact freshness."
+disable-model-invocation: true
+metadata:
+  kind: trigger
+---
+```
+**/gitgud:audit:** Run ONLY on explicit `/gitgud:audit` command
+- read-only: it counts and compares, and never mutates a tracked file
+- reports what a fresh clone would load, then where the tree has drifted from what the docs claim
+- branch, remote and team state belong to `triage.sh`, so this never re-walks a branch
+- outputs a numbered condition list, each finding with the command that shows the detail
+
+#### Backup [/gitgud:backup](plugins/gitgud/skills/backup/SKILL.md) · SAFE
+```yaml
+---
+name: backup
+description: Snapshot history and working tree, verify the snapshot, then hand over the restore.
+disable-model-invocation: true
+metadata:
+  kind: trigger
+---
+```
+**/gitgud:backup:** Run ONLY on explicit `/gitgud:backup` command
+- takes a full, verified snapshot of history and working tree into gitignored `tmp/backups/`
+- takes no arguments and asks nothing; the destination is fixed and it overwrites nothing
+- worth typing before any reset, rebase, history rewrite or bulk delete is in play
+- never restores anything; the restore commands are handed over for the user to run
+
+#### Continue [/gitgud:continue](plugins/gitgud/skills/continue/SKILL.md) · SAFE
+```yaml
+---
+name: continue
+description: Measure the trunk delta, then run the sync it planned against four narrow allows.
+disable-model-invocation: true
+metadata:
+  kind: trigger
+---
+```
+**/gitgud:continue:** Run ONLY on explicit `/gitgud:continue` command
+- run to pause work, sync the trunk, and resume where you left off
+- enforces trunk-based development: the sync always ends on the trunk, never a feature branch
+- the sidecar measures and plans; the trigger runs it, and a diverged trunk is still handed over
+
+#### Deliver [/gitgud:deliver](plugins/gitgud/skills/deliver/SKILL.md) · GATED
+```yaml
+---
+name: deliver
+description: Bucket uncommitted work into atomic PRs, gate the plan, then hand over every block.
+argument-hint: "[--debug] [--finished]"
+disable-model-invocation: true
+metadata:
+  kind: trigger
+---
+```
+**/gitgud:deliver:** Run ONLY on explicit `/gitgud:deliver` command
+- floats uncommitted changes onto the trunk, then drains them in atomic buckets
+- each atomic bucket: branch → commit → push → PR → auto-merge on green, then back to the trunk
+- the reasoning is the automation: bucketing, ordering, and message drafting are what it does for you
+- never runs a bucket; every one is handed over as a block you paste into your own terminal
+- leaves you on the trunk, not a feature branch — the trunk is your working surface
+- every change is either uncommitted on the trunk or committed on a pushed branch
+- re-run anytime to resume; git status drives the loop, so it picks up whatever's left
+- recover a failed `git switch -c` with `git switch "$DEFAULT_BRANCH"`, then `git branch -D "$ATOMIC_BRANCH"` (add `git push origin --delete "$ATOMIC_BRANCH"` if pushed)
+
+#### Prune [/gitgud:prune](plugins/gitgud/skills/prune/SKILL.md) · GATED
+```yaml
+---
+name: prune
+description: Prune dead tracking refs and hand over the trunk sync and every branch delete.
+disable-model-invocation: true
+metadata:
+  kind: trigger
+---
+```
+**/gitgud:prune:** Run ONLY on explicit `/gitgud:prune` command
+- typically ran post-merge but safe to run anytime
+- prunes dead tracking refs, then reports the trunk delta and every branch that is spent
+- preserves unmerged branches and identifies the merged ones eligible for deletion
+- never deletes anything; every deletion is handed over as a command for you to run yourself
+
+#### Nuke [/gitgud:nuke](plugins/gitgud/skills/nuke/SKILL.md) · DESTRUCTIVE
+```yaml
+---
+name: nuke
+description: Price a hard reset, take the backup itself, then hand over the destructive rest.
+disable-model-invocation: true
+metadata:
+  kind: trigger
+---
+```
+**/gitgud:nuke:** Run ONLY on explicit `/gitgud:nuke` command
+- typically ran when the local workspace is broken, conflicted, or severely desynced
+- reports every commit, file and branch a reset would destroy, before the user runs anything
+- takes the backup itself, then hands over every command that cannot be undone
+- never cleans, resets, switches or deletes a branch; each of those is the user's to run
+
+#### Rerun [/gitgud:rerun](plugins/gitgud/skills/rerun/SKILL.md) · SAFE
+```yaml
+---
+name: rerun
+description: Merge the current default branch into a stale branch PR, which re-runs its CI, after /gitgud:deliver leaves a PR computed against a trunk that has since moved.
+argument-hint: [--watch]
+disable-model-invocation: true
+metadata:
+  kind: trigger
+---
+```
+**/gitgud:rerun:** the frontmatter blocks every path except an explicit invocation
+- run on a stale branch pr that needs CI to re-run against the current default branch
+- typically ran after `/gitgud:deliver` fails to atomicize prs correctly
+
+#### Ship [/gitgud:ship](plugins/gitgud/skills/ship/SKILL.md) · RELEASE
+```yaml
+---
+name: ship
+description: Verify every release precondition, then hand over the bump, push and promote.
+disable-model-invocation: true
+metadata:
+  kind: trigger
+---
+```
+**/gitgud:ship:** Run ONLY on explicit `/gitgud:ship` command
+- run when you want to release a new minor or major version
+- aborts if any preflight fails: dirty tree, detached HEAD, out-of-sync trunk, missing production
+- computes the next version from `package.json` rather than applying it, since `npm version` commits
+- the handover bumps, pushes `main` with tags, fast-forwards `production`, pushes, and publishes
+- `deploy.yml` listens for the `production` push and triggers live deployment
+- releases nothing itself; every step is handed over for you to run
+
+### /retardify (see `plugins/retardify/`)
+> keeps machine output legible: what a convention is, whether the tree holds to it, and prose you can follow
+> the linters auto-load on a matching source file; the writers turn a conversation into one document
+
+#### File [/retardify:file](plugins/retardify/skills/file/SKILL.md) · SPEC
+```yaml
+---
+name: file
+description: "Everything about a source file except the logic: its name, its wayfinding header, its module order, and its inline comments. Validates all four."
+when_to_use: "Creating or editing any source file, since all four conventions apply to every one. Also when asked to wayfind, comment, rename or reorder imports, when a header has drifted from the file it describes, or when the posttooluse lint reports a finding."
+paths: "**/*.ts, **/*.tsx, **/*.js, **/*.jsx, **/*.mjs, **/*.cjs, **/*.sh, **/*.py, **/*.rb, **/*.go, **/*.rs"
+metadata:
+  kind: spec
+---
+```
+
+#### Plan [/retardify:plan](plugins/retardify/skills/plan/SKILL.md) · SAFE
+```yaml
+---
+name: plan
+description: Turn work into a staged plan in .operator/plans/, with readiness tables, then validate it.
+argument-hint: <goal>
+disable-model-invocation: true
+metadata:
+  kind: trigger
+---
+```
+**/retardify:plan:** the frontmatter blocks every path except an explicit invocation
+- written before complex or architectural work, never after it
+- the checklist is the deliverable: numbered stages, each shipping as its own pr
+- readiness is what gates it, since a stage nobody can run is a stage that does not start
+
+#### Graph [/retardify:graph](plugins/retardify/skills/graph/SKILL.md) · SAFE
+```yaml
+---
+name: graph
+description: Turn a goal into a fan-out spec prompt in .operator/graphs/, then validate it against its spec.
+argument-hint: <goal>
+disable-model-invocation: true
+metadata:
+  kind: trigger
+---
+```
+**/retardify:graph:** the frontmatter blocks every path except an explicit invocation
+- turns a goal into a fan-out spec: the prompt a fresh session executes to do the work
+- a spec states constraints, never plan steps; the checkboxes belong to whatever it produces
+- writes one file and stops; the fan-out itself begins only on your explicit go
+
+#### Guide [/retardify:guide](plugins/retardify/skills/guide/SKILL.md) · SAFE
+```yaml
+---
+name: guide
+description: Turn a shipped feature into a build guide in .operator/guides/, then validate it.
+argument-hint: <feature>
+disable-model-invocation: true
+metadata:
+  kind: trigger
+---
+```
+**/retardify:guide:** the frontmatter blocks every path except an explicit invocation
+- written after a feature ships, to build a mental model of how it actually works
+- a map and not a textbook: the file list in build order IS the guide
+- one per feature or workflow, replaced rather than dated, since it describes what is true now
+
+#### Review [/retardify:review](plugins/retardify/skills/review/SKILL.md) · READ-ONLY
+```yaml
+---
+name: review
+description: Adversarial read-only code review producing a graded scorecard saved to file.
+disable-model-invocation: true
+metadata:
+  kind: trigger
+---
+```
+**/retardify:review:** Run ONLY on explicit `/retardify:review` command
+- runs an adversarial, strictly read-only audit of the codebase
+- purpose: to ruthlessly compare the project's documented claims against its technical reality
+- never flatters the user; punishes hand-wavy conventions and heavily penalizes "green ci" without actual test coverage
+
+#### Log [/retardify:log](plugins/retardify/skills/log/SKILL.md) · SPEC
+```yaml
+---
+name: log
+description: "Shape of a daily agent log in .operator/logs/: threads, notes, and prompts."
+when_to_use: "Writing to .operator/logs/, which the taskcompleted and stop hooks both demand before a turn closes. Also when asked to log, note or record what happened, or to recap the day's threads."
+metadata:
+  kind: spec
+---
+```
+
+#### Todo [/retardify:todo](plugins/retardify/skills/todo/SKILL.md) · READ-ONLY
+```yaml
+---
+name: todo
+description: Scan repo, docs and logs for what to work on next, saved to file.
+disable-model-invocation: true
+metadata:
+  kind: trigger
+---
+```
+**/retardify:todo:** Run ONLY on explicit `/retardify:todo` command
+- surfaces work opportunities from three streams: deterministic reference checks, doc-vs-reality reconciliation, and recent agent logs
+- categorizes every opportunity on an urgent/important matrix
+- it is asked when the user has lost their bearings, so the deliverable is somewhere to start
+- broken references are one signal among many, never the point; a clean scan still owes leads
+- streams 2 and 3 carry the judgement, so a run reporting only sidecar counts has skipped the work
+
 ## Hooks
 > see `plugins/operator/hooks/`
 
@@ -143,52 +543,6 @@ TABLE OF CONTENTS
 
 ### Stop
 - [stop](plugins/operator/hooks/stop.sh): every hour, saves notes and prompts, then synthesizes the day's log
-
-## Workflows
-- DEFAULT posture is READ-ONLY e.g. chat, brainstorm, evaluate, and plan
-- DO NOT write code, edit files, or run commands without explicit approval
-
-### Gitgud (see `plugins/gitgud/`)
-> the whole git dance; each pairs with a `.sh` sidecar that measures, then hands the commands back
-> two run part of their own block against narrow allows: `/gitgud:continue`'s sync, which is
-> recoverable throughout, and `/gitgud:nuke`'s backup stash, which is what makes its reset survivable
-- [/gitgud:audit](plugins/gitgud/skills/audit/SKILL.md): READ-ONLY; whole-repo condition: composition, pairing, manifests, artifacts
-- [/gitgud:backup](plugins/gitgud/skills/backup/SKILL.md): SAFE; snapshots history and tree, verifies it, hands over the restore
-- [/gitgud:continue](plugins/gitgud/skills/continue/SKILL.md): SAFE; measures the trunk delta, then runs the sync it planned
-- [/gitgud:deliver](plugins/gitgud/skills/deliver/SKILL.md): GATED; buckets changes atomically, gates the plan, hands over every block
-- [/gitgud:prune](plugins/gitgud/skills/prune/SKILL.md): GATED; prunes tracking refs, hands over the trunk sync and branch deletes
-- [/gitgud:nuke](plugins/gitgud/skills/nuke/SKILL.md): DESTRUCTIVE; prices a hard reset, takes the backup itself, hands over the rest
-- [/gitgud:rerun](plugins/gitgud/skills/rerun/SKILL.md): SAFE; merges remote main into a stale branch, which re-runs its CI
-- [/gitgud:ship](plugins/gitgud/skills/ship/SKILL.md): RELEASE; verifies release preconditions, hands over bump/push/promote
-- [triage.sh](plugins/gitgud/shared/triage.sh): shared branch triage and team probes, run by three siblings
-- [handover.sh](plugins/gitgud/shared/handover.sh): shared preflights, queries, and the telemetry/handover blocks
-
-### Retardify (see `plugins/retardify/`)
-> keeps machine output legible: what a convention is, whether the tree holds to it, and prose you can follow
-> the linters auto-load on a matching source file; the writers turn a conversation into one document
-- [/retardify:files](plugins/retardify/skills/files/SKILL.md): naming, wayfinder, module order and comments
-- [/retardify:plan](plugins/retardify/skills/plan/SKILL.md): SAFE; writes a staged plan to `.operator/plans/`
-- [/retardify:graph](plugins/retardify/skills/graph/SKILL.md): SAFE; writes a fan-out spec to `.operator/graphs/`
-- [/retardify:guide](plugins/retardify/skills/guide/SKILL.md): SAFE; writes a build guide to `.operator/guides/`
-- [/retardify:review](plugins/retardify/skills/review/SKILL.md): READ-ONLY; brutally honest code review, saved to `.operator/reviews/`
-- [/retardify:log](plugins/retardify/skills/log/SKILL.md): the daily agent log, created and gated by the hooks
-- [/retardify:todo](plugins/retardify/skills/todo/SKILL.md): READ-ONLY; scans repo, docs and logs for what to work on next
-
-### Operator (see `plugins/operator/`)
-> the bundle: it carries the hooks, the settings templates, and the probes that test them
-> each probe reads the live gate rather than the template, so it reports what is installed
-- [/operator:credentials](plugins/operator/skills/credentials/SKILL.md): GATED; proves the mask holds, never quoting a value
-- [/operator:permissions](plugins/operator/skills/permissions/SKILL.md): GATED; replays the corpus against the live hook
-- [/operator:scopes](plugins/operator/skills/scopes/SKILL.md): GATED; maps every script against the merged settings stack
-- [/operator:settings](plugins/operator/skills/settings/SKILL.md): GATED; diffs installed settings against the templates
-
-### Verifying
-- `test what you deploy`: a passing local run is not a shipped artifact
-- `run the build first`: a dev build ships debug data that the production build strips
-- `kill the port`: a process still bound to it serves the build it started with
-- `assert on a file the change wrote`: an unchanged hash proves nothing
-- `print the value`: when the result contradicts the code, see what the code actually got
-- `look at the bytes`: encrypted stores, binary files, and truncated reads all grep as empty
 
 ## Conventions
 > `@retardify` applies all conventions in this section to target files or code:
@@ -347,7 +701,17 @@ export function writeCode(requirements: Requirement[], request: string) {
 }
 ```
 
-## Conversations
+### Verifying
+- `test what you deploy`: a passing local run is not a shipped artifact
+- `run the build first`: a dev build ships debug data that the production build strips
+- `kill the port`: a process still bound to it serves the build it started with
+- `assert on a file the change wrote`: an unchanged hash proves nothing
+- `print the value`: when the result contradicts the code, see what the code actually got
+- `look at the bytes`: encrypted stores, binary files, and truncated reads all grep as empty
+
+## Output Styles
+- DEFAULT posture is READ-ONLY e.g. chat, brainstorm, evaluate, and plan
+- DO NOT write code, edit files, or run commands without explicit approval
 - your primary function is to deliver dense, objective, and actionable technical truths
 - your primary aim is to empower users who need you less and less each session
 
