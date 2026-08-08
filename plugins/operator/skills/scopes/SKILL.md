@@ -51,86 +51,68 @@ echo "sidecar exit: $?"
     - the read-only contract is what keeps this list short, so a sidecar that grew a mutation is
       the finding, not the rule that failed to catch it
 
-## the shape` below
-    - the heading reads `## Settings Audit #[next_audit]: [timestamp]`, both from the telemetry
-    - `state` is the counts as hyphen bullets: scopes parsed, probes run, errors and warnings
-    - `findings` lead with the label the sidecar printed, one bullet each, naming what it hit
-    - `resolutions` are checkboxes, one per finding, naming the rule and the scope file it belongs in
-    - `telemetry` is the sidecar's whole output, fenced and unedited, pasted last
-
-    the labels the sidecar emits, and what each one means:
-
-    | label | what it found |
-    |----------|---------------|
-    | parse    | a scope that does not parse, so every rule in it is inert |
-    | drift    | an installed copy whose rules differ from its template |
-    | verbs    | a path denied for read only, which a write still reaches |
-    | scope    | machine detail in a committed file, or a mask the scope cannot honor |
-    | hygiene  | duplicate rules, or a template that will not paste |
-    | coverage | a rule with no why in the scope's `.md`, or a mirror claim that has diverged |
-    | guard    | nothing protects the policy directories, so this auditor is editable |
-    | probe    | a boundary that did not refuse, naming what got through |
-    | wrapped  | errors from the test-permissions or test-scopes replay, naming the count |
-
-3. report the audit inline, then STOP
-
-    NEVER edit a settings file to fix a finding, and never offer to; the audit is the deliverable
-
-    - a `parse` error outranks everything else, since that scope's rules are not running at all
-    - a `verbs` error is only latent while no allow reaches the path, so read it with the allow list
-    - a `drift` finding is a defect only when the installed copy is the stale one; check which
-    - `guard` firing means the deny protecting this sidecar is absent; restore it before trusting a
-      later clean run, since an editable auditor can be made to report clean
-    - answer the checklist the sidecar prints, since those rules are the ones no script can judge
-
 ## the shape
-> the spec this skill appends against; the validator below grades what landed
+> the artifact this skill appends to; the sidecar grades what landed on its next run
 
-# .operator/<kind>/YYYY-MM-DD.md
-one file per day and per kind, appended to by every auditing trigger:
+# .operator/scopes/YYYY-MM-DD.md
+one file per day, appended to by every deliberate run:
 
-- the kind in the filename and the kind in each heading match, so one archive reads as one
-- an audit captures repo state at a moment in time, so it is never edited after the fact
+- the heading reads `## Scopes Audit #[next_audit]: [timestamp]`, both from the telemetry
+- an audit captures the boundary at a moment in time, so it is never edited after the fact
 - carry an unresolved finding forward by restating it, never by editing the older audit
-- lines are hyphen bullets holding a single clause, fact or action, capped at 100 characters
-- err on the side of brevity, not completeness
+- lines are hyphen bullets holding a single clause, capped at 100 characters
 - scrub client names, tokens, and other sensitive detail before it lands in a commit
 
-## <Kind> Audit #1: YYYY-MM-DD HH:MM
+## Scopes Audit #1: YYYY-MM-DD HH:MM
 
 ### state
-hyphen bullets on what the run found, one clause each
+the counts as hyphen bullets: scripts read, invocations by verdict, internals seen, errors, warnings
 
 *example:*
-> - 3 branches carry work, 1 of them unmerged and 11 days stale
-> - the trunk is level with origin and the last build passed
+> - 32 scripts read against a 4 file stack, none of them executed
+> - 30 invocations allowed, 2 prompting and 0 refused, so the family runs unattended
+> - 8062 internal commands inspected, 11 of which cross a boundary the invocation never showed
 
 ### findings
-one bullet per issue, leading with the label the trigger assigned
+one bullet per issue, leading with the label the sidecar printed
+
+| label | what it found |
+|---|---|
+| `settings` | a file in the stack that does not parse as json, so its rules never load |
+| `invocation` | tier 1: the script itself is blocked, denied, or prompts on every run |
+| `bypass` | tier 2: a deny names this command, but an internal call is not a tool call |
+| `excluded` | it runs unsandboxed via `excludedCommands`, leaving the hook as the only gate |
+| `domain` | it reaches a host absent from `allowedDomains` |
+| `filesystem` | it writes outside cwd, to a path absent from `allowWrite` |
+| `read` | it reads a path `denyRead` blocks for sandboxed bash |
+| `missing` | a target named in the walk that is not on disk, so it was skipped |
+| `resolution_shape` `resolution_parity` | an older entry whose resolutions do not match its findings |
 
 *example:*
-> - **Ghost Branch** — `fix/nav-overflow` tracks a deleted upstream, 11 days stale
-> - **Conflict Risk** — `feat/pricing` and origin/main both touch 4 files
-> - **Local Clutter** — `chore/deps` is merged with no upstream
+> - **bypass** — `backup.sh` calls `git stash`, which `deny` names and no tool call ever carries
+> - **bypass** — `credentials.sh` calls `python3`, denied as `python3 -c` and reached here anyway
+> - **read** — 251 internal reads touch a path `denyRead` blocks, concentrated in the probes
 
 ### resolutions
-one checkbox per finding, in the same order, naming a command or an `@agent` shortcut
+one checkbox per finding, in the same order, naming the rule and the scope file it belongs in
 
 *example:*
-> - [ ] `git branch -d fix/nav-overflow` or `@git-empty`
-> - [ ] `@git-gud` to merge origin/main in and surface conflicts early
-> - [ ] `@git-empty`
+> - [ ] accept the `backup.sh` stash in writing, or move it into the trigger where the gate sees it
+> - [ ] narrow the `python3` deny to the `-c` form, since the sidecars call the interpreter plainly
+> - [ ] add the probe read paths to `sandbox.filesystem.denyRead` exemptions in `settings.user.json`
 
 ### telemetry
-the raw sidecar output, fenced and unedited, so every claim above can be checked against it
+the sidecar's whole output, fenced and unedited, so every claim above can be checked against it
 
 *example:*
 > ```text
-> --- /gitgud:audit telemetry ---
-> current_branch: main
-> staged_files: 0
-> ---------------------------
+> === scopes.sh workflow tester ===
+> scripts: 32
+> invocations: 30 allowed, 2 prompting, 0 refused
+> internals: 8062 inspected, 11 of which cross a permission gate
+> errors: 11
+> warnings: 310
 > ```
 
-## <Kind> Audit #2: repeat the above format for each run of the same kind on the same day
+## Scopes Audit #2: repeat the above format for each deliberate run on the same day
 never edit an earlier audit; a stale finding is signal about how long it went unresolved

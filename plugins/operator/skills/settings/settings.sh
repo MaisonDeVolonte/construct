@@ -339,14 +339,14 @@ check_probes() {
 # sitting beside this file; a missing one warns instead of failing, since the static half still ran
 run_wrapped() {
   local name script output count
-  for name in test-permissions test-scopes; do
+  for name in permissions scopes; do
     script="$HERE/../$name/$name.sh"
     if [ ! -f "$script" ]; then warn wrapped "$name" "no $name.sh in its sibling skill folder"; continue; fi
     output=$(bash "$script" 2>&1 || true)
     count=$(printf '%s' "$output" | sed -n 's/^errors: \([0-9]\{1,\}\)$/\1/p' | head -n 1)
     count=${count:-0}
     if [ "$count" -gt 0 ]; then
-      err wrapped "$name" "$count errors; run plugins/$name/$name.sh for the detail"
+      err wrapped "$name" "$count errors; run /operator:$name for the detail"
     else
       pass wrapped "$name" "0 errors"
     fi
@@ -368,7 +368,7 @@ if [ "$STATIC_ONLY" -eq 0 ] && [ "$QUICK" -eq 0 ]; then run_wrapped; fi
 
 # ==============
 # ARTIFACT
-#   this skill's own dated artifact, graded here so nothing outside this file decides its shape.
+#   this skill's own dated artifact, graded here so nothing outside this file decides its shape
 #   the shape lives in this skill's SKILL.md and the labels below are what this sidecar emits
 # ==============
 ARTIFACT_KIND="settings"
@@ -554,7 +554,7 @@ AUDIT_COUNT=${AUDIT_COUNT:-0}
 
 cat <<EOF
 
-=== settingsaudit.sh sidecar ===
+=== settings.sh sidecar ===
 audit_file: $TODAYS_AUDIT
 audit_count: $AUDIT_COUNT
 next_audit: $((AUDIT_COUNT + 1))

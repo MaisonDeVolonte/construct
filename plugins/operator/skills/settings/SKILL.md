@@ -31,20 +31,7 @@ echo "sidecar exit: $?"
     - `findings` lead with the label the sidecar printed, one bullet each, naming what it hit
     - `resolutions` are checkboxes, one per finding, naming the rule and the scope file it belongs in
     - `telemetry` is the sidecar's whole output, fenced and unedited, pasted last
-
-    the labels the sidecar emits, and what each one means:
-
-    | label | what it found |
-    |----------|---------------|
-    | parse    | a scope that does not parse, so every rule in it is inert |
-    | drift    | an installed copy whose rules differ from its template |
-    | verbs    | a path denied for read only, which a write still reaches |
-    | scope    | machine detail in a committed file, or a mask the scope cannot honor |
-    | hygiene  | duplicate rules, or a template that will not paste |
-    | coverage | a rule with no why in the scope's `.md`, or a mirror claim that has diverged |
-    | guard    | nothing protects the policy directories, so this auditor is editable |
-    | probe    | a boundary that did not refuse, naming what got through |
-    | wrapped  | errors from the test-permissions or test-scopes replay, naming the count |
+    - CREATE the file first if it does not exist, with `# <audit_file>` as its only line
 
 3. report the audit inline, then STOP
 
@@ -58,53 +45,67 @@ echo "sidecar exit: $?"
     - answer the checklist the sidecar prints, since those rules are the ones no script can judge
 
 ## the shape
-> the spec this skill appends against; the validator below grades what landed
+> the artifact this skill appends to; the sidecar grades what landed on its next run
 
-# .operator/<kind>/YYYY-MM-DD.md
-one file per day and per kind, appended to by every auditing trigger:
+# .operator/settings/YYYY-MM-DD.md
+one file per day, appended to by every deliberate run:
 
-- the kind in the filename and the kind in each heading match, so one archive reads as one
-- an audit captures repo state at a moment in time, so it is never edited after the fact
+- the heading reads `## Settings Audit #[next_audit]: [timestamp]`, both from the telemetry
+- an audit captures the stack at a moment in time, so it is never edited after the fact
 - carry an unresolved finding forward by restating it, never by editing the older audit
-- lines are hyphen bullets holding a single clause, fact or action, capped at 100 characters
-- err on the side of brevity, not completeness
+- lines are hyphen bullets holding a single clause, capped at 100 characters
 - scrub client names, tokens, and other sensitive detail before it lands in a commit
 
-## <Kind> Audit #1: YYYY-MM-DD HH:MM
+## Settings Audit #1: YYYY-MM-DD HH:MM
 
 ### state
-hyphen bullets on what the run found, one clause each
+the counts as hyphen bullets: scopes parsed, probes run, passes, errors, warnings
 
 *example:*
-> - 3 branches carry work, 1 of them unmerged and 11 days stale
-> - the trunk is level with origin and the last build passed
+> - 4 scopes parsed, carrying 435 project rules and 431 user rules
+> - 4 probes run against the live boundary, all of them refused as configured
+> - 18 passes, 1 error and 6 warnings, so the stack holds everything but its own documentation
 
 ### findings
-one bullet per issue, leading with the label the trigger assigned
+one bullet per issue, leading with the label the sidecar printed
+
+| label | what it found |
+|---|---|
+| `parse` | a scope that does not parse, so every rule in it is inert |
+| `drift` | an installed copy whose rules differ from its template |
+| `verbs` | a path denied for read only, which a write still reaches |
+| `scope` | machine detail in a committed file, or a mask the scope cannot honor |
+| `hygiene` | duplicate rules, or a template that will not paste |
+| `coverage` | a rule with no why in the scope's `.md`, or a mirror claim that has diverged |
+| `guard` | nothing protects the policy directories, so this auditor is editable |
+| `probe` | a boundary that did not refuse, naming what got through |
+| `wrapped` | errors from the wrapped `/operator:permissions` or `/operator:scopes` run |
+| `resolution_shape` `resolution_parity` | an older entry whose resolutions do not match its findings |
 
 *example:*
-> - **Ghost Branch** — `fix/nav-overflow` tracks a deleted upstream, 11 days stale
-> - **Conflict Risk** — `feat/pricing` and origin/main both touch 4 files
-> - **Local Clutter** — `chore/deps` is merged with no upstream
+> - **coverage** — 12 rules in `settings.user.json` carry no why in `settings.user.md`
+> - **wrapped** — the permissions replay came back with 2 errors, so the gate itself is off
+> - **drift** — the installed project copy carries 3 rules its template does not
 
 ### resolutions
-one checkbox per finding, in the same order, naming a command or an `@agent` shortcut
+one checkbox per finding, in the same order, naming the rule and the scope file it belongs in
 
 *example:*
-> - [ ] `git branch -d fix/nav-overflow` or `@git-empty`
-> - [ ] `@git-gud` to merge origin/main in and surface conflicts early
-> - [ ] `@git-empty`
+> - [ ] document the 12 undocumented rules in `settings.user.md`, or drop them from the json
+> - [ ] run `/operator:permissions` for the detail behind the wrapped count
+> - [ ] reconcile the project copy against `settings.project.json`, deciding which is stale
 
 ### telemetry
-the raw sidecar output, fenced and unedited, so every claim above can be checked against it
+the sidecar's whole output, fenced and unedited, so every claim above can be checked against it
 
 *example:*
 > ```text
-> --- /gitgud:audit telemetry ---
-> current_branch: main
-> staged_files: 0
-> ---------------------------
+> === settings.sh sidecar ===
+> probes: run
+> passes: 18
+> errors: 1
+> warnings: 6
 > ```
 
-## <Kind> Audit #2: repeat the above format for each run of the same kind on the same day
+## Settings Audit #2: repeat the above format for each deliberate run on the same day
 never edit an earlier audit; a stale finding is signal about how long it went unresolved
