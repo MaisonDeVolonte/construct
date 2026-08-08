@@ -13,6 +13,7 @@
 # - LIVE probes exercise the boundary, because a config can be perfect while the gate is dead
 # - it wraps the permissions and scopes replays rather than replacing them, surfacing error counts
 # - a tracked path reads as guarded at `ask`, since `deny` reaches the sandbox and blocks git itself
+# - templates resolve from the plugin, so drift and hygiene run the same under either install method
 # RUN
 # - `--static` skips the probes, `--quick` skips the wrapped sidecars, `--strict` fails on warnings
 # - the doc appends one entry to the day's settings audit, never editing an earlier one
@@ -31,6 +32,10 @@ if [ ! -f "$SHARED/secrets.sh" ]; then
   echo "fatal: no shared/secrets.sh reachable from this sidecar" >&2; exit 1; fi
 # shellcheck source=../../shared/secrets.sh
 . "$SHARED/secrets.sh"
+
+# resolved from this file, never from the repo being audited: cwd holds no plugins/operator/ once
+# the plugin is installed from a marketplace
+TEMPLATES=${CLAUDE_PLUGIN_ROOT:-$(cd "$HERE/../.." 2>/dev/null && pwd || true)}/settings
 
 if ! command -v jq >/dev/null 2>&1; then echo "fatal: jq is required" >&2; exit 1; fi
 if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -90,6 +95,24 @@ check_parse() {
 }
 
 # ==============
+# STATIC - templates
+#   drift and hygiene both read this directory, so its absence is the finding that hides theirs
+# ==============
+check_templates() {
+  local count
+  if [ ! -d "$TEMPLATES" ]; then
+    err templates missing "no settings/ beside this plugin; drift and hygiene read nothing"
+    return 0
+  fi
+  count=$(find "$TEMPLATES" -maxdepth 1 -name 'settings.*.json' | wc -l | tr -d ' ')
+  if [ "$count" -eq 0 ]; then
+    err templates empty "settings/ holds no settings.*.json; drift and hygiene read nothing"
+  else
+    pass templates found "$count templates readable at the plugin root"
+  fi
+}
+
+# ==============
 # STATIC - drift
 #   the template is the reviewed copy, the installed file is the one that actually runs
 # ==============
@@ -98,7 +121,7 @@ check_drift() {
   for pair in "project:$ROOT/.claude/settings.json" "user:$HOME/.claude/settings.json"; do
     name=${pair%%:*}
     path=${pair#*:}
-    template="$ROOT/plugins/operator/settings/settings.$name.json"
+    template="$TEMPLATES/settings.$name.json"
     if [ ! -f "$path" ] || [ ! -f "$template" ]; then continue; fi
     # a rule set is what matters, never the order it was typed, so sort before comparing; a byte
     # diff calls a reordered pair drifted and buries the one line that actually went missing
@@ -180,7 +203,7 @@ check_hygiene() {
   done
   # the templates get the same checks as the installed copies: a duplicate here is what a paste
   # carries downstream, and it reads as drift against a clean install rather than as its own fault
-  for template in "$ROOT"/plugins/operator/settings/settings.*.json; do
+  for template in "$TEMPLATES"/settings.*.json; do
     if [ ! -f "$template" ]; then continue; fi
     name=$(basename "$template")
     if ! jq empty "$template" >/dev/null 2>&1; then
@@ -357,6 +380,7 @@ run_wrapped() {
 # EXECUTION
 # ==============
 check_parse
+check_templates
 check_drift
 check_verbs
 check_scope
