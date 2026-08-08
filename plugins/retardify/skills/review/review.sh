@@ -422,7 +422,7 @@ SECRETS=$(grep -c '|secret|' "$FINDINGS" || true)
 
 cat <<EOF
 
-=== reviews.sh sidecar ===
+=== review.sh sidecar ===
 template: $TEMPLATE
 scanned: ${#REVIEWS[@]} scorecard file(s)
 width_cap: $MAX_WIDTH chars

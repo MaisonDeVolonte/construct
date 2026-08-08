@@ -539,7 +539,7 @@ SECRETS=$(grep -c '|secret|' "$FINDINGS" || true)
 
 cat <<EOF
 
-=== plans.sh sidecar ===
+=== plan.sh sidecar ===
 template: $TEMPLATE
 scanned: ${#PLANS[@]} plan(s)
 width_cap: $MAX_WIDTH chars
