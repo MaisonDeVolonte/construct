@@ -4,7 +4,7 @@
 # ==========================================
 # @description
 # PAIR
-# - sidecar for `logs` — asserts a day's log matches the shape its SKILL.md documents
+# - sidecar for `/retardify:log` — asserts a day's log matches the shape its SKILL.md documents
 # - the doc carries threads, notes and prompts; this file carries what a script can judge
 # ARTIFACT
 # - `.operator/logs/YYYY-MM-DD.md`, one file per day, holding the work and the prompts that drove it
@@ -408,7 +408,7 @@ SECRETS=$(grep -c '|secret|' "$FINDINGS" || true)
 
 cat <<EOF
 
-=== logs.sh sidecar ===
+=== log.sh sidecar ===
 template: $TEMPLATE
 scanned: ${#LOGS[@]} log file(s)
 width_cap: $MAX_WIDTH chars

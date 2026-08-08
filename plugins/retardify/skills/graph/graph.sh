@@ -335,7 +335,7 @@ SECRETS=$(grep -c '|secret|' "$FINDINGS" || true)
 
 cat <<EOF
 
-=== graphs.sh sidecar ===
+=== graph.sh sidecar ===
 template: $TEMPLATE
 scanned: ${#SPECS[@]} spec(s)
 width_cap: $MAX_WIDTH chars

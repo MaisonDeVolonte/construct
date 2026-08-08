@@ -628,7 +628,7 @@ done
 
 # ==============
 # ARTIFACT
-#   this skill's own dated artifact, graded here so nothing outside this file decides its shape.
+#   this skill's own dated artifact, graded here so nothing outside this file decides its shape
 #   the shape lives in this skill's SKILL.md and the labels below are what this sidecar emits
 # ==============
 ARTIFACT_KIND="files"

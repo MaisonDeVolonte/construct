@@ -345,7 +345,7 @@ SECRETS=$(grep -c '|secret|' "$FINDINGS" || true)
 
 cat <<EOF
 
-=== credentials sidecar ===
+=== credentials.sh sidecar ===
 template: $TEMPLATE
 scanned: ${#FILES[@]} report(s)
 width_cap: $MAX_WIDTH chars
