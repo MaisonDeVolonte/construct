@@ -1,10 +1,10 @@
 #!/bin/bash
 # ==================================================
-# @file files.sh - source file shape validator sidecar
+# @file file.sh - source file shape validator sidecar
 # ==================================================
 # @description
 # PAIR
-# - sidecar for `/retardify:files` — asserts a source file matches the shape its SKILL.md documents
+# - sidecar for `/retardify:file` — asserts a source file matches the shape its SKILL.md documents
 # - the doc carries the four conventions and their examples; this file carries what a script judges
 # - everything about a source file except the logic itself, which `/retardify:code` owns
 # SCOPE
@@ -17,7 +17,7 @@
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
 # - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
 # - a broken `@see` only warns, since nothing gates references; `/retardify:todo` reports repo-wide
-# @see plugins/retardify/skills/files/SKILL.md, plugins/retardify/skills/todo/todo.sh, plugins/operator/hooks/posttooluse.sh, plugins/retardify/shared/secrets.sh, .operator/files/
+# @see plugins/retardify/skills/file/SKILL.md, plugins/retardify/skills/todo/todo.sh, plugins/operator/hooks/posttooluse.sh, plugins/retardify/shared/secrets.sh, .operator/files/
 
 set -euo pipefail
 
@@ -40,7 +40,7 @@ if [ -n "$UTF8_LOCALE" ]; then export LC_ALL="$UTF8_LOCALE"; fi
 MAX_WIDTH=100
 STRICT=0
 KEEP=0
-TEMPLATE="plugins/retardify/skills/files/SKILL.md"
+TEMPLATE="plugins/retardify/skills/file/SKILL.md"
 
 # "a comment past 2 consecutive lines belongs in the wayfinding header instead"
 MAX_BLOCK_LINES=2
@@ -813,7 +813,7 @@ AUDIT_COUNT=${AUDIT_COUNT:-0}
 
 cat <<EOF
 
-=== files.sh sidecar ===
+=== file.sh sidecar ===
 audit_file: $TODAYS_AUDIT
 audit_count: $AUDIT_COUNT
 next_audit: $((AUDIT_COUNT + 1))

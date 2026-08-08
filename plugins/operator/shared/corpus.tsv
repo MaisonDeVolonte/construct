@@ -89,7 +89,7 @@ safe	none	ls .git/refs
 safe	none	cat .git/config > /private/tmp/out
 safe	none	rm /private/tmp/scratch.env
 safe	none	mkdir -p .operator/logs
-safe	none	bash plugins/retardify/skills/files/files.sh
+safe	none	bash plugins/retardify/skills/file/file.sh
 safe	none	npm test
 safe	none	npx tsc --noEmit
 policy-dir-remove	hook	rm -rf plugins/operator/hooks
