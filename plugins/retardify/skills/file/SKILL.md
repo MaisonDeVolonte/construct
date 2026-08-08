@@ -1,5 +1,5 @@
 ---
-name: files
+name: file
 description: "Everything about a source file except the logic: its name, its wayfinding header, its module order, and its inline comments. Validates all four."
 when_to_use: "Creating or editing any source file, since all four conventions apply to every one. Also when asked to wayfind, comment, rename or reorder imports, when a header has drifted from the file it describes, or when the posttooluse lint reports a finding."
 paths: "**/*.ts, **/*.tsx, **/*.js, **/*.jsx, **/*.mjs, **/*.cjs, **/*.sh, **/*.py, **/*.rb, **/*.go, **/*.rs"
@@ -212,7 +212,7 @@ the rules every inline comment holds to.
 
 ```text
 VERIFY - not part of the artifact
-- RUN `plugins/retardify/skills/files/files.sh` after writing or editing a source file; pass a path to scope it
+- RUN `plugins/retardify/skills/file/file.sh` after writing or editing a source file; pass a path to scope it
 - FIX every ERROR, since each one breaks a rule this spec states outright
 - STOP on a `secret` finding and ask the user before truncating it; the key needs rotating first
 - JUSTIFY or fix every WARN; the sidecar tolerates them, the next reader may not
@@ -277,7 +277,7 @@ the sidecar's whole output, fenced and unedited, so every claim above can be che
 
 *example:*
 > ```text
-> === files.sh sidecar ===
+> === file.sh sidecar ===
 > scanned: 41 source file(s)
 > wayfinder_scope: 38 eligible for a header
 > errors: 0
