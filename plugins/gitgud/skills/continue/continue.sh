@@ -60,7 +60,7 @@ if [ "$AHEAD" -gt 0 ]; then SYNC_STATE="diverged"
 elif [ "$BEHIND" -gt 0 ]; then SYNC_STATE="behind, fast-forwards cleanly"
 else SYNC_STATE="up to date"; fi
 
-telemetry_open git-continue
+telemetry_open gitgud:continue
 telemetry_line "default branch" "$DEFAULT_BRANCH"
 telemetry_line "current branch" "$CURRENT_BRANCH"
 telemetry_line "uncommitted files" "$CHANGED_FILES"
@@ -73,7 +73,7 @@ telemetry_line "sync state" "$SYNC_STATE"
 NEEDS_MOVE=0
 if [ "$CURRENT_BRANCH" != "$DEFAULT_BRANCH" ] || [ "$BEHIND" -gt 0 ]; then NEEDS_MOVE=1; fi
 
-handover_open git-continue
+handover_open gitgud:continue
 if [ "$AHEAD" -gt 0 ]; then
   handover_note "$DEFAULT_BRANCH has $AHEAD local commit(s) origin does not — resolve before syncing"
   handover_note "inspect them first: git log --oneline origin/$DEFAULT_BRANCH..$DEFAULT_BRANCH"

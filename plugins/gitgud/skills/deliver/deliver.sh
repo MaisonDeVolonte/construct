@@ -75,7 +75,7 @@ if git status --porcelain 2>/dev/null | grep -q '\.claude/settings\.json'; then
   TOUCHES_SETTINGS=yes
 fi
 
-telemetry_open git-deliver
+telemetry_open gitgud:deliver
 telemetry_line "default branch" "$DEFAULT_BRANCH"
 telemetry_line "current branch" "$CURRENT_BRANCH"
 telemetry_line "github auth" "ok (http $AUTH_CODE)"
@@ -85,7 +85,7 @@ telemetry_line "trunk behind origin" "$BEHIND"
 telemetry_line "trunk ahead of origin" "$AHEAD"
 telemetry_line "touches .claude/settings.json" "$TOUCHES_SETTINGS"
 
-handover_open git-deliver
+handover_open gitgud:deliver
 if [ "$AHEAD" -gt 0 ]; then
   handover_note "$DEFAULT_BRANCH has $AHEAD commit(s) origin does not — resolve before delivering"
 elif [ "$CURRENT_BRANCH" = "$DEFAULT_BRANCH" ] && [ "$BEHIND" -eq 0 ] && [ "$STAGED_FILES" -eq 0 ]; then

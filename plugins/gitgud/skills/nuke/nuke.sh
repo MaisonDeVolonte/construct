@@ -61,7 +61,7 @@ DISCARDED_COMMITS=$(git rev-list --count "origin/$DEFAULT_BRANCH..$DEFAULT_BRANC
 GAINED_COMMITS=$(git rev-list --count "$DEFAULT_BRANCH..origin/$DEFAULT_BRANCH" 2>/dev/null || echo 0)
 PENDING_BRANCH_COUNT=$(printf '%s' "$ALL_LOCAL_BRANCHES" | grep -c . || true)
 
-telemetry_open git-fresh
+telemetry_open gitgud:nuke
 telemetry_line "default branch" "$DEFAULT_BRANCH"
 telemetry_line "current branch" "${STARTING_BRANCH:-detached}"
 telemetry_line "operation in progress" "$OP_IN_PROGRESS"
@@ -76,13 +76,13 @@ telemetry_line "pending branch names" \
 # the backup is split into its own block because it is the only step here that adds safety; the
 # trigger runs it, so the one recoverable line never depends on the user pasting the block whole
 if git_is_dirty; then
-  trigger_open git-fresh
+  trigger_open gitgud:nuke
   handover_note "the trigger runs this itself, then proves the stash exists before handing over"
   handover_cmd "git stash push -u -m '$STASH_NAME'"
   block_close
 fi
 
-handover_open git-fresh
+handover_open gitgud:nuke
 handover_note "every line below is refused as a tool call — run them yourself, in this order"
 if git_is_dirty; then
   handover_note "do NOT run these until the backup above reports a stash entry named $STASH_NAME"

@@ -71,10 +71,12 @@ is_absorbed() {
 # ==============
 # OUTPUT
 # ==============
-# every sidecar prints the same two blocks in the same order, so the trigger docs can share
-# one reading contract: telemetry is what was measured, handover is what the user runs
+# a sidecar using these prints the same two blocks in the same order, so its trigger doc reads one
+# contract: telemetry is what was measured, handover is what the user runs. `rerun.sh` opts out and
+# prints one bespoke block, which is why this says "a sidecar" rather than "every sidecar"
+# the name is the INVOCATION, `gitgud:audit`, so a block header and a `/` menu entry never disagree
 telemetry_open() {
-  printf '\n=== @%s telemetry ===\n' "$1"
+  printf '\n=== /%s telemetry ===\n' "$1"
 }
 
 telemetry_line() {
@@ -84,13 +86,13 @@ telemetry_line() {
 # HANDOVER is the block the agent fences and the user pastes; it stays copy/paste clean, so
 # notes are commented rather than prose, and every line is runnable as written
 handover_open() {
-  printf '\n=== @%s handover ===\n' "$1"
+  printf '\n=== /%s handover ===\n' "$1"
 }
 
 # TRIGGER is the counterpart block: what the trigger runs itself against a narrow allow, never
 # what the user pastes; a step earns a place here only by adding safety rather than spending it
 trigger_open() {
-  printf '\n=== @%s trigger ===\n' "$1"
+  printf '\n=== /%s trigger ===\n' "$1"
 }
 
 handover_note() {

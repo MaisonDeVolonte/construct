@@ -108,7 +108,7 @@ BACKUP_COUNT=$(find tmp/backups -mindepth 1 -maxdepth 1 -type d | grep -c . || t
   printf 'restore one file: cp %s/worktree/<path> <path>\n' "$DEST"
 } > "$DEST/MANIFEST.txt"
 
-telemetry_open git-backup
+telemetry_open gitgud:backup
 telemetry_line "backup location" "$DEST"
 telemetry_line "head" "$HEAD_SHA"
 telemetry_line "branch" "${CURRENT_BRANCH:-detached}"
@@ -124,7 +124,7 @@ telemetry_line "verified" "object counts match at $SOURCE_OBJECTS"
 
 # the restore is handed over rather than run: putting files back overwrites whatever sits there
 # now, which is the one thing a backup tool must never decide on the user's behalf
-handover_open git-backup
+handover_open gitgud:backup
 handover_note "the snapshot is already taken; nothing below runs unless you paste it"
 handover_note "restore the full history into a fresh directory, then look before you swap:"
 handover_cmd "git clone $DEST/git restored-$STAMP"
