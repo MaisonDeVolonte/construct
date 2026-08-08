@@ -28,9 +28,9 @@ then mkdir -p .operator/logs; echo "# $TODAYS_LOG" > "$TODAYS_LOG"; fi
 
 ELAPSED_TIME=$((NOW - LAST_MODIFIED))
 
-NOTES_TASK="append notes to the end of $TODAYS_LOG (see plugins/retardify/skills/log/SKILL.md)"
+NOTES_TASK="append notes to the end of $TODAYS_LOG (see /retardify:log)"
 PROMPTS_TASK="append any uncaptured prompts to their thread's PROMPTS block in $TODAYS_LOG"
-SYNTHESIZE_TASK="synthesize $TODAYS_LOG (see plugins/retardify/skills/log/SKILL.md): incorporate notes \
+SYNTHESIZE_TASK="synthesize $TODAYS_LOG (see /retardify:log): incorporate notes \
 into thread prose, and prune each thread's prompts without turning them into prose"
 
 # the full pass first, since it covers everything the cheap check does and more
@@ -64,7 +64,7 @@ if [ "$PENDING_NOTES" -eq 0 ] && [ -z "$WIDEST" ]; then exit 0; fi
 # the debounce is the only thing standing between a stubborn thread and an ask on every turn
 if [ "$ELAPSED_TIME" -lt "$SYNTH_DEBOUNCE" ]; then exit 0; fi
 
-REASON="synthesize $TODAYS_LOG (see plugins/retardify/skills/log/SKILL.md)"
+REASON="synthesize $TODAYS_LOG (see /retardify:log)"
 if [ "$PENDING_NOTES" -gt 0 ]; then
   REASON="$REASON: incorporate the $PENDING_NOTES pending note(s) into thread prose and delete them"
 fi
