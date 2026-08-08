@@ -97,7 +97,9 @@ TABLE OF CONTENTS
 
 ### 1. basic sandbox (automations and workflows, ~5 mins)
 - [ ] clone: `git clone https://github.com/MaisonDeVolonte/operator.git ~/.../operator`
-- [ ] symlink plugins: `ln -s ~/.../operator/plugins/operator ~/.claude/skills/operator`
+- [ ] symlink operator: `ln -s ~/.../operator/plugins/operator ~/.claude/skills/operator`
+- [ ] symlink gitgud: `ln -s ~/.../operator/plugins/gitgud ~/.claude/skills/gitgud`
+- [ ] symlink retardify: `ln -s ~/.../operator/plugins/retardify ~/.claude/skills/retardify`
 - [ ] local settings: `cp plugins/operator/settings/settings.local.json .claude/settings.local.json`
 - [ ] gitignore: `.claude/settings.local.json`
 - [ ] restart: editor, start new claude session, run `/sandbox` and `/operator:settings`
@@ -213,7 +215,8 @@ TABLE OF CONTENTS
  * @file widget.ts - jsdoc wayfinding header guidelines
  * ====================================================
  * @description
- * - automatically add this block to executable files (js, ts, tsx, jsx)
+ * - automatically add this block to js (js, jsx, ts, tsx, mjs, cjs) and shell (sh, bash, zsh)
+ * - shell carries the same block in the hash style, opening on line 2 under the shebang
  * - continuously update tags to reflect the file's contents, purpose, and dependencies
  *   - @file: the filename - short, specific title
  *   - @description: - hyphen delimited list of single clause descriptions, avoid wrapping text
