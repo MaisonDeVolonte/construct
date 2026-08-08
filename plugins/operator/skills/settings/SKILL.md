@@ -40,6 +40,8 @@ echo "sidecar exit: $?"
     - a `parse` error outranks everything else, since that scope's rules are not running at all
     - a `verbs` error is only latent while no allow reaches the path, so read it with the allow list
     - a `drift` finding is a defect only when the installed copy is the stale one; check which
+    - `templates` firing means drift and hygiene had nothing to read, so a clean run proves less
+    - a scope with no file at all is `/operator:sandbox` territory, not a finding to fix here
     - `guard` firing means the deny protecting this sidecar is absent; restore it before trusting a
       later clean run, since an editable auditor can be made to report clean
     - answer the checklist the sidecar prints, since those rules are the ones no script can judge
@@ -72,6 +74,7 @@ one bullet per issue, leading with the label the sidecar printed
 | label | what it found |
 |---|---|
 | `parse` | a scope that does not parse, so every rule in it is inert |
+| `templates` | the plugin's `settings/` is missing or empty, so drift and hygiene read nothing |
 | `drift` | an installed copy whose rules differ from its template |
 | `verbs` | a path denied for read only, which a write still reaches |
 | `scope` | machine detail in a committed file, or a mask the scope cannot honor |
