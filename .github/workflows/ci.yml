@@ -5,11 +5,12 @@
 # - the repo ships shell scripts that source each other, so ci gates exactly that and no more
 # - `shellcheck -x` lints every sidecar, hook, and validator at warning severity, sourced files too
 # - the shared files are linted directly as well, so a renamed variable fails the build (SC2034)
+# - `sync-secrets --check` gates the copies against their canonical, since nothing else compares them
 # - references are NOT gated here: `todo.sh` ranks opportunities, it never graded them
 # - a report shaped for judgement makes a poor required check, so its replacement is its own tool
 # - until that checker lands nothing gates references, and a broken `@see` reaches main unblocked
 # - this is the required check that lets `gh pr merge --auto` engage (see plugins/gitgud/skills/deliver/SKILL.md)
-# @see README.md, plugins/gitgud/skills/deliver/SKILL.md, plugins/retardify/skills/files/SKILL.md
+# @see README.md, plugins/gitgud/skills/deliver/SKILL.md, plugins/retardify/skills/files/SKILL.md, tools/sync-secrets/sync-secrets.sh
 
 name: ci
 
@@ -41,3 +42,8 @@ jobs:
       - name: syntax
         run: |
           find plugins tools -name '*.sh' -print0 | xargs -0 -n1 bash -n
+
+      # the shared files are copied per plugin rather than sourced across one, so nothing but this
+      # compares them; a detector with no gate is how three identical copies drift apart
+      - name: secrets drift
+        run: bash tools/sync-secrets/sync-secrets.sh --check
