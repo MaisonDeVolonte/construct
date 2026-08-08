@@ -278,18 +278,110 @@ check_branches() {
 
 # a trigger that writes a dated artifact has to name the template that artifact must match, or the
 # agent writing it has nothing to follow
+# an audit directory is named for the SUBJECT audited rather than for the skill that audits it, so
+# the two agree everywhere except `git`, which /gitgud:audit owns; every other kind is its own owner
+owner_of_kind() {
+  case "$1" in
+    git) printf 'audit';;
+    *)   printf '%s' "${1%s}";;
+  esac
+}
+
 check_artifact() {
-  local doc=$1 type root
+  local doc=$1 type root owner
   # one directory per kind, all at one level, so the root is the kind and needs no lookup
   for type in graphs guides logs plans reviews todos files permissions scopes settings credentials git; do
     root=".operator/$type/"
     if ! grep -q "$root" "$doc"; then continue; fi
+    owner=$(owner_of_kind "$type")
     # a cross-plugin reference is an invocation, since CLAUDE_PLUGIN_ROOT never leaves its plugin
-    if ! grep -qE "plugins/[a-z]+/skills/${type%s}s?/SKILL\.md|/[a-z]+:${type%s}s?([^a-z-]|$)" "$doc"; then
+    if ! grep -qE "plugins/[a-z]+/skills/${owner}s?/SKILL\.md|/[a-z]+:${owner}s?([^a-z-]|$)" "$doc"; then
       warn "$doc" "$(where "$doc" "$root")" artifact \
         "writes $root without naming the skill that owns that shape"
     fi
   done
+}
+
+# a block header carries the name a user typed, so it survives a rename only if something checks it
+# four sidecars printed a name one or two renames stale, and two docs already quoted the right one
+check_block_name() {
+  local doc=$1 name plugin sidecar want n found
+  name=$(trigger_name "$doc")
+  sidecar="$(dirname "$doc")/$name.sh"
+  [ -f "$sidecar" ] || return 0
+  # plugins/<plugin>/skills/<name>/ — the plugin is the namespace half of every invocation
+  plugin=$(printf '%s' "$doc" | sed -n 's|.*plugins/\([a-z][a-z-]*\)/skills/.*|\1|p')
+  [ -n "$plugin" ] || return 0
+  want="$plugin:$name"
+  while IFS=$'\t' read -r n found; do
+    [ -n "$n" ] || continue
+    found=$(printf '%s' "$found" | sed -E 's/.*_open[[:space:]]+"?([^"[:space:]]+)"?.*/\1/')
+    [ "$found" = "$want" ] && continue
+    err "$sidecar" "$n" block_name "block opens '$found' where the invocation is '$want'"
+  done < <(grep -nE '(telemetry|handover|trigger)_open[[:space:]]+"?[A-Za-z]' "$sidecar" 2>/dev/null | sed 's/:/\t/' || true)
+}
+
+# the body checks: a doc can be shape-correct in its frontmatter and its pairing and still be
+# structurally broken inside, which is how a pasted shape corrupted two docs with 0 errors reported
+check_body() {
+  local doc=$1 n num prev heading ticks kind found template
+
+  # the first `# ` heading is where a doc stops instructing and starts templating, so it is the
+  # boundary every check below needs: numbered lines above it are steps, below it they are example
+  # content. a doc with no template region has no boundary and is scanned whole
+  # `|| true` on every one of these: grep exits 1 when it matches nothing, which under `set -e`
+  # and `pipefail` kills the run mid-walk and reports zero findings, reading exactly like a pass
+  template=$(grep -nE '^# ' "$doc" 2>/dev/null | head -1 | cut -d: -f1 || true)
+  template=${template:-999999}
+
+  # steps read in file order and must climb: a repeated number is two step 3s, and a number that
+  # drops is a block pasted in below the step it duplicates. one rule catches both
+  prev=0
+  while IFS=$'\t' read -r n heading; do
+    [ -n "$n" ] || continue
+    [ "$n" -lt "$template" ] || continue
+    num=$(printf '%s' "$heading" | sed -n 's/^\([0-9]\{1,\}\)\..*/\1/p')
+    [ -n "$num" ] || continue
+    if [ "$num" -le "$prev" ]; then
+      err "$doc" "$n" step_order "step $num follows step $prev; a step number appears once, ascending"
+    fi
+    prev=$num
+  done < <(grep -nE '^[0-9]+\. ' "$doc" | sed 's/:/\t/' || true)
+
+  # a heading closing no backtick it opened is the fingerprint of a bulk edit that ate a line: it
+  # renders as a heading, so nothing downstream complains, and the text it swallowed is just gone
+  while IFS=$'\t' read -r n heading; do
+    [ -n "$n" ] || continue
+    ticks=$(printf '%s' "$heading" | tr -cd '`' | wc -c | tr -d ' ')
+    if [ $((ticks % 2)) -ne 0 ]; then
+      err "$doc" "$n" heading_backtick "heading opens a backtick it never closes"
+    fi
+  done < <(grep -nE '^#{1,6} ' "$doc" | sed 's/:/\t/' || true)
+
+  # an archive shape naming another skill's kind is what a pasted block leaves behind, and the
+  # agent silently corrects for it, so the artifacts on disk never show the doc is wrong
+  # the kind comes from the template's own h1, never from a mention: a findings example may name
+  # a sibling kind, and scanning for any `.operator/x/` reads that as ownership
+  # an unfilled placeholder is the pasted generic shape itself, still carrying `<kind>` and
+  # `<Kind>` where the skill's own name belongs. it reads as a template rather than a spec, and it
+  # is what a kind check can never catch, since a placeholder names no kind to disagree with
+  n=$(grep -nE '^# \.operator/<[a-z]+>/|^## <[A-Za-z]+> Audit #' "$doc" 2>/dev/null | head -1 | cut -d: -f1 || true)
+  if [ -n "$n" ]; then
+    err "$doc" "$n" shape_placeholder \
+      "the archive shape still carries its <kind> placeholders; write it for this skill"
+    return 0
+  fi
+
+  kind=$(sed -n 's|^# \.operator/\([a-z]\{1,\}\)/.*|\1|p' "$doc" | head -1)
+  [ -n "$kind" ] || return 0
+  while IFS=$'\t' read -r n heading; do
+    [ -n "$n" ] || continue
+    found=$(printf '%s' "$heading" | sed -n 's/^## \([A-Za-z]\{1,\}\) Audit #.*/\1/p' | tr '[:upper:]' '[:lower:]')
+    [ -n "$found" ] || continue
+    if [ "$found" != "$kind" ]; then
+      err "$doc" "$n" shape_kind "a '$found' audit heading in the skill that owns '$kind'"
+    fi
+  done < <(grep -nE '^## [A-Za-z]+ Audit #' "$doc" | sed 's/:/\t/' || true)
 }
 
 # the sidecar is the half that touches git, so its own header and its shebang are load-bearing
@@ -394,6 +486,8 @@ for pair in "${PAIRS[@]}"; do
   check_sidecar_header  "$pair"
   check_sidecar_lint    "$pair"
   check_scrub           "$pair"
+  check_body            "$pair"
+  check_block_name      "$pair"
   case "$(skill_kind "$pair")" in
     spec)
       check_spec        "$pair";;

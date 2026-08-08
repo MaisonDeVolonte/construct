@@ -29,7 +29,7 @@ a skill is one folder, named for its trigger, holding exactly two files:
 - longer still belongs in a sibling file the body names, which costs nothing until it is read
 - `metadata` is free-form and the harness ignores it, so it never counts against the cap
 
-All @gitautomations follow the following general shape:
+every trigger doc follows the same general shape:
 
 1. run the native shell command exactly as specified
   ```bash
@@ -54,14 +54,27 @@ All @gitautomations follow the following general shape:
   - include ...
   ```
 
+## the body
+frontmatter and pairing can both be correct while the body is structurally broken, which is how a
+pasted archive shape corrupted two docs and every gate still reported clean:
+
+- the first `# ` heading is the boundary: above it the doc instructs, below it the doc templates
+- step numbers above that boundary climb, each appearing once; a repeat is two blocks fighting
+- a heading closing no backtick it opened ate the line it was meant to reference
+- an archive shape names the kind its own template h1 declares, never a sibling's
+- a `<kind>` or `<Kind>` placeholder means the generic shape was pasted and never written
+- the kind is read from that h1 and never from a mention, since a findings example may name a sibling
+- an audit directory is named for the SUBJECT audited, so `git` is owned by `/gitgud:audit`
+
 ## the two blocks
-every sidecar prints the same pair, in the same order, so each trigger doc reads one contract:
+every sidecar prints the same pair, in the same order, so each trigger doc reads one contract.
+the name in a block header is the INVOCATION, so the header and the `/` menu can never disagree:
 
 ```text
-=== @gitname telemetry ===
+=== /plugin:skill telemetry ===
 key: value
 
-=== @gitname handover ===
+=== /plugin:skill handover ===
 # a note explaining the block, or why it is empty
 git command one
 git command two
