@@ -197,6 +197,7 @@ tier1() {
 #   a script's own commands are not tool calls, so permissions never see them; the sandbox does
 # ==============
 T2_SEEN=0
+T2_BYPASS=0
 
 # strip comments, then split on every separator that starts a fresh command
 internals_of() {
@@ -264,6 +265,7 @@ tier2() {
     # a deny that would have caught this string never fires, because no rule is consulted here
     if hits_deny "$line" || hits_deny "$base"; then
       err "$rel" bypass "$base" "a deny names this, but an internal call is not a tool call"
+      T2_BYPASS=$((T2_BYPASS + 1))
       continue
     fi
 
@@ -314,7 +316,7 @@ done
 
 # ==============
 # ARTIFACT
-#   this skill's own dated artifact, graded here so nothing outside this file decides its shape.
+#   this skill's own dated artifact, graded here so nothing outside this file decides its shape
 #   the shape lives in this skill's SKILL.md and the labels below are what this sidecar emits
 # ==============
 ARTIFACT_KIND="scopes"
@@ -510,7 +512,7 @@ stack: ${STACK_NAMES[*]}
 origin: $ORIGIN_HOST
 scripts: ${#TARGETS[@]}
 invocations: $T1_PASS allowed, $T1_ASK prompting, $T1_FAIL refused
-internals: $T2_SEEN inspected, none of which cross a permission gate
+internals: $T2_SEEN inspected, $T2_BYPASS of which cross a permission gate
 errors: $ERRORS
 warnings: $WARNINGS
 --- findings ---

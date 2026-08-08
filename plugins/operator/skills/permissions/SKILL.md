@@ -49,86 +49,63 @@ echo "sidecar exit: $?"
     - a corpus gap is itself a finding: add the spelling you found in the wild, since coverage
       is the whole point of keeping a labelled list
 
-## the shape` below
-    - the heading reads `## Settings Audit #[next_audit]: [timestamp]`, both from the telemetry
-    - `state` is the counts as hyphen bullets: scopes parsed, probes run, errors and warnings
-    - `findings` lead with the label the sidecar printed, one bullet each, naming what it hit
-    - `resolutions` are checkboxes, one per finding, naming the rule and the scope file it belongs in
-    - `telemetry` is the sidecar's whole output, fenced and unedited, pasted last
-
-    the labels the sidecar emits, and what each one means:
-
-    | label | what it found |
-    |----------|---------------|
-    | parse    | a scope that does not parse, so every rule in it is inert |
-    | drift    | an installed copy whose rules differ from its template |
-    | verbs    | a path denied for read only, which a write still reaches |
-    | scope    | machine detail in a committed file, or a mask the scope cannot honor |
-    | hygiene  | duplicate rules, or a template that will not paste |
-    | coverage | a rule with no why in the scope's `.md`, or a mirror claim that has diverged |
-    | guard    | nothing protects the policy directories, so this auditor is editable |
-    | probe    | a boundary that did not refuse, naming what got through |
-    | wrapped  | errors from the test-permissions or test-scopes replay, naming the count |
-
-3. report the audit inline, then STOP
-
-    NEVER edit a settings file to fix a finding, and never offer to; the audit is the deliverable
-
-    - a `parse` error outranks everything else, since that scope's rules are not running at all
-    - a `verbs` error is only latent while no allow reaches the path, so read it with the allow list
-    - a `drift` finding is a defect only when the installed copy is the stale one; check which
-    - `guard` firing means the deny protecting this sidecar is absent; restore it before trusting a
-      later clean run, since an editable auditor can be made to report clean
-    - answer the checklist the sidecar prints, since those rules are the ones no script can judge
-
 ## the shape
-> the spec this skill appends against; the validator below grades what landed
+> the artifact this skill appends to; the sidecar grades what landed on its next run
 
-# .operator/<kind>/YYYY-MM-DD.md
-one file per day and per kind, appended to by every auditing trigger:
+# .operator/permissions/YYYY-MM-DD.md
+one file per day, appended to by every deliberate run:
 
-- the kind in the filename and the kind in each heading match, so one archive reads as one
-- an audit captures repo state at a moment in time, so it is never edited after the fact
+- the heading reads `## Permissions Audit #[next_audit]: [timestamp]`, both from the telemetry
+- an audit captures the gate at a moment in time, so it is never edited after the fact
 - carry an unresolved finding forward by restating it, never by editing the older audit
-- lines are hyphen bullets holding a single clause, fact or action, capped at 100 characters
-- err on the side of brevity, not completeness
+- lines are hyphen bullets holding a single clause, capped at 100 characters
 - scrub client names, tokens, and other sensitive detail before it lands in a commit
 
-## <Kind> Audit #1: YYYY-MM-DD HH:MM
+## Permissions Audit #1: YYYY-MM-DD HH:MM
 
 ### state
-hyphen bullets on what the run found, one clause each
+the counts as hyphen bullets: cases loaded, tier 1 replayed, how many held, errors, warnings
 
 *example:*
-> - 3 branches carry work, 1 of them unmerged and 11 days stale
-> - the trunk is level with origin and the last build passed
+> - 78 corpus cases loaded, 38 of them tier 1 replays fed to the live hook
+> - 38 held and 0 failed, so every command the corpus calls blocking was blocked
+> - 0 errors and 32 warnings, all of them tier 2 reads of what the files literally say
 
 ### findings
-one bullet per issue, leading with the label the trigger assigned
+one bullet per issue, leading with the label the sidecar printed
+
+| label | what it found |
+|---|---|
+| a corpus case name | a replay whose verdict disagreed with the gate its corpus row declares |
+| `drift` | the hook and the rules guard different paths; the text names which way it leans |
+| `parse` | a file in the merged stack that does not parse, so every rule in it is inert |
+| `dead_rule` | a rule no command in the corpus reaches, so nothing measures whether it works |
+| `resolution_shape` | an older entry whose resolution names prose rather than a command |
 
 *example:*
-> - **Ghost Branch** — `fix/nav-overflow` tracks a deleted upstream, 11 days stale
-> - **Conflict Risk** — `feat/pricing` and origin/main both touch 4 files
-> - **Local Clutter** — `chore/deps` is merged with no upstream
+> - **remote-exec** — no deny rule names `curl`, and an allow wildcard covers it: auto-approved
+> - **drift** — 4 paths the hook guards carry no Edit/Write rule, `.husky` and `.cursor` among them
+> - **dead_rule** — 2 deny rules match nothing the corpus spells, so neither is being tested
 
 ### resolutions
-one checkbox per finding, in the same order, naming a command or an `@agent` shortcut
+one checkbox per finding, in the same order, naming the rule and the scope file it belongs in
 
 *example:*
-> - [ ] `git branch -d fix/nav-overflow` or `@git-empty`
-> - [ ] `@git-gud` to merge origin/main in and surface conflicts early
-> - [ ] `@git-empty`
+> - [ ] add `Bash(curl * | sh)` to `deny` in `settings.user.json`
+> - [ ] add the four hook-only paths to `deny` in `settings.project.json`, or drop them from the hook
+> - [ ] add the spelling this run found to `shared/corpus.tsv`, since a gap is itself a finding
 
 ### telemetry
-the raw sidecar output, fenced and unedited, so every claim above can be checked against it
+the sidecar's whole output, fenced and unedited, so every claim above can be checked against it
 
 *example:*
 > ```text
-> --- /gitgud:audit telemetry ---
-> current_branch: main
-> staged_files: 0
-> ---------------------------
+> === permissions.sh audit ===
+> cases: 78
+> tier1 replayed: 38 - 38 held, 0 failed
+> errors: 0
+> warnings: 32
 > ```
 
-## <Kind> Audit #2: repeat the above format for each run of the same kind on the same day
+## Permissions Audit #2: repeat the above format for each deliberate run on the same day
 never edit an earlier audit; a stale finding is signal about how long it went unresolved
