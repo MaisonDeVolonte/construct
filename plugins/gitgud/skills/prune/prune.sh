@@ -87,7 +87,7 @@ LIVE_COUNT=$(git for-each-ref --format='%(refname:short)' refs/heads/ \
   | grep -vx "$DEFAULT_BRANCH" | grep -c . || true)
 LIVE_COUNT=$((LIVE_COUNT - SPENT_COUNT))
 
-telemetry_open git-empty
+telemetry_open gitgud:prune
 telemetry_line "default branch" "$DEFAULT_BRANCH"
 telemetry_line "current branch" "$STARTING_BRANCH"
 telemetry_line "trunk behind origin" "$BEHIND"
@@ -100,7 +100,7 @@ telemetry_line "deletable with -d" "$(printf '%s' "${DELETE_SAFE# }" | sed 's/ /
 telemetry_line "deletable with -D (absorbed)" "$(printf '%s' "${DELETE_FORCE# }" | sed 's/ /, /g')"
 telemetry_line "kept, unmerged and unabsorbed" "$(printf '%s' "${KEEP_BRANCHES# }" | sed 's/ /, /g')"
 
-handover_open git-empty
+handover_open gitgud:prune
 if [ "$AHEAD" -gt 0 ]; then
   handover_note "$DEFAULT_BRANCH has $AHEAD commit(s) origin does not — resolve before cleaning up"
 elif [ "$BEHIND" -eq 0 ] && [ "${DELETE_COUNT:-0}" -eq 0 ]; then
