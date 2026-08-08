@@ -32,12 +32,12 @@ else
 
   # one file per day, many reports per file — reported never created, so a ci scan leaves nothing
   # the cd above already anchored us to the repo root, so these paths stay relative
-  TODAYS_INSIGHTS=".operator/todos/$(date +%Y-%m-%d).md"
-  INSIGHTS_TIME=$(date '+%Y-%m-%d %H:%M')
+  TODAYS_TODO=".operator/todos/$(date +%Y-%m-%d).md"
+  TODO_TIME=$(date '+%Y-%m-%d %H:%M')
   # no file yet means no reports yet, which is the count the agent numbers its first one from
-  if [ -f "$TODAYS_INSIGHTS" ];
-  then INSIGHTS_COUNT=$(grep -c '^## Insight #' "$TODAYS_INSIGHTS" || true)
-  else INSIGHTS_COUNT=0; fi
+  if [ -f "$TODAYS_TODO" ];
+  then TODO_COUNT=$(grep -c '^## Todo #' "$TODAYS_TODO" || true)
+  else TODO_COUNT=0; fi
 
   KEEP=0
   for arg in "$@"; do
@@ -188,10 +188,10 @@ else
 
   cat <<EOF
 
-=== /retardify:todo sidecar ===
-insights_file: $TODAYS_INSIGHTS
-insights_time: $INSIGHTS_TIME
-insights_count: $INSIGHTS_COUNT
+=== todo.sh sidecar ===
+todo_file: $TODAYS_TODO
+todo_time: $TODO_TIME
+todo_count: $TODO_COUNT
 SCANNED: mirror pointers, markdown links, see-tag paths, code markers
 broken_mirror: $broken_mirror
 broken_link: $broken_link
@@ -313,13 +313,13 @@ subsection() {
 #   each takes a report path and appends findings; to add one, write a function and list it below
 # ==============
 
-# "one insights file per day" — the date in the name is what makes a recurring opportunity visible
+# "one todo file per day" — the date in the name is what makes a recurring opportunity visible
 check_filename() {
   local file=$1 base dir
   base=$(basename "$file")
   dir=$(dirname "$file")
   if ! printf '%s' "$base" | grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2}\.md$'; then
-    err "$file" 1 filename "one insights file per day, named YYYY-MM-DD.md"
+    err "$file" 1 filename "one todo file per day, named YYYY-MM-DD.md"
   fi
   case "$dir" in
     "$ARTIFACTS"|"./$ARTIFACTS"|*"/$ARTIFACTS") ;;
@@ -346,12 +346,12 @@ check_entries() {
   while IFS=$'\t' read -r start end heading; do
     count=$((count + 1))
     if ! printf '%s' "$heading" \
-      | grep -qE '^Insight #[0-9]+: [0-9]{4}-[0-9]{2}-[0-9]{2} ([01][0-9]|2[0-3]):[0-5][0-9]$'; then
-      err "$file" "$start" entry_heading "entries read '## Insight #N: YYYY-MM-DD HH:MM'"
+      | grep -qE '^Todo #[0-9]+: [0-9]{4}-[0-9]{2}-[0-9]{2} ([01][0-9]|2[0-3]):[0-5][0-9]$'; then
+      err "$file" "$start" entry_heading "entries read '## Todo #N: YYYY-MM-DD HH:MM'"
       continue
     fi
-    number=$(printf '%s' "$heading" | sed -n 's/^Insight #\([0-9]\{1,\}\):.*/\1/p')
-    stamp=$(printf '%s' "$heading" | sed -n 's/^Insight #[0-9]\{1,\}: \(.*\)$/\1/p')
+    number=$(printf '%s' "$heading" | sed -n 's/^Todo #\([0-9]\{1,\}\):.*/\1/p')
+    stamp=$(printf '%s' "$heading" | sed -n 's/^Todo #[0-9]\{1,\}: \(.*\)$/\1/p')
     if [ "$number" -ne "$expected" ]; then
       err "$file" "$start" entry_numbering "report $number where $expected was expected"
     fi
@@ -552,7 +552,7 @@ SECRETS=$(grep -c '|secret|' "$FINDINGS" || true)
 
 cat <<EOF
 
-=== insights.sh sidecar ===
+=== todo.sh sidecar ===
 template: $TEMPLATE
 scanned: ${#REPORTS[@]} report file(s)
 width_cap: $MAX_WIDTH chars

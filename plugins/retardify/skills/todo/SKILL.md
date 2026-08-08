@@ -64,13 +64,13 @@ echo "sidecar exit: $?"
   - hyphen-delimited list of bullets
   ```
 
-6. THEN append the same report to the insights file (see `plugins/retardify/skills/todo/SKILL.md`)
+6. THEN append the same report to the todo file, in the shape defined under `## the shape` below
   ```text
   - the sidecar reports the target but never creates it; take it from the telemetry header:
-  - CREATE the file first if it does not exist, with `# <insights_file>` as its only line
-    - `insights_file` is the path, `insights_time` is the heading timestamp
-    - `insights_count` is how many reports the file already holds, so this one is #(insights_count + 1)
-  - append a new `## Insight #N: YYYY-MM-DD HH:MM` section, never overwrite an earlier report
+  - CREATE the file first if it does not exist, with `# <todo_file>` as its only line
+    - `todo_file` is the path, `todo_time` is the heading timestamp
+    - `todo_count` is how many reports the file already holds, so this one is #(todo_count + 1)
+  - append a new `## Todo #N: YYYY-MM-DD HH:MM` section, never overwrite an earlier report
   - write the report as delivered to the user, minus the raw sidecar dump
   - an opportunity that recurs across dated files is a finding in itself; restate it, never edit the older report
   ```
@@ -90,7 +90,7 @@ one file per day, appended to by `/retardify:todo` and nothing else:
 - lines hold a single clause, fact or action, capped at 100 characters
 - scrub client names, tokens, and other sensitive detail before it lands in a commit
 
-## Insight #1: YYYY-MM-DD HH:MM
+## Todo #1: YYYY-MM-DD HH:MM
 
 ### sources
 which streams fed this report, and the log range read
@@ -126,5 +126,5 @@ opportunities restated from an earlier report, with how many reports they have s
 *example:*
 > hook test coverage — carried 3 reports, still Q1 on paper, evidently not urgent in practice
 
-## Insight #2: repeat the above format for each `/retardify:todo` run on the same day
+## Todo #2: repeat the above format for each `/retardify:todo` run on the same day
 never edit an earlier report; a recurring opportunity is signal about what keeps getting skipped
