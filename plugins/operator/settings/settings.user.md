@@ -62,7 +62,7 @@
   "strictAllowlist": true,
   "tlsTerminate": {},
   "allowedDomains": [
-    "code.claude.com", "docs.claude.com",
+    "code.claude.com", "docs.claude.com", "agentskills.io", "zed.dev",
     "github.com", "api.github.com",
     "registry.npmjs.org"
   ]
@@ -75,6 +75,8 @@
 - `github.com` `api.github.com`: git over https, and the api every sidecar reaches by curl
 - `registry.npmjs.org`: npm and pnpm installs, matching the allowWrite caches
 - `code.claude.com` `docs.claude.com`: WebFetch allows that also seed this bash allowlist, never the reverse
+- `agentskills.io`: the open spec behind `license` and `compatibility`, which the skill docs defer to
+- `zed.dev`: editor support questions, since its markdown preview differs from github's
 
 ### credentials
 > hides secrets from sandboxed bash only; the Read, Edit and Write tools need a permission rule

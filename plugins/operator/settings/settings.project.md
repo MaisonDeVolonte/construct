@@ -28,7 +28,7 @@
 
   "network": {
     "allowedDomains": [
-      "code.claude.com", "docs.claude.com",
+      "code.claude.com", "docs.claude.com", "agentskills.io", "zed.dev",
       "github.com", "api.github.com",
       "registry.npmjs.org"
     ]
