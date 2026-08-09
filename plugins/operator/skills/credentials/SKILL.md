@@ -13,7 +13,7 @@ metadata:
 ## telemetry
 
 ```!
-"${CLAUDE_PLUGIN_ROOT}"/skills/credentials/credentials.sh
+"${CLAUDE_PLUGIN_ROOT}"/skills/credentials/credentials.sh $ARGUMENTS
 echo "sidecar exit: $?"
 ```
 

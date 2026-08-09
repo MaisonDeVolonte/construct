@@ -14,7 +14,7 @@ metadata:
 ## telemetry
 
 ```!
-"${CLAUDE_PLUGIN_ROOT}"/skills/scopes/scopes.sh
+"${CLAUDE_PLUGIN_ROOT}"/skills/scopes/scopes.sh $ARGUMENTS
 echo "sidecar exit: $?"
 ```
 
