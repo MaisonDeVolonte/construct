@@ -6,6 +6,8 @@
 # - `shellcheck -x` lints every sidecar, hook, and validator at warning severity, sourced files too
 # - the shared files are linted directly as well, so a renamed variable fails the build (SC2034)
 # - `sync-secrets --check` gates the copies against their canonical, since nothing else compares them
+# - `sidecars stay read-only` fails the build on an executed mutating git verb outside a handover
+# - it exists because `prune.sh` ran one for five deliveries and the sandbox half-applied each merge
 # - references are NOT gated here: `todo.sh` ranks opportunities, it never graded them
 # - a report shaped for judgement makes a poor required check, so its replacement is its own tool
 # - until that checker lands nothing gates references, and a broken `@see` reaches main unblocked
@@ -47,3 +49,18 @@ jobs:
       # compares them; a detector with no gate is how three identical copies drift apart
       - name: secrets drift
         run: bash tools/sync-secrets/sync-secrets.sh --check
+
+      # a sidecar measures and hands over; it never mutates the tree itself
+      - name: sidecars stay read-only
+        run: |
+          # handover_cmd and handover_note carry these verbs as strings, which is the whole design,
+          # and settings.sh feeds one to the hook replay; a quoted verb is data, so only bare runs
+          if grep -rnE '(^|[[:space:]]|[;&|(])git[[:space:]]+(merge[[:space:]]|pull|checkout|restore|switch|reset|clean|rebase|cherry-pick|revert|commit|am|apply|stash[[:space:]]+(push|pop|apply|drop|clear)|branch[[:space:]]+-[dD]|push|tag)' \
+              plugins/*/skills/*/*.sh plugins/*/shared/*.sh \
+              | grep -vE ':[0-9]+:[[:space:]]*#' \
+              | grep -vE 'handover_cmd|handover_note|telemetry_line' \
+              | grep -vE '["'"'"'`]git[[:space:]]'; then
+            echo "::error::a sidecar runs a mutating git command; emit it with handover_cmd instead"
+            exit 1
+          fi
+          echo "no sidecar mutates the worktree"

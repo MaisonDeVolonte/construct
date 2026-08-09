@@ -24,6 +24,9 @@ echo "sidecar exit: $?"
 2. report the telemetry, then act on `sync state`, since it decides which shape applies
     - `up to date` → say so; there is nothing to run
     - `behind, fast-forwards cleanly` → run the emitted commands, each as its own tool call
+    - `behind, but the sync is yours to run` → STOP and hand the block over; the incoming commits
+      write a path the sandbox denies, and a sandboxed merge half-applies rather than refusing,
+      leaving the writable files checked out against a HEAD that never moved
     - `diverged` → STOP and hand the block over; local commits origin lacks need a rebase or a
       merge commit, and both rewrite history, so both stay the user's call
 
