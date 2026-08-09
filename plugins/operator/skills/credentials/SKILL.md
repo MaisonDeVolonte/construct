@@ -1,9 +1,15 @@
 ---
 name: credentials
-description: Prove every credential is masked, unset, or unruled by probing the live sandbox across every exfiltration vector, then save the report.
+description: Probe every credential-shaped variable in this sandboxed shell across 19 injected, masked and denied vectors, then save a dated report to .operator/credentials/ naming every leak to rotate first.
+argument-hint: "[--strict] [--quick]"
 disable-model-invocation: true
+disallowed-tools: WebFetch, WebSearch
+model: opus
+effort: max
+license: MIT
 metadata:
   kind: trigger
+  artifact: .operator/credentials/
 ---
 **/operator:credentials:** the frontmatter blocks every path except an explicit invocation
 - proves the masking story rather than asserting it, across every vector an agent could reach
