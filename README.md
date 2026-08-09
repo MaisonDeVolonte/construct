@@ -1,13 +1,13 @@
-# OPERATOR: Secure Agentic Coding Infra (Claude Code Plugin)
+# TheConstruct: Secure Agentic Coding (Claude Code Plugin)
 **sandboxed automations, masked credentials, deterministic conventions, and more**
 
 ```
 TABLE OF CONTENTS
 ├─ Examples ─────── operator:credentials · gitgud:deliver · retardify:graph
 ├─ Installation ─── plugin marketplace · cloned repo
-├─ Sandbox ──────── basic · configured · advanced · managed
+├─ Sandbox ──────── basic · repo · personal · managed · advanced
 ├─ Plugins & Skills
-├─ /operator ────── credentials · permissions · sandbox · scopes · settings
+├─ /operator ────── credentials · permissions · scopes · settings
 ├─ /gitgud ──────── audit · backup · continue · deliver · prune · nuke · rerun · ship
 ├─ /retardify ───── file · code · graph · plan · review · guide · todo · log
 ├─ Hooks ────────── sessions · tools · tasks · turns
@@ -184,13 +184,13 @@ OUTPUT:       retardify/plans/2026-07-31-operation-monorepo.md
 <details>
 <summary>
 
-### Option A: Plugin Marketplace (mix and match, manual/auto updates, ~5 mins)
+Option A: Plugin Marketplace (mix and match, manual/auto updates, ~5 mins)
 
 </summary>
 
 ```bash
 # install TheConstruct plugin marketplace
-claude plugin marketplace add MaisonDeVolonte/construct --scope user --sparse .claude-plugin plugins
+claude plugin marketplace add MaisonDeVolonte/construct --scope user
 ```
 ```bash
 # install /operator bundle (all plugins)
@@ -233,7 +233,7 @@ claude plugin marketplace remove TheConstruct
 <details>
 <summary>
 
-### Option B: Cloned Repo (customizable, manual-updates only, ~5 mins)
+Option B: Cloned Repo (customizable, manual-updates only, ~5 mins)
 
 </summary>
 
@@ -283,49 +283,143 @@ rm -rf ~/Developer/construct
 </details>
 
 ## Sandbox
+> see claude sandbox
+> [security & isolation](https://code.claude.com/docs/en/sandboxing#how-sandboxing-works),
+> [scopes & settings](https://code.claude.com/docs/en/sandboxing#configure-sandboxing),
+> [modes & permissions](https://code.claude.com/docs/en/sandboxing#sandbox-modes),
+> [troubleshooting](https://code.claude.com/docs/en/sandboxing#troubleshooting)
 
-### 3. basic sandbox (local test environment, ~5 mins)
-> https://code.claude.com/docs/en/security
-```bash
-# basic sandbox
-/operator:sandbox --local
+<details>
+<summary>1. basic sandbox (local test environment, ~5-10 mins)</summary>
+
 ```
-> see `plugins/operator/settings/` for preconfigured templates (need to be extended to your specific services)
-> the skill resolves both paths for whichever way you installed, since a marketplace install keeps
-> the templates nowhere near your project; it emits the copy and never runs it
-- [ ] local settings: run the copy it emits, into `.claude/settings.local.json`
-- [ ] gitignore: `.claude/settings.local.json`
-- [ ] restart: editor, start new claude session, run `/sandbox` and `/operator:settings`
-- [ ] confirm the skills list: `/retardify:` and `/gitgud:` both complete
-
-### 4. configured sandbox (filesystem lockdown, ~5 mins)
-```bash
-# configured sandbox
-/operator:sandbox --project --user
+# setup local settings file (follow generated instructions)
+/operator:settings --local
 ```
-- [ ] project settings: run the copy it emits, into `.claude/settings.json`
-- [ ] user settings: run the copy it emits, into `~/.claude/settings.json`
-- [ ] restart: editor, start new claude session, run `/sandbox` and `/operator:settings`
-
-### 5. advanced sandbox (masked credentials, ~20 mins)
-- [ ] make: secure directory for your keys `mkdir -p ~/.operator && chmod 700 ~/.operator`
-- [ ] add: non-exposed credentials to `~/.operator/.env` (e.g. `export GH_TOKEN="github_pat_123"`)
-- [ ] add: your package-manager caches to `sandbox.filesystem.allowWrite`
-- [ ] add: deny rules for `env | grep -iE 'key|token|secret'` to `sandbox.credentials.envVars`
-- [ ] add: deny rule for `~/.operator/.env` to `sandbox.credentials.files`
-- [ ] add: mask + injectHosts rules for each pat in `~/.operator/.env` to `sandbox.credentials.envVars`
-- [ ] add: domain rules for each injectHosts host to `sandbox.network.allowedDomains`
-- [ ] append: `[ -r ~/.operator/.env ] && source ~/.operator/.env` to `~/.zshrc`
-- [ ] restart: editor, start new claude session, run `/sandbox` and `/operator:settings`
-- [ ] confirm: `echo $GH_TOKEN` returns a sentinel (NOT raw token) when claude runs it
-
-### 6. managed sandbox (machine lockdown, requires sudo, ~5 mins)
-```bash
-# managed sandbox
-/operator:sandbox --managed
 ```
-- [ ] make: claude code directory, and copy `settings.managed.json` in; both commands need sudo
-- [ ] run: `/operator:settings`
+# restart code editor and claude tui
+claude
+```
+```
+# check your live sandbox settings
+/sandbox
+```
+```
+# run operator's settings audit (could take a few minutes)
+/operator:settings --audit
+```
+
+</details>
+
+<details>
+<summary>2. repo sandbox (project-wide, ~15-30 mins)</summary>
+
+```
+# setup project settings file (follow generated instructions)
+/operator:settings --project
+```
+```
+# restart code editor and claude tui
+claude
+```
+```
+# check your live sandbox settings
+/sandbox
+```
+```
+# run operator's settings audit (could take a few minutes)
+/operator:settings --audit
+```
+
+</details>
+
+<details>
+<summary>3. personal sandbox (user-wide, ~15-30 mins)</summary>
+
+```
+# setup user settings file (follow generated instructions)
+/operator:settings --user
+
+# example instructions:
+# [ ] add: package-manager caches to `sandbox.filesystem.allowWrite`
+```
+```
+# restart code editor and claude tui
+claude
+```
+```
+# check your live sandbox settings
+/sandbox
+```
+```
+# run operator's settings audit (could take a few minutes)
+/operator:settings --audit
+```
+
+</details>
+
+<details>
+<summary>4. managed sandbox (machine-wide, ~15-30 mins)</summary>
+
+```
+# setup managed settings file (follow generated instructions)
+/operator:settings --managed
+```
+```
+# restart code editor and claude tui
+claude
+```
+```
+# check your live sandbox settings
+/sandbox
+```
+```
+# run operator's settings audit (could take a few minutes)
+/operator:settings --audit
+```
+
+</details>
+
+<details>
+<summary>5. advanced sandbox (masked credentials, ~20 mins)</summary>
+
+> requires user sandbox
+```bash
+# make secure directory in your home directory
+mkdir -p ~/.operator && chmod 700 ~/.operator
+# make secure file for your masked credentials
+touch ~/.operator/.env && chmod 600 ~/.operator/.env
+# append source command to shell config
+echo '[ -r ~/.operator/.env ] && source ~/.operator/.env' >> ~/.zshrc
+```
+```
+# configure advanced settings (follow generated instructions)
+/operator:settings --advanced
+
+# example instructions:
+# [ ] deny: any exposed credentials from `env | grep -iE 'key|token|secret'` via `sandbox.credentials.envVars`
+# [ ] deny: access to `~/.operator/.env` via `sandbox.credentials.files`
+# [ ] rotate: personal access tokens one-at-a-time, updating `~/.operator/.env` as needed
+# [ ] export: non-exposed credentials in `~/.operator/.env` (e.g. `export GH_TOKEN="github_pat_123"`)
+# [ ] mask: exported credentials from `~/.operator/.env` via `sandbox.credentials.envVars` (requires injectHosts)
+# [ ] allow: network access to each masked host via `sandbox.network.allowedDomains`
+```
+```
+# restart code editor and claude tui
+claude
+```
+```
+# check your live sandbox settings
+/sandbox
+```
+```
+# run operator's settings audit (could take a few minutes)
+/operator:settings --audit
+# run operator's credentials check (could take a few minutes)
+/operator:credentials
+```
+
+</details>
 
 ## Plugins & Skills
 
@@ -364,23 +458,6 @@ metadata:
 - a config can read perfectly and still have a dead hook, which only a replay catches
 - `/operator:settings` wraps this, so run it directly when you want the detail rather than the count
 
-#### Sandbox [/operator:sandbox](plugins/operator/skills/sandbox/SKILL.md) · READ-ONLY
-```yaml
----
-name: sandbox
-description: Emit the sandbox setup this plugin cannot perform itself, resolving every template and target path on the disk it runs on, then hand the commands back for the user to run.
-argument-hint: "[--local] [--project] [--user] [--managed]"
-disable-model-invocation: true
-metadata:
-  kind: trigger
----
-```
-**/operator:sandbox:** the frontmatter blocks every path except an explicit invocation
-- answers one question: which commands set this sandbox up, on this disk, for this install
-- the templates ship inside the plugin, so a marketplace install holds them nowhere near the project
-- reports each target's state beside its command, since a copy onto a populated scope is a merge
-- emits and never applies: the deny floor stops any sidecar from writing a settings file
-
 #### Scopes [/operator:scopes](plugins/operator/skills/scopes/SKILL.md) · GATED
 ```yaml
 ---
@@ -401,18 +478,20 @@ metadata:
 ```yaml
 ---
 name: settings
-description: Audit every settings scope for faults that stay silent until they matter, then probe the live boundary to confirm the gate is not dead.
-argument-hint: [--static|--quick]
+description: Audit every settings scope for faults that stay silent until they matter, then probe the live boundary to confirm the gate is not dead, or emit the setup commands for one scope instead.
+argument-hint: "[--audit] [--static] [--quick] [--local] [--project] [--user] [--managed] [--advanced]"
 disable-model-invocation: true
 metadata:
   kind: trigger
 ---
 ```
 **/operator:settings:** the frontmatter blocks every path except an explicit invocation
-- audits the merged settings stack for faults that are silent until the moment they matter
-- static checks read the files: parse, drift, verb symmetry, scope placement, hygiene, guard
-- live probes exercise the boundary, since a config can be perfect while the gate is dead
-- never edits a settings file; every finding is handed back as the user's to apply
+- a bare run explains itself, since every real run needs a flag naming which job it wants
+- `--audit` grades the merged settings stack for faults that stay silent until they matter
+- static checks read the files, and live probes exercise the boundary the files only describe
+- a scope flag emits that scope's setup instead, with both paths resolved for either install method
+- `--advanced` walks the masked-credential setup, grading the half of it a sidecar can observe
+- never edits a settings file; every finding and every command is the user's to apply
 
 ### /gitgud (see `plugins/gitgud/`)
 > the whole git dance; each pairs with a `.sh` sidecar that measures, then hands the commands back

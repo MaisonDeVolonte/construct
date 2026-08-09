@@ -1,29 +1,35 @@
 ---
 name: settings
-description: Audit every settings scope for faults that stay silent until they matter, then probe the live boundary to confirm the gate is not dead.
-argument-hint: [--static|--quick]
+description: Audit every settings scope for faults that stay silent until they matter, then probe the live boundary to confirm the gate is not dead, or emit the setup commands for one scope instead.
+argument-hint: "[--audit] [--static] [--quick] [--local] [--project] [--user] [--managed] [--advanced]"
 disable-model-invocation: true
 metadata:
   kind: trigger
 ---
 **/operator:settings:** the frontmatter blocks every path except an explicit invocation
-- audits the merged settings stack for faults that are silent until the moment they matter
-- static checks read the files: parse, drift, verb symmetry, scope placement, hygiene, guard
-- live probes exercise the boundary, since a config can be perfect while the gate is dead
-- never edits a settings file; every finding is handed back as the user's to apply
+- a bare run explains itself, since every real run needs a flag naming which job it wants
+- `--audit` grades the merged settings stack for faults that stay silent until they matter
+- static checks read the files, and live probes exercise the boundary the files only describe
+- a scope flag emits that scope's setup instead, with both paths resolved for either install method
+- `--advanced` walks the masked-credential setup, grading the half of it a sidecar can observe
+- never edits a settings file; every finding and every command is the user's to apply
 
 ## telemetry
 
 ```!
-"${CLAUDE_PLUGIN_ROOT}"/skills/settings/settings.sh
+"${CLAUDE_PLUGIN_ROOT}"/skills/settings/settings.sh $ARGUMENTS
 echo "sidecar exit: $?"
 ```
 
-1. read the block above; it already ran, so there is no command to issue
-  - fail (`sidecar exit` > 0) → findings exist; continue to step 2 and report them
-  - success (`sidecar exit` = 0) → continue to step 2 and record the clean run
-  - `--static` skips the probes and `--quick` skips the wrapped sidecars; both need a tool call,
-    since the block above takes no arguments
+1. read the block above; it already ran with whatever flags the invocation carried
+  - NO FLAG → the sidecar printed its own usage; relay it, answer what the user asked, and STOP
+  - `--audit`, `--static`, `--quick`, `--strict` → an audit ran; continue to step 2
+  - `--local`, `--project`, `--user`, `--managed` → an emit ran; skip to step 4
+  - `--advanced` → the credential walkthrough ran; skip to step 5
+  - fail (`sidecar exit` > 0) → findings exist; report them rather than rerunning
+  - success (`sidecar exit` = 0) → the run is clean; record it in whichever step the flags selected
+  - `--audit` takes minutes, since the wrapped sidecars replay their whole corpus; the `probes` and
+    `wrapped` telemetry lines carry the seconds each stage spent, so quote them when it ran long
 
 2. append one entry to `[audit_file]`, in the shape defined under `## the shape` below
     - the heading reads `## Settings Audit #[next_audit]: [timestamp]`, both from the telemetry
@@ -41,10 +47,33 @@ echo "sidecar exit: $?"
     - a `verbs` error is only latent while no allow reaches the path, so read it with the allow list
     - a `drift` finding is a defect only when the installed copy is the stale one; check which
     - `templates` firing means drift and hygiene had nothing to read, so a clean run proves less
-    - a scope with no file at all is `/operator:sandbox` territory, not a finding to fix here
+    - a scope with no file at all is a setup gap, so name the flag that emits it rather than a fix
     - `guard` firing means the deny protecting this sidecar is absent; restore it before trusting a
       later clean run, since an editable auditor can be made to report clean
     - answer the checklist the sidecar prints, since those rules are the ones no script can judge
+
+4. on an EMIT run, report the commands inline in the sidecar's own order, then STOP
+
+    NEVER run a copy yourself, and never offer to; the commands are the deliverable
+
+    - lead with the scopes whose target is absent, since those copy clean and need no merge
+    - a scope reported as populated is a merge decision, so name the rule count already there
+    - `managed` needs sudo and lands outside the project, so it is always the reader's call
+    - the credential steps are not copies; pass them through as the manual work they are
+    - never append an emit run to `[audit_file]`; those lines are absolute paths on one machine
+
+5. on an ADVANCED run, walk the user through the numbered steps, one at a time, then STOP
+
+    NEVER write a token, an env file or a settings rule yourself; the walkthrough is the deliverable
+
+    - open with the state block: what is already in place is not a step to repeat
+    - a `gap` line is the finding that matters, since a masked token whose host is missing from
+      `allowedDomains` authenticates against a host the sandbox will not resolve
+    - `envfile not observable` is the deny rule working, so never report it as a missing file
+    - stop at the first step the state block shows unfinished, and ask before moving past it
+    - steps 3 and 7 write files this sidecar is denied, so ask the user to confirm rather than check
+    - never echo a token value back, even one the user pastes; name the variable instead
+    - close by naming `/operator:credentials` as the proof, since it spends the token then reads back
 
 ## the shape
 > the artifact this skill appends to; the sidecar grades what landed on its next run

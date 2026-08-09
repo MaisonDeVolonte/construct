@@ -15,8 +15,16 @@
 # - a tracked path reads as guarded at `ask`, since `deny` reaches the sandbox and blocks git itself
 # - templates resolve from the plugin, so drift and hygiene run the same under either install method
 # RUN
-# - `--static` skips the probes, `--quick` skips the wrapped sidecars, `--strict` fails on warnings
+# - a bare run prints its own usage, since the full audit takes minutes and reads as a hung session
+# - `--audit` runs everything, `--static` skips the probes, `--quick` skips the wrapped sidecars
+# - `--strict` fails on warnings, and each slow stage reports the seconds it spent
 # - the doc appends one entry to the day's settings audit, never editing an earlier one
+# EMIT
+# - `--local`, `--project`, `--user` and `--managed` emit that scope's setup instead of auditing
+# - `--advanced` walks the masked-credential setup, grading the user scope it can read
+# - the env file is deny-listed, so not seeing it is the pass rather than a finding
+# - an emit run never appends to the artifact, since these lines carry absolute home paths
+# - it emits and never applies, because the deny floor stops this sidecar writing a settings file
 # @see plugins/operator/skills/settings/SKILL.md, plugins/operator/skills/permissions/permissions.sh, plugins/operator/skills/scopes/scopes.sh, .operator/settings/
 
 set -euo pipefail
@@ -37,23 +45,68 @@ if [ ! -f "$SHARED/secrets.sh" ]; then
 # the plugin is installed from a marketplace
 TEMPLATES=${CLAUDE_PLUGIN_ROOT:-$(cd "$HERE/../.." 2>/dev/null && pwd || true)}/settings
 
-if ! command -v jq >/dev/null 2>&1; then echo "fatal: jq is required" >&2; exit 1; fi
-if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  echo "fatal: not a git repository" >&2; exit 1; fi
-
+AUDIT=0
 STATIC_ONLY=0
 QUICK=0
 STRICT=0
+ADVANCED=0
+EMIT=()
+# the audit modifiers imply the audit, since none of them mean anything on their own
 while [ $# -gt 0 ]; do
   case "$1" in
-    --static) STATIC_ONLY=1;;
-    --quick) QUICK=1;;
-    --strict) STRICT=1;;
-    -h|--help) sed -n '2,15p' "$0"; exit 0;;
+    --audit) AUDIT=1;;
+    --static) STATIC_ONLY=1; AUDIT=1;;
+    --quick) QUICK=1; AUDIT=1;;
+    --strict) STRICT=1; AUDIT=1;;
+    --local|--project|--user|--managed) EMIT+=("${1#--}");;
+    --advanced) ADVANCED=1;;
+    -h|--help) AUDIT=0; EMIT=();;
     *) echo "fatal: unknown flag $1" >&2; exit 1;;
   esac
   shift
 done
+
+# a bare run explains itself rather than starting the slowest path by accident: the full audit runs
+# for minutes, which reads as a hung session
+if [ "$AUDIT" -eq 0 ] && [ "$ADVANCED" -eq 0 ] && [ ${#EMIT[@]} -eq 0 ]; then
+  cat <<'EOF'
+
+=== settings.sh sidecar (usage) ===
+this sidecar audits the settings stack, or emits the setup for one scope. it never writes a
+settings file: the deny floor stops it, so every command is handed back for you to run.
+
+AUDIT
+  --audit     every static check, the live probes, and the wrapped permissions and scopes runs
+              slowest path by far, since the wrapped sidecars replay their whole corpus
+  --static    the file checks only: parse, templates, drift, verbs, scope, hygiene, coverage, guard
+  --quick     audit and probe, but skip the two wrapped sidecars
+  --strict    exit non-zero on warnings as well as errors
+  an audit appends one entry to .operator/settings/<today>.md
+
+EMIT
+  --local     the scope you alone see in this repo
+  --project   the scope every collaborator on this repo inherits
+  --user      your scope across every project
+  --managed   the machine scope, which needs sudo and sits outside the project
+  flags combine, and an emit run is never appended to the artifact
+
+WALKTHROUGH
+  --advanced  the masked-credential setup, step by step: the key directory, the env file, the deny
+              rule, one mask rule per token, the domains those tokens reach, and the proof
+              it grades the user scope it can read, and names the steps it cannot see
+
+RELATED
+  /operator:credentials   proves each token is masked, across every exfiltration vector
+  /operator:permissions   replays the corpus through the real hook
+  /operator:scopes        maps what a script reaches once it is already running
+========================
+EOF
+  exit 0
+fi
+
+if ! command -v jq >/dev/null 2>&1; then echo "fatal: jq is required" >&2; exit 1; fi
+if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  echo "fatal: not a git repository" >&2; exit 1; fi
 
 cd "$(git rev-parse --show-toplevel)"
 ROOT=$(pwd)
@@ -95,6 +148,165 @@ check_parse() {
 }
 
 # ==============
+# EMIT - scope setup
+#   the audit grades what landed; this hands back the commands that land it
+# ==============
+target_of() {
+  case "$1" in
+    local)   printf '%s' "$ROOT/.claude/settings.local.json";;
+    project) printf '%s' "$ROOT/.claude/settings.json";;
+    user)    printf '%s' "$HOME/.claude/settings.json";;
+    managed) printf '%s' "$MANAGED";;
+  esac
+}
+
+# an absent target copies clean; a populated one is a merge, and saying so beats a lost rule set
+state_of() {
+  local path=$1 rules
+  if [ ! -f "$path" ]; then printf 'absent, so the copy lands clean'; return 0; fi
+  if ! jq empty "$path" >/dev/null 2>&1; then
+    printf 'present but unparseable, so read it before overwriting'; return 0; fi
+  rules=$(jq '[.permissions[]?|length]|add // 0' "$path")
+  printf 'present with %s rule%s, so merge rather than overwrite' \
+    "$rules" "$(if [ "$rules" -eq 1 ]; then echo ''; else echo s; fi)"
+}
+
+emit_scopes() {
+  local scope template path missing=0
+  printf '\n=== settings.sh sidecar (emit) ===\n'
+  printf 'templates: %s\n' "$TEMPLATES"
+  printf 'scopes: %s\n' "${EMIT[*]}"
+  for scope in "${EMIT[@]}"; do
+    template="$TEMPLATES/settings.$scope.json"
+    path=$(target_of "$scope")
+    printf -- '--- %s ---\n' "$scope"
+    if [ ! -f "$template" ]; then
+      printf 'template   MISSING at %s\n' "$template"
+      missing=$((missing + 1))
+      continue
+    fi
+    printf 'target     %s\n' "$path"
+    printf 'state      %s\n' "$(state_of "$path")"
+    if [ "$scope" = managed ]; then
+      printf 'command    sudo mkdir -p "%s"\n' "$(dirname "$MANAGED")"
+      printf '           sudo cp "%s" "%s"\n' "$template" "$path"
+    else
+      printf 'command    mkdir -p "%s"\n' "$(dirname "$path")"
+      printf '           cp "%s" "%s"\n' "$template" "$path"
+    fi
+  done
+  # not a copy, so no template carries them and no audit can hand them back
+  cat <<EOF
+--- beyond the copies (masked credentials) ---
+keys       mkdir -p ~/.operator && chmod 700 ~/.operator
+env        write each token into ~/.operator/.env as: export GH_TOKEN="..."
+shell      append to ~/.zshrc: [ -r ~/.operator/.env ] && source ~/.operator/.env
+rules      add one {"name":"GH_TOKEN","mode":"mask"} per token to sandbox.credentials.envVars
+restart    restart the editor, then start a new claude session
+EOF
+  cat <<'EOF'
+--- needs a human (rules no script can judge) ---
+- every template is a starting point, since only you know which services you actually reach
+- a copy onto a populated scope is a merge; the rules already there were put there for a reason
+- rerun with no flag once the copies land, and /operator:credentials once tokens are masked
+- an emit run is never appended to the artifact, since the paths above are machine detail
+========================
+EOF
+  [ "$missing" -eq 0 ]
+}
+
+if [ ${#EMIT[@]} -gt 0 ]; then
+  emit_scopes || exit 1
+  exit 0
+fi
+
+# ==============
+# EMIT - masked credentials
+#   user scope holds the credentials, so this reads the installed user file and never a template
+# ==============
+# the mask rule and the domain list are two halves of one setup: a masked token whose host never
+# reaches allowedDomains is authenticated against a host the sandbox refuses to resolve
+advanced_state() {
+  local installed=$1 masked domains host name gap=0
+  masked=$(jq -r '[.sandbox.credentials.envVars[]? | select(.mode=="mask") | .name] | join(" ")' \
+    "$installed" 2>/dev/null || true)
+  domains=$(jq -r '[.sandbox.network.allowedDomains[]?] | join(" ")' "$installed" 2>/dev/null || true)
+  if [ -z "$masked" ]; then
+    printf 'masked     none yet, so step 7 is where this starts\n'
+  else
+    printf 'masked     %s\n' "$masked"
+  fi
+  # every injectHosts host has to appear in allowedDomains, or the token cannot reach its api
+  for name in $masked; do
+    while IFS= read -r host; do
+      [ -n "$host" ] || continue
+      case " $domains " in
+        *" $host "*) ;;
+        *) printf 'gap        %s injects into %s, which allowedDomains omits\n' "$name" "$host"
+           gap=$((gap + 1));;
+      esac
+    done < <(jq -r --arg n "$name" \
+      '.sandbox.credentials.envVars[]? | select(.name==$n) | .injectHosts[]?' "$installed" 2>/dev/null)
+  done
+  if [ -n "$masked" ] && [ "$gap" -eq 0 ]; then
+    printf 'domains    every injected host is in allowedDomains\n'
+  fi
+  if jq -e '.sandbox.credentials.files[]? | select(.path|test("\\.operator/\\.env$"))' \
+    "$installed" >/dev/null 2>&1; then
+    printf 'deny       the env file is denied, so no agent reads it back\n'
+  else
+    printf 'deny       NO deny rule for ~/.operator/.env, so step 3 comes before any token\n'
+  fi
+}
+
+emit_advanced() {
+  local installed="$HOME/.claude/settings.json"
+  printf '\n=== settings.sh sidecar (advanced) ===\n'
+  printf 'scope      user, at %s\n' "$installed"
+  if [ -d "$HOME/.operator" ]; then
+    printf 'keydir     present, mode %s\n' "$(stat -f '%Lp' "$HOME/.operator" 2>/dev/null || echo '?')"
+  else
+    printf 'keydir     absent, so step 1 is where this starts\n'
+  fi
+  # the env file is deny-listed, so this sidecar cannot see it: not seeing it IS the pass
+  printf 'envfile    not observable from here, which is the deny rule working\n'
+  if [ -f "$installed" ] && jq empty "$installed" >/dev/null 2>&1; then
+    advanced_state "$installed"
+  else
+    printf 'masked     no parseable user scope yet, so run --user first\n'
+  fi
+  cat <<'EOF'
+--- steps, in this order (each one is yours to run) ---
+1  keydir    mkdir -p ~/.operator && chmod 700 ~/.operator
+2  envfile   touch ~/.operator/.env && chmod 600 ~/.operator/.env
+3  deny      add {"path":"~/.operator/.env","mode":"deny"} to sandbox.credentials.files
+             this lands BEFORE any token does, so the file is never briefly readable
+4  unset     add {"name":"<VAR>","mode":"deny"} per exposed credential to
+             sandbox.credentials.envVars, which removes the variable rather than hiding it
+5  rotate    rotate each exposed token one at a time, since a token an agent could read is spent
+6  export    append one line per rotated credential: export GH_TOKEN="..."
+7  mask      add {"name":"GH_TOKEN","mode":"mask","injectHosts":["api.github.com"]} to
+             sandbox.credentials.envVars, naming every host that token authenticates against
+8  domains   add each injectHosts host to sandbox.network.allowedDomains
+9  shell     append to ~/.zshrc: [ -r ~/.operator/.env ] && source ~/.operator/.env
+10 restart   restart the editor, then start a new claude session
+11 prove     run /operator:credentials, which spends each token and then tries to read it back
+--- needs a human (rules no script can judge) ---
+- only you know which services a token reaches, so only you can name its injectHosts
+- a token with no injectHosts is inert under mask: it is hidden and it authenticates nothing
+- masking is not recall, so step 5 comes first: a leaked value stays leaked behind a mask
+- prefer deny over mask for a credential no command here needs, since deny removes the variable
+- steps 6 and 9 write files this sidecar is denied, so nothing here can confirm them
+========================
+EOF
+}
+
+if [ "$ADVANCED" -eq 1 ]; then
+  emit_advanced
+  exit 0
+fi
+
+# ==============
 # STATIC - templates
 #   drift and hygiene both read this directory, so its absence is the finding that hides theirs
 # ==============
@@ -118,7 +330,9 @@ check_templates() {
 # ==============
 check_drift() {
   local pair name path template missing extra
-  for pair in "project:$ROOT/.claude/settings.json" "user:$HOME/.claude/settings.json"; do
+  # every scope that carries a file, not just the two shared ones: local and managed drifted in
+  # silence while nothing compared them
+  for pair in "${SCOPES[@]}"; do
     name=${pair%%:*}
     path=${pair#*:}
     template="$TEMPLATES/settings.$name.json"
@@ -361,17 +575,19 @@ check_probes() {
 # each wrapped tool is its own skill now, so it resolves through the sibling folder rather than by
 # sitting beside this file; a missing one warns instead of failing, since the static half still ran
 run_wrapped() {
-  local name script output count
+  local name script output count started elapsed
   for name in permissions scopes; do
     script="$HERE/../$name/$name.sh"
     if [ ! -f "$script" ]; then warn wrapped "$name" "no $name.sh in its sibling skill folder"; continue; fi
+    started=$SECONDS
     output=$(bash "$script" 2>&1 || true)
+    elapsed=$((SECONDS - started))
     count=$(printf '%s' "$output" | sed -n 's/^errors: \([0-9]\{1,\}\)$/\1/p' | head -n 1)
     count=${count:-0}
     if [ "$count" -gt 0 ]; then
-      err wrapped "$name" "$count errors; run /operator:$name for the detail"
+      err wrapped "$name" "$count errors in ${elapsed}s; run /operator:$name for the detail"
     else
-      pass wrapped "$name" "0 errors"
+      pass wrapped "$name" "0 errors in ${elapsed}s"
     fi
   done
 }
@@ -387,8 +603,19 @@ check_scope
 check_hygiene
 check_coverage
 check_guard
-if [ "$STATIC_ONLY" -eq 0 ]; then check_probes; fi
-if [ "$STATIC_ONLY" -eq 0 ] && [ "$QUICK" -eq 0 ]; then run_wrapped; fi
+# each slow stage reports its own elapsed seconds, since a run with no clock reads as a hung one
+PROBES_ELAPSED=skipped
+WRAPPED_ELAPSED=skipped
+if [ "$STATIC_ONLY" -eq 0 ]; then
+  STAGE_START=$SECONDS
+  check_probes
+  PROBES_ELAPSED="run in $((SECONDS - STAGE_START))s"
+fi
+if [ "$STATIC_ONLY" -eq 0 ] && [ "$QUICK" -eq 0 ]; then
+  STAGE_START=$SECONDS
+  run_wrapped
+  WRAPPED_ELAPSED="run in $((SECONDS - STAGE_START))s"
+fi
 
 # ==============
 # ARTIFACT
@@ -583,7 +810,8 @@ audit_file: $TODAYS_AUDIT
 audit_count: $AUDIT_COUNT
 next_audit: $((AUDIT_COUNT + 1))
 timestamp: $(date '+%Y-%m-%d %H:%M')
-probes: $(if [ "$STATIC_ONLY" -eq 1 ]; then echo skipped; else echo run; fi)
+probes: $PROBES_ELAPSED
+wrapped: $WRAPPED_ELAPSED
 passes: $PASSES
 errors: $ERRORS
 warnings: $WARNINGS
