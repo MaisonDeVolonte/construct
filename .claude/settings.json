@@ -10,7 +10,8 @@
       "allowedDomains": [
         "code.claude.com", "docs.claude.com", "zed.dev",
         "github.com", "api.github.com",
-        "registry.npmjs.org"
+        "registry.npmjs.org",
+        "agentskills.io"
       ]
     }
   },
