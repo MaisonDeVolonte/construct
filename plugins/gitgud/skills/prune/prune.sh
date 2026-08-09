@@ -7,7 +7,8 @@
 # - sidecar for `/gitgud:prune` — finds spent branches, then hands the cleanup commands over
 # - typically run post-merge, but safe anytime, since nothing in the pair deletes a branch
 # SIDECAR
-# - read-only apart from `fetch --prune` and a trunk fast-forward, neither of which loses work
+# - read-only apart from `fetch --prune`, which deletes no local branch and writes no tracked file
+# - the trunk sync is handed over, never run: a sandboxed merge half-applies on a denied path
 # - classifies each local branch as gone, merged, or live, so the handover deletes only the spent
 # - emits `-d` or `-D` to match, since `-d` consults the same patch-id read a rebase already fooled
 # - a gone branch that is neither merged nor absorbed is kept, never offered for deletion
@@ -48,14 +49,12 @@ fi
 BEHIND=$(git rev-list --count "$DEFAULT_BRANCH..origin/$DEFAULT_BRANCH" 2>/dev/null || echo 0)
 AHEAD=$(git rev-list --count "origin/$DEFAULT_BRANCH..$DEFAULT_BRANCH" 2>/dev/null || echo 0)
 
-# --ff-only cannot lose work: it refuses anything but a strict fast-forward, and refuses again
-# over local changes; only from the trunk, since switching a branch out from under the user mutates
-FAST_FORWARDED="no"
-if [ "$BEHIND" -gt 0 ] && [ "$STARTING_BRANCH" = "$DEFAULT_BRANCH" ] && ! git_is_dirty; then
-  if git merge --ff-only "origin/$DEFAULT_BRANCH" >/dev/null 2>&1; then
-    FAST_FORWARDED="yes ($BEHIND commit(s))"
-    BEHIND=0
-  fi
+# --ff-only cannot lose work, but it can half apply it: a path the sandbox denies fails the merge
+# after the writable ones landed, so the sync is measured here and run by the user (see #127)
+PROTECTED_PATHS=""
+if [ "$BEHIND" -gt 0 ]; then
+  PROTECTED_PATHS=$(protected_incoming "$DEFAULT_BRANCH..origin/$DEFAULT_BRANCH" \
+    | paste -sd, - | sed 's/,/, /g')
 fi
 
 # a branch is spent when its remote is gone, or when trunk already contains every commit on it;
@@ -92,7 +91,8 @@ telemetry_line "default branch" "$DEFAULT_BRANCH"
 telemetry_line "current branch" "$STARTING_BRANCH"
 telemetry_line "trunk behind origin" "$BEHIND"
 telemetry_line "trunk ahead of origin" "$AHEAD"
-telemetry_line "trunk fast-forwarded" "$FAST_FORWARDED"
+telemetry_line "trunk sync" "$([ "$BEHIND" -gt 0 ] && echo "handed over" || echo "not needed")"
+telemetry_line "sandbox-denied incoming paths" "${PROTECTED_PATHS:-none}"
 telemetry_line "spent branches" "${SPENT_COUNT:-0}"
 telemetry_line "live branches" "${LIVE_COUNT:-0}"
 telemetry_line "spent branch names" "$(printf '%s' "$SPENT_BRANCHES" | paste -sd, - | sed 's/,/, /g')"
@@ -118,6 +118,10 @@ else
       handover_cmd "git switch $DEFAULT_BRANCH"
     fi
     handover_cmd "git merge --ff-only origin/$DEFAULT_BRANCH"
+    if [ -n "$PROTECTED_PATHS" ]; then
+      handover_note "the sync writes paths no sandboxed command can: $PROTECTED_PATHS"
+      handover_note "run it in your own terminal, then confirm with: git diff origin/$DEFAULT_BRANCH"
+    fi
   fi
   # -d refuses a branch trunk does not already contain, which is the safety this list relies on
   for branch in $DELETE_SAFE; do

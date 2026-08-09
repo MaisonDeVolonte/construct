@@ -56,7 +56,16 @@ CHANGED_FILES=$(git status --porcelain 2>/dev/null | wc -l | tr -d ' ')
 BEHIND=$(git rev-list --count "$DEFAULT_BRANCH..origin/$DEFAULT_BRANCH" 2>/dev/null || echo 0)
 AHEAD=$(git rev-list --count "origin/$DEFAULT_BRANCH..$DEFAULT_BRANCH" 2>/dev/null || echo 0)
 
+# a sandboxed merge cannot write every path, and it half applies rather than refusing, so an
+# incoming policy path downgrades the sync from something the trigger runs to a handover (see #127)
+PROTECTED_PATHS=""
+if [ "$BEHIND" -gt 0 ]; then
+  PROTECTED_PATHS=$(protected_incoming "$DEFAULT_BRANCH..origin/$DEFAULT_BRANCH" \
+    | paste -sd, - | sed 's/,/, /g')
+fi
+
 if [ "$AHEAD" -gt 0 ]; then SYNC_STATE="diverged"
+elif [ -n "$PROTECTED_PATHS" ]; then SYNC_STATE="behind, but the sync is yours to run"
 elif [ "$BEHIND" -gt 0 ]; then SYNC_STATE="behind, fast-forwards cleanly"
 else SYNC_STATE="up to date"; fi
 
@@ -67,6 +76,7 @@ telemetry_line "uncommitted files" "$CHANGED_FILES"
 telemetry_line "trunk behind origin" "$BEHIND"
 telemetry_line "trunk ahead of origin" "$AHEAD"
 telemetry_line "sync state" "$SYNC_STATE"
+telemetry_line "sandbox-denied incoming paths" "${PROTECTED_PATHS:-none}"
 
 # the stash only earns its place when something has to move underneath it; a dirty tree with
 # nothing to switch to and nothing to fast-forward would otherwise get a push/pop that is a no-op
@@ -83,7 +93,12 @@ elif [ "$NEEDS_MOVE" -eq 0 ]; then
     handover_note "your $CHANGED_FILES uncommitted file(s) are untouched, which is the point"
   fi
 else
-  handover_note "the trigger runs these in order, stopping at the first non-zero exit"
+  if [ -n "$PROTECTED_PATHS" ]; then
+    handover_note "DO NOT RUN THESE — the sync writes paths no sandboxed command can: $PROTECTED_PATHS"
+    handover_note "paste the block into your own terminal instead, in the order printed"
+  else
+    handover_note "the trigger runs these in order, stopping at the first non-zero exit"
+  fi
   if [ "$DIRTY" -eq 1 ]; then
     handover_cmd "git stash push -u -m 'auto-stash: /gitgud:continue'"
   fi

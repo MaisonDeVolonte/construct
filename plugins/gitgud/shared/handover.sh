@@ -9,6 +9,8 @@
 # - the handover block is the deliverable: measured here, pasted and run by the user
 # - the trigger block is the narrow exception: measured here, run by the trigger as a tool call
 # - a sidecar that needs to mutate emits the command instead of running it, into either block
+# - `protected_incoming` names the paths a sandboxed sync cannot write, so the sync is handed over
+# - a denied path leaves git's checkout half applied against an unmoved HEAD, never a clean failure
 # @see tools/check-skills/README.md, plugins/operator/settings/settings.user.md, plugins/
 
 # ==============
@@ -66,6 +68,17 @@ is_absorbed() {
   merged_tree=$(git merge-tree --write-tree "$1" "$2" 2>/dev/null) || { echo no; return; }
   trunk_tree=$(git rev-parse "$1^{tree}" 2>/dev/null) || { echo no; return; }
   if [ "$merged_tree" = "$trunk_tree" ]; then echo yes; else echo no; fi
+}
+
+# incoming policy paths, mirroring pretooluse.sh's PROTECTED list; it over-approximates the write
+# deny on purpose, since a needless handover costs a paste and a missed one costs a half-synced tree
+protected_incoming() {
+  local range="$1" boundary protected
+  boundary='([/[:space:]"'"'"']|$)'
+  protected="^\.claude$boundary|^\.git$boundary|^\.husky$boundary"
+  protected="$protected|^plugins/operator/settings$boundary|^plugins/operator/hooks$boundary"
+  protected="$protected|^plugins/operator/skills/(credentials|permissions|scopes|settings)$boundary"
+  git diff --name-only "$range" 2>/dev/null | grep -E "$protected" || true
 }
 
 # ==============
