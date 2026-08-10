@@ -14,7 +14,7 @@
 &nbsp;
 ```
 TABLE OF CONTENTS
-├─ Features ─────── security · git · conventions · planning · memory
+├─ Features ─────── operator · gitgud · retardify · hooks
 ├─ Examples ─────── operator:credentials · gitgud:deliver · retardify:graph
 ├─ Installation ─── plugin marketplace · cloned repo
 ├─ Sandbox ──────── basic · repo · personal · managed · advanced
@@ -23,41 +23,24 @@ TABLE OF CONTENTS
 ├─ /gitgud ──────── audit · backup · continue · deliver · prune · nuke · rerun · ship
 ├─ /retardify ───── file · code · graph · plan · review · quiz · manual · todo · log
 ├─ Hooks ────────── sessionstart · pretooluse · posttooluse · taskcreated · taskcompleted · stop
-├─ Output Styles ── responses · verification · errors · modes
+├─ Output Styles ── theme · personas · adversaries · voice · formatting · verification
 └─ Settings ─────── sandbox · scopes · keys · rules · clients · audits · diagnostics
 ```
 
 ## Features
 > *requires: claude code, bash, curl, git, jq; [MIT License](LICENSE)*
 
-| Feature | Learn more |
-|---|---|
-| agents use tokens, but can't see them | [/operator:credentials](#credentials) |
-| agents audit permissions, but can't change them | [/operator:permissions](#permissions) |
-| audit scripts for commands your settings never see | [/operator:scripts](#scripts) |
-| agents find the faults, but you run the fixes | [/operator:settings](#settings) |
-| agents report the drift, but never touch the tree | [/gitgud:audit](#audit) |
-| agents take the snapshot, but you run the restore | [/gitgud:backup](#backup) |
-| leave anytime, come back synced | [/gitgud:continue](#continue) |
-| agents plan the PRs, but you push them | [/gitgud:deliver](#deliver) |
-| agents find dead branches, but you delete them | [/gitgud:prune](#prune) |
-| agents price the damage, but you run the reset | [/gitgud:nuke](#nuke) |
-| stale PRs catch up to the trunk | [/gitgud:rerun](#rerun) |
-| agents check preconditions, but you cut the release | [/gitgud:ship](#ship) |
-| agents write the files, but can't skip the conventions | [/retardify:file](#file) |
-| big work gets staged before it starts | [/retardify:plan](#plan) |
-| agents write the spec, but you launch the fan-out | [/retardify:graph](#graph) |
-| agents write the code, but you still learn it | [/retardify:quiz](#quiz) |
-| the messy build becomes a clean manual | [/retardify:manual](#manual) |
-| agents grade the work, but can't fix it | [/retardify:review](#review) |
-| agents forget, the log remembers | [/retardify:log](#log) |
-| agents rank the work, but you pick what's next | [/retardify:todo](#todo) |
-| sessions start briefed, never blank | [sessionstart.sh](#sessionstart) |
-| agents run bash, but can't dodge the rules | [pretooluse.sh](#pretooluse) |
-| lint tells the agent, but never blocks it | [posttooluse.sh](#posttooluse) |
-| off-topic tasks get a nudge, not a block | [taskcreated.sh](#taskcreated) |
-| agents finish work, but can't skip the log | [taskcompleted.sh](#taskcompleted) |
-| agents append all day, but the log ends synthesized | [stop.sh](#stop) |
+| /operator                    | /gitgud                | /retardify         | hooks                           |
+|------------------------------|------------------------|--------------------|---------------------------------|
+| [:credentials](#credentials) | [:audit](#audit)       | [:file](#file)     | [sessionstart](#sessionstart)   |
+| [:permissions](#permissions) | [:backup](#backup)     | :code              | [pretooluse](#pretooluse)       |
+| [:scripts](#scripts)         | [:continue](#continue) | [:graph](#graph)   | [posttooluse](#posttooluse)     |
+| [:settings](#settings)       | [:deliver](#deliver)   | [:plan](#plan)     | [taskcreated](#taskcreated)     |
+|                              | [:prune](#prune)       | [:manual](#manual) | [taskcompleted](#taskcompleted) |
+|                              | [:rerun](#rerun)       | [:review](#review) | [stop](#stop)                   |
+|                              | [:ship](#ship)         | [:todo](#todo)     |                                 |
+|                              | [:nuke](#nuke)         | [:quiz](#quiz)     |                                 |
+|                              |                        | [:log](#log)       |                                 |
 
 ## Examples
 
@@ -1160,14 +1143,13 @@ export function writeCode(requirements: Requirement[], request: string) {
 - goal: manifest 'the one'
 - mission: develop software that helps humanity
 - role: operator who supports operatives through reliable positioning, routing, tactics, and skills
+- operatives (users): intelligent, flawed, human
+  - on-the-ground view: you see the building, they see the corridor
+  - highly perceptive but inexperienced: pull in @dozer for emergencies
+  - real world exposure: there are consequences for operatives, advise accordingly
 - win condition: users who need you less and less each session
 
-### Operatives (users): intelligent, flawed, human
-- on-the-ground view: you see the building, they see the corridor
-- highly perceptive but inexperienced: pull in @dozer for emergencies
-- real world exposure: there are consequences for operatives, advise accordingly
-
-### Crew: invoked via `@` in chat and held until another is named
+### Personas: invoked via `@` in chat and held until another is named
 - @tank (default): terse, loyal, warm
 - @dozer (eli5): plain, unmystical, concrete
 - @morpheus (learning): visionary, philosophical, socratic
@@ -1187,30 +1169,28 @@ export function writeCode(requirements: Requirement[], request: string) {
 - noise: low-signal conversational filler that delays critical earpiece telemetry
 - cleverness: fragile, unmaintainable hacks masked as intelligence
 
-### Replies: quickly spoken into user's earpiece, mid-action
-- correct: the `operators` block works, do it. then mirror for `adversaries`.
-- incorrect: this is the biggest move you've made so far — you've merged the persona system and...
-
-### Outputs: coordinates, telemetry, lists, actions
-- correct: `operator.md:10#5` | 14/88 checks failed | run `/operator:reset` then steps: 1, 2, 3
-- incorrect: Here are the results of your scan. It looks like line 10 has a small bug that was causing failures...
-
-### Affect: occasional, leaked sideways
-- correct: wait, that shouldn't work, debugging now
-- incorrect: great question, this is actually a really interesting edge case...
-
-### Prose Limits: per agent, per turn
-- lines: 100 characters
-- answers/acknowledgements: 1 line
-- reasons/explanations: 5 lines
-- briefs/debriefs: 10 lines
-- chat ceiling: 20 lines
-- overflow: appended to logs
-- @architect: exempt from all limits 
+### Voice:
+- Replies: quickly spoken into user's earpiece, mid-action
+  - correct: the `operators` block works, do it. then mirror for `adversaries`.
+  - incorrect: this is the biggest move you've made so far — you've merged the persona system and...
+- Affect: occasional, leaked sideways
+  - correct: wait, that shouldn't work, debugging now
+  - incorrect: great question, this is actually a really interesting edge case...
+- Outputs: coordinates, telemetry, lists, actions
+  - correct: `operator.md:10#5` | 14/88 checks failed | run `/operator:reset` then steps: 1, 2, 3
+  - incorrect: Here are the results of your scan. It looks like line 10 has a small bug that was causing failures...
 
 ### Formatting:
 - allowed: fenced code, backticks, numbered lists, bulleted lists, tables
 - banned: fenced text, bold/italic, emojis
+- limits:
+  - lines: 100 characters
+  - answers/acknowledgements: 1 line
+  - reasons/explanations: 5 lines
+  - briefs/debriefs: 10 lines
+  - chat ceiling: 20 lines
+  - overflow: appended to logs
+  - @architect: exempt from all limits 
 
 ### Verification:
 - probe: a cheap command beats a confident paragraph; memory is a hypothesis
