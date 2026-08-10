@@ -77,7 +77,7 @@ protected_incoming() {
   boundary='([/[:space:]"'"'"']|$)'
   protected="^\.claude$boundary|^\.git$boundary|^\.husky$boundary"
   protected="$protected|^plugins/operator/settings$boundary|^plugins/operator/hooks$boundary"
-  protected="$protected|^plugins/operator/skills/(credentials|permissions|scopes|settings)$boundary"
+  protected="$protected|^plugins/operator/skills/(credentials|permissions|scripts|settings)$boundary"
   git diff --name-only "$range" 2>/dev/null | grep -E "$protected" || true
 }
 

@@ -1,12 +1,12 @@
 ---
-name: scopes
-description: Map every workflow script against the merged settings stack, separating what a permission rule sees from what a script runs internally, where only the sandbox is still watching.
+name: scripts
+description: Scan every workflow script, extract the commands it runs internally, then test each one against the merged settings and report what would be allowed, denied, asked, or matched by no rule at all.
 argument-hint: "[--repo <name>] [--strict]"
 disable-model-invocation: true
 metadata:
   kind: trigger
 ---
-**/operator:scopes:** the frontmatter blocks every path except an explicit invocation
+**/operator:scripts:** the frontmatter blocks every path except an explicit invocation
 - answers the question the floor cannot: what does a sidecar reach once it is already running
 - a permission rule sees `bash plugins/gitgud/skills/nuke/nuke.sh` and nothing inside it
 - `/operator:settings` wraps this, so run it directly when you want the per-script detail
@@ -14,7 +14,7 @@ metadata:
 ## telemetry
 
 ```!
-"${CLAUDE_PLUGIN_ROOT}"/skills/scopes/scopes.sh $ARGUMENTS
+"${CLAUDE_PLUGIN_ROOT}"/skills/scripts/scripts.sh $ARGUMENTS
 echo "sidecar exit: $?"
 ```
 
@@ -35,7 +35,7 @@ echo "sidecar exit: $?"
 
 3. report inline
 4. append one entry to `[audit_file]`, in the shape defined under `## the shape` below
-  - the heading reads `## Scopes Audit #[next_audit]: [timestamp]`, both from the telemetry
+  - the heading reads `## Scripts Audit #[next_audit]: [timestamp]`, both from the telemetry
   - `state` is what the run measured, as hyphen bullets, one clause each
   - `findings` lead with the label the sidecar printed, one bullet each, naming what it hit
   - `resolutions` are checkboxes, one per finding, in the same order
@@ -54,16 +54,16 @@ echo "sidecar exit: $?"
 ## the shape
 > the artifact this skill appends to; the sidecar grades what landed on its next run
 
-# .operator/scopes/YYYY-MM-DD.md
+# .construct/operator/scripts/YYYY-MM-DD.md
 one file per day, appended to by every deliberate run:
 
-- the heading reads `## Scopes Audit #[next_audit]: [timestamp]`, both from the telemetry
+- the heading reads `## Scripts Audit #[next_audit]: [timestamp]`, both from the telemetry
 - an audit captures the boundary at a moment in time, so it is never edited after the fact
 - carry an unresolved finding forward by restating it, never by editing the older audit
 - lines are hyphen bullets holding a single clause, capped at 100 characters
 - scrub client names, tokens, and other sensitive detail before it lands in a commit
 
-## Scopes Audit #1: YYYY-MM-DD HH:MM
+## Scripts Audit #1: YYYY-MM-DD HH:MM
 
 ### state
 the counts as hyphen bullets: scripts read, invocations by verdict, internals seen, errors, warnings
@@ -106,7 +106,7 @@ the sidecar's whole output, fenced and unedited, so every claim above can be che
 
 *example:*
 > ```text
-> === scopes.sh workflow tester ===
+> === scripts.sh workflow tester ===
 > scripts: 32
 > invocations: 30 allowed, 2 prompting, 0 refused
 > internals: 8062 inspected, 11 of which cross a permission gate
@@ -114,5 +114,5 @@ the sidecar's whole output, fenced and unedited, so every claim above can be che
 > warnings: 310
 > ```
 
-## Scopes Audit #2: repeat the above format for each deliberate run on the same day
+## Scripts Audit #2: repeat the above format for each deliberate run on the same day
 never edit an earlier audit; a stale finding is signal about how long it went unresolved

@@ -11,7 +11,7 @@
 # - STATIC checks read the files: parse, drift, verb symmetry, scope placement, hygiene, coverage
 # - `guard` is the check that watches this auditor, since an editable auditor can be made to pass
 # - LIVE probes exercise the boundary, because a config can be perfect while the gate is dead
-# - it wraps the permissions and scopes replays rather than replacing them, surfacing error counts
+# - it wraps the permissions and scripts replays rather than replacing them, surfacing error counts
 # - a tracked path reads as guarded at `ask`, since `deny` reaches the sandbox and blocks git itself
 # - templates resolve from the plugin, so drift and hygiene run the same under either install method
 # RUN
@@ -25,7 +25,7 @@
 # - the env file is deny-listed, so not seeing it is the pass rather than a finding
 # - an emit run never appends to the artifact, since these lines carry absolute home paths
 # - it emits and never applies, because the deny floor stops this sidecar writing a settings file
-# @see plugins/operator/skills/settings/SKILL.md, plugins/operator/skills/permissions/permissions.sh, plugins/operator/skills/scopes/scopes.sh, .operator/settings/
+# @see plugins/operator/skills/settings/SKILL.md, plugins/operator/skills/permissions/permissions.sh, plugins/operator/skills/scripts/scripts.sh, .construct/operator/settings/
 
 set -euo pipefail
 
@@ -76,12 +76,12 @@ this sidecar audits the settings stack, or emits the setup for one scope. it nev
 settings file: the deny floor stops it, so every command is handed back for you to run.
 
 AUDIT
-  --audit     every static check, the live probes, and the wrapped permissions and scopes runs
+  --audit     every static check, the live probes, and the wrapped permissions and scripts runs
               slowest path by far, since the wrapped sidecars replay their whole corpus
   --static    the file checks only: parse, templates, drift, verbs, scope, hygiene, coverage, guard
   --quick     audit and probe, but skip the two wrapped sidecars
   --strict    exit non-zero on warnings as well as errors
-  an audit appends one entry to .operator/settings/<today>.md
+  an audit appends one entry to .construct/operator/settings/<today>.md
 
 EMIT
   --local     the scope you alone see in this repo
@@ -98,7 +98,7 @@ WALKTHROUGH
 RELATED
   /operator:credentials   proves each token is masked, across every exfiltration vector
   /operator:permissions   replays the corpus through the real hook
-  /operator:scopes        maps what a script reaches once it is already running
+  /operator:scripts       tests every command a script runs against the merged settings
 ========================
 EOF
   exit 0
@@ -576,7 +576,7 @@ check_probes() {
 # sitting beside this file; a missing one warns instead of failing, since the static half still ran
 run_wrapped() {
   local name script output count started elapsed
-  for name in permissions scopes; do
+  for name in permissions scripts; do
     script="$HERE/../$name/$name.sh"
     if [ ! -f "$script" ]; then warn wrapped "$name" "no $name.sh in its sibling skill folder"; continue; fi
     started=$SECONDS
@@ -783,7 +783,7 @@ check_artifact() {
   done
 }
 
-check_artifact ".operator/settings"
+check_artifact ".construct/operator/settings"
 
 # ==============
 # TELEMETRY
@@ -795,7 +795,7 @@ ERRORS=${ERRORS:-0}
 WARNINGS=${WARNINGS:-0}
 PASSES=${PASSES:-0}
 
-TODAYS_AUDIT=".operator/settings/$(date +%Y-%m-%d).md"
+TODAYS_AUDIT=".construct/operator/settings/$(date +%Y-%m-%d).md"
 if [ -f "$ROOT/$TODAYS_AUDIT" ];
 then AUDIT_COUNT=$(grep -c '^## Settings Audit #' "$ROOT/$TODAYS_AUDIT" || true)
 else AUDIT_COUNT=0; fi
