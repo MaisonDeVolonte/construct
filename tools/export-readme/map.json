@@ -1,0 +1,23 @@
+{
+  "#### Credentials": "plugins/operator/skills/credentials/SKILL.md",
+  "#### Permissions": "plugins/operator/skills/permissions/SKILL.md",
+  "#### Scripts": "plugins/operator/skills/scripts/SKILL.md",
+  "#### Settings": "plugins/operator/skills/settings/SKILL.md",
+  "#### Issues": "plugins/operator/skills/issues/SKILL.md",
+  "#### Audit": "plugins/gitgud/skills/audit/SKILL.md",
+  "#### Backup": "plugins/gitgud/skills/backup/SKILL.md",
+  "#### Continue": "plugins/gitgud/skills/continue/SKILL.md",
+  "#### Deliver": "plugins/gitgud/skills/deliver/SKILL.md",
+  "#### Prune": "plugins/gitgud/skills/prune/SKILL.md",
+  "#### Nuke": "plugins/gitgud/skills/nuke/SKILL.md",
+  "#### Rerun": "plugins/gitgud/skills/rerun/SKILL.md",
+  "#### Ship": "plugins/gitgud/skills/ship/SKILL.md",
+  "#### File": "plugins/retardify/skills/file/SKILL.md",
+  "#### Plan": "plugins/retardify/skills/plan/SKILL.md",
+  "#### Graph": "plugins/retardify/skills/graph/SKILL.md",
+  "#### Quiz": "plugins/retardify/skills/quiz/SKILL.md",
+  "#### Manual": "plugins/retardify/skills/manual/SKILL.md",
+  "#### Review": "plugins/retardify/skills/review/SKILL.md",
+  "#### Log": "plugins/retardify/skills/log/SKILL.md",
+  "#### Todo": "plugins/retardify/skills/todo/SKILL.md"
+}
