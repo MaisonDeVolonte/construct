@@ -11,7 +11,7 @@
 # - no flag runs the trigger half, so every existing invocation is unchanged
 # - `--check [paths]` runs the validator half; with no paths it grades the whole artifact dir
 # - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
-# @see plugins/retardify/skills/graph/SKILL.md, .operator/graphs/, plugins/retardify/skills/plan/SKILL.md, plugins/retardify/shared/secrets.sh
+# @see plugins/retardify/skills/graph/SKILL.md, .construct/retardify/graph/, plugins/retardify/skills/plan/SKILL.md, plugins/retardify/shared/secrets.sh
 
 set -euo pipefail
 
@@ -24,7 +24,7 @@ else
     echo "fatal: not a git repository" >&2; exit 1; fi
   cd "$(git rev-parse --show-toplevel)"
 
-  ARTIFACTS=".operator/graphs"
+  ARTIFACTS=".construct/retardify/graph"
   TEMPLATE="plugins/retardify/skills/graph/SKILL.md"
   VALIDATOR="plugins/retardify/skills/graph/graph.sh --check"
   TODAY=$(date +%Y-%m-%d)
@@ -86,7 +86,7 @@ MAX_WIDTH=100
 STRICT=0
 KEEP=0
 TEMPLATE="plugins/retardify/skills/graph/SKILL.md"
-ARTIFACTS=".operator/graphs"
+ARTIFACTS=".construct/retardify/graph"
 
 # the template's own field order, which is the one thing every spec must agree on
 EXPECTED_FIELDS=$'GOAL\nCONTEXT\nDONE WHEN\nFAN OUT\nRULES\nVERIFY\nOUTPUT'
@@ -164,7 +164,7 @@ field() {
 #   each takes a spec path and appends findings; to add one, write a function and list it below
 # ==============
 
-# "one file per spec, `.operator/graphs/`, named `YYYY-MM-DD-operation-<title>.md`"
+# "one file per spec, `.construct/retardify/graph/`, named `YYYY-MM-DD-operation-<title>.md`"
 check_filename() {
   local file=$1 base dir
   base=$(basename "$file")
@@ -296,14 +296,14 @@ check_fanout() {
   fi
 }
 
-# "`--plan` means `.operator/plans/<same-basename>.md`" — the pairing is the whole reason a spec and
+# "`--plan` means `.construct/retardify/plan/<same-basename>.md`" — the pairing is the whole reason a spec and
 # the artifact it produces share a name, so a mismatched basename is a broken pair
 check_output() {
   local file=$1 base named
   base=$(basename "$file")
-  named=$(field "$file" OUTPUT | cut -f2- | grep -oE '.operator/plans/[A-Za-z0-9.-]+\.md' | head -n 1 || true)
+  named=$(field "$file" OUTPUT | cut -f2- | grep -oE '.construct/retardify/plan/[A-Za-z0-9.-]+\.md' | head -n 1 || true)
   if [ -z "$named" ]; then
-    warn "$file" 1 output_path "output names no .operator/plans/ path to pair with"
+    warn "$file" 1 output_path "output names no .construct/retardify/plan/ path to pair with"
     return
   fi
   if [ "$(basename "$named")" != "$base" ]; then

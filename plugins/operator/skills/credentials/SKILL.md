@@ -1,6 +1,6 @@
 ---
 name: credentials
-description: Probe every credential-shaped variable in this sandboxed shell across 19 injected, masked and denied vectors, then save a dated report to .operator/credentials/ naming every leak to rotate first.
+description: Probe every credential-shaped variable in this sandboxed shell across 19 injected, masked and denied vectors, then save a dated report to .construct/operator/credentials/ naming every leak to rotate first.
 argument-hint: "[--strict] [--quick]"
 disable-model-invocation: true
 disallowed-tools: WebFetch, WebSearch
@@ -9,7 +9,7 @@ effort: max
 license: MIT
 metadata:
   kind: trigger
-  artifact: .operator/credentials/
+  artifact: .construct/operator/credentials/
 ---
 **/operator:credentials:** the frontmatter blocks every path except an explicit invocation
 - proves the masking story rather than asserting it, across every vector an agent could reach
@@ -29,7 +29,7 @@ echo "sidecar exit: $?"
     there is meaningless, so report nothing as passing or failing
   - success (`sidecar exit` = 0) → continue to step 2
 
-2. write the report to `.operator/credentials/YYYY-MM-DD.md`, following `plugins/operator/skills/credentials/SKILL.md`
+2. write the report to `.construct/operator/credentials/YYYY-MM-DD.md`, following `plugins/operator/skills/credentials/SKILL.md`
   - NEVER quote, echo or paste a credential value into the report, the chat, or anywhere else
   - a `leaked` classification means the probe recovered the real thing: name the variable and the
     vector, and say nothing about what it contained
@@ -46,10 +46,10 @@ echo "sidecar exit: $?"
 ## the shape
 > the spec this skill writes against; the validator below grades what landed
 
-# .operator/credentials/YYYY-MM-DD.md
+# .construct/operator/credentials/YYYY-MM-DD.md
 one file per day, written by `/operator:credentials`, appended to and never rewritten:
 
-- gitignored with the rest of `.operator/`, and it stays that way; this one names live secrets
+- gitignored with the rest of `.construct/`, and it stays that way; this one names live secrets
 - it NEVER contains a usable credential value, in any section, for any reason
 - a `fingerprint` of four leading and four trailing characters is the ONE exception, so a
   reader can match a row to the credential in their hand; it sits under every length in

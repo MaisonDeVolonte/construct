@@ -408,7 +408,7 @@ check_artifact() {
   done
 }
 
-check_artifact ".operator/permissions"
+check_artifact ".construct/operator/permissions"
 
 # ==============
 # TELEMETRY
@@ -420,7 +420,7 @@ CASES=$(grep -cvE '^#|^$' "$CORPUS" || true)
 # audit: one file per day per kind, so two triggers on the same day never interleave one file
 # reported, never created: the sidecar names the path and the count, the agent writes the entry
 AUDIT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
-TODAYS_AUDIT=".operator/permissions/$(date +%Y-%m-%d).md"
+TODAYS_AUDIT=".construct/operator/permissions/$(date +%Y-%m-%d).md"
 if [ -f "$AUDIT_ROOT/$TODAYS_AUDIT" ];
 then AUDIT_COUNT=$(grep -c '^## Permissions Audit #' "$AUDIT_ROOT/$TODAYS_AUDIT" || true)
 else AUDIT_COUNT=0; fi

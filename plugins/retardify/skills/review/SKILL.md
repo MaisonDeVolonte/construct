@@ -70,7 +70,7 @@ echo "sidecar exit: $?"
 ## the shape
 > the spec this skill writes against; the validator below grades what landed
 
-# .operator/reviews/YYYY-MM-DD.md
+# .construct/retardify/review/YYYY-MM-DD.md
 one file per day, appended to by `/retardify:review` and nothing else:
 
 - a scorecard captures the doc-vs-reality gap at a moment in time, never edited after the fact

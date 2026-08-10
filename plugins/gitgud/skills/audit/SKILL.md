@@ -51,7 +51,7 @@ echo "sidecar exit: $?"
 ## the shape
 > the artifact this skill appends to; the sidecar grades what landed on its next run
 
-# .operator/git/YYYY-MM-DD.md
+# .construct/gitgud/audit/YYYY-MM-DD.md
 one file per day, appended to by every deliberate run:
 
 - the heading reads `## Git Audit #[next_audit]: [timestamp]`, both from the telemetry
@@ -85,7 +85,7 @@ one bullet per issue, leading with the label this doc assigns
 
 *example:*
 > - **Shared Drift** — 2 versions across 3 secrets.sh copies; retardify holds the stale one
-> - **Stale Artifact** — `.operator/credentials/` has not been written since 2026-08-01
+> - **Stale Artifact** — `.construct/operator/credentials/` has not been written since 2026-08-01
 > - **Unpinned Version** — gitgud and retardify both carry `version: unset`
 
 ### resolutions
@@ -105,7 +105,7 @@ the sidecar's whole output, fenced and unedited, so every claim above can be che
 > skill_docs: 19
 > docs_missing_sidecar: 0
 > --- archive ---
-> audit_file: .operator/git/YYYY-MM-DD.md
+> audit_file: .construct/gitgud/audit/YYYY-MM-DD.md
 > next_audit: 1
 > ```
 

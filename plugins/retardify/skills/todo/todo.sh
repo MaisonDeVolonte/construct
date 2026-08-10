@@ -11,7 +11,7 @@
 # - no flag runs the trigger half, so every existing invocation is unchanged
 # - `--check [paths]` runs the validator half; with no paths it grades the whole artifact dir
 # - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
-# @see plugins/retardify/skills/todo/SKILL.md, plugins/retardify/skills/log/SKILL.md, .operator/todos/, .operator/logs/, plugins/retardify/skills/todo/todo.sh, plugins/retardify/shared/secrets.sh
+# @see plugins/retardify/skills/todo/SKILL.md, plugins/retardify/skills/log/SKILL.md, .construct/retardify/todo/, .construct/retardify/log/, plugins/retardify/skills/todo/todo.sh, plugins/retardify/shared/secrets.sh
 
 set -euo pipefail
 
@@ -32,7 +32,7 @@ else
 
   # one file per day, many reports per file — reported never created, so a ci scan leaves nothing
   # the cd above already anchored us to the repo root, so these paths stay relative
-  TODAYS_TODO=".operator/todos/$(date +%Y-%m-%d).md"
+  TODAYS_TODO=".construct/retardify/todo/$(date +%Y-%m-%d).md"
   TODO_TIME=$(date '+%Y-%m-%d %H:%M')
   # no file yet means no reports yet, which is the count the agent numbers its first one from
   if [ -f "$TODAYS_TODO" ];
@@ -63,7 +63,7 @@ else
     case "$1" in
       *tests/report*|*tests/results*|*.next*|*node_modules*) return 0;;
       # runtime artifact dirs: gitignored and written on demand, so absent from a fresh clone
-      .operator/*) return 0;;
+      .construct/*) return 0;;
       *) return 1;;
     esac
   }
@@ -231,7 +231,7 @@ MAX_WIDTH=100
 STRICT=0
 KEEP=0
 TEMPLATE="plugins/retardify/skills/todo/SKILL.md"
-ARTIFACTS=".operator/todos"
+ARTIFACTS=".construct/retardify/todo"
 
 # the subsections every report carries, which is the one thing every entry must agree on
 EXPECTED_SECTIONS=$'sources\nobservations\nopportunities\ncarried'

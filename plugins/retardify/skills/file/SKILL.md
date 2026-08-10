@@ -11,7 +11,7 @@ everything about a source file that is not the logic inside it, in four conventi
 `/retardify:code` owns the logic; this spec owns the frame around it.
 
 ## scope
-- source files, never a `.operator/` artifact
+- source files, never a `.construct/` artifact
 - naming and module order apply to the js family, which is where those conventions have meaning
 - the wayfinding header applies to js, jsx, ts, tsx, mjs, cjs and sh, which carry the block
 - comments apply to every language with a full-line marker, which is a wider list than the header
@@ -224,7 +224,7 @@ VERIFY - not part of the artifact
 ## the shape
 > the artifact this skill appends to; the sidecar grades what landed on its next run
 
-# .operator/files/YYYY-MM-DD.md
+# .construct/retardify/file/YYYY-MM-DD.md
 one file per day, appended to by every deliberate run:
 
 - the heading reads `## Files Audit #[next_audit]: [timestamp]`, both taken from the telemetry

@@ -52,7 +52,7 @@ echo "sidecar exit: $?"
 ## the shape
 > the artifact this skill appends to; the sidecar grades what landed on its next run
 
-# .operator/permissions/YYYY-MM-DD.md
+# .construct/operator/permissions/YYYY-MM-DD.md
 one file per day, appended to by every deliberate run:
 
 - the heading reads `## Permissions Audit #[next_audit]: [timestamp]`, both from the telemetry

@@ -11,13 +11,13 @@
 # - four conventions in one pass: naming, the wayfinding header, module order, inline comments
 # - two eligibility lists, since a wayfinder belongs only to the js family and shell
 # - comments are checked across every language that carries a full-line marker
-# - source files, never a `.operator/` artifact; the artifact it writes is graded here too
+# - source files, never a `.construct/` artifact; the artifact it writes is graded here too
 # RUN
 # - defaults to every tracked eligible file; pass files or a directory to scope it
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
 # - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
 # - a broken `@see` only warns, since nothing gates references; `/retardify:todo` reports repo-wide
-# @see plugins/retardify/skills/file/SKILL.md, plugins/retardify/skills/todo/todo.sh, plugins/operator/hooks/posttooluse.sh, plugins/retardify/shared/secrets.sh, .operator/files/
+# @see plugins/retardify/skills/file/SKILL.md, plugins/retardify/skills/todo/todo.sh, plugins/operator/hooks/posttooluse.sh, plugins/retardify/shared/secrets.sh, .construct/retardify/file/
 
 set -euo pipefail
 
@@ -167,7 +167,7 @@ is_host_only() {
 is_generated() {
   case "$1" in
     *tests/report*|*tests/results*|*.next*|*node_modules*) return 0;;
-    .operator/*) return 0;;
+    .construct/*) return 0;;
     *) return 1;;
   esac
 }
@@ -791,7 +791,7 @@ check_artifact() {
   done
 }
 
-check_artifact ".operator/files"
+check_artifact ".construct/retardify/file"
 
 # ==============
 # TELEMETRY
@@ -803,7 +803,7 @@ SECRETS=$(grep -c '|secret|' "$FINDINGS" || true)
 # audit: one file per day per kind, so two runs on the same day never interleave one file
 # reported, never created: the sidecar names the path and the count, the agent writes the entry
 AUDIT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
-TODAYS_AUDIT=".operator/files/$(date +%Y-%m-%d).md"
+TODAYS_AUDIT=".construct/retardify/file/$(date +%Y-%m-%d).md"
 if [ -f "$AUDIT_ROOT/$TODAYS_AUDIT" ];
 then AUDIT_COUNT=$(grep -c '^## Files Audit #' "$AUDIT_ROOT/$TODAYS_AUDIT" || true)
 else AUDIT_COUNT=0; fi
