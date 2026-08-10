@@ -13,17 +13,16 @@
 # - a trigger runs only when invoked; a spec loads whenever the model touches what it describes
 # - the sidecar measures and never mutates, and sources `gitgud/shared/handover.sh` for its blocks
 # - a sidecar needing to mutate emits the command into a block instead of running it
-# BUDGET
-# - only `description` and `when_to_use` reach the listing, and the harness caps the pair at 1536
-# - past the cap the tail is dropped silently, so a skill loses what says when it fires
-# - nothing in the harness reports that loss, which is why the cap is measured here
-# - the body costs nothing until the skill loads, so long prose belongs below the frontmatter
-# - `metadata` is free-form and the harness ignores it, so it never counts against the cap
+# SPLIT
+# - export-readme owns every frontmatter and preamble rule, judged at the readme source
+# - this sidecar owns the rest of the pair: the body, the sidecar, the pairing, and the index
+# - `metadata.kind` is still read here, since it decides which body checks a doc earns
+# - a kind nobody declared is export-readme's ERROR; here it only warns that checks were skipped
 # RUN
 # - defaults to every pair in `plugins/*/skills/`; pass a doc, a sidecar, or a directory to scope it
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
 # - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
-# @see tools/check-skills/README.md, plugins/gitgud/shared/handover.sh, plugins/, plugins/operator/shared/secrets.sh, .github/workflows/ci.yml
+# @see tools/check-skills/README.md, tools/export-readme/export-readme.sh, plugins/gitgud/shared/handover.sh, plugins/, plugins/operator/shared/secrets.sh, .github/workflows/ci.yml
 
 set -euo pipefail
 
@@ -45,11 +44,6 @@ TRIGGERS="plugins"
 
 # the postures the index assigns; a trigger nobody can tell the blast radius of is a trap
 POSTURES='READ-ONLY|SAFE|GATED|DESTRUCTIVE|RELEASE'
-
-# the harness truncates `description` + `when_to_use` at this many characters in the skill listing
-LISTING_CAP=1536
-# 80% of the cap: near enough that the next edit is the one that drops text without saying so
-LISTING_WARN=1228
 
 PAIRS=()
 for arg in "$@"; do
@@ -138,11 +132,8 @@ mkdir -p "$TMPROOT"
 # findings collect as "SEV|file|line|category|detail" — line is its own field so the report can
 # sort numerically; joining it to the path first sorts 121 above 31. the run fails on ERROR only
 FINDINGS=$(mktemp "$TMPROOT/$TMPTAG-findings.XXXXXX")
-# every skill's listing spend, collected as "chars|file" so the telemetry can name the widest one:
-# a clean run still reports headroom, since the cap is worth watching before anything crosses it
-BUDGETS=$(mktemp "$TMPROOT/$TMPTAG-budgets.XXXXXX")
 # a failed run leaves scratch behind to read; --keep does the same after a clean one
-cleanup() { st=$?; if [ "$KEEP" -eq 0 ] && [ "$st" -eq 0 ]; then rm -f "$FINDINGS" "$BUDGETS"; fi; }
+cleanup() { st=$?; if [ "$KEEP" -eq 0 ] && [ "$st" -eq 0 ]; then rm -f "$FINDINGS"; fi; }
 trap cleanup EXIT
 
 err()  { printf 'ERROR|%s|%s|%s|%s\n' "$1" "$2" "$3" "$4" >> "$FINDINGS"; }
@@ -153,31 +144,6 @@ where() {
   local hit
   hit=$(grep -nE "$2" "$1" 2>/dev/null | head -n 1 | cut -d: -f1 || true)
   printf '%s' "${hit:-1}"
-}
-
-# one frontmatter value, read only between the opening and closing `---`: a body line starting with
-# the same key is prose, and charging it to the budget would fail a doc for text nothing ever lists
-frontmatter_field() {
-  local doc=$1 key=$2 value
-  value=$(awk -v key="$key" '
-    NR == 1 && $0 == "---" { open = 1; next }
-    !open { exit }
-    $0 == "---" { exit }
-    # `>` and `|` push the value onto the lines below, so keep reading until the indent ends
-    folded && /^[[:space:]]/ { sub(/^[[:space:]]+/, ""); buffer = buffer " " $0; next }
-    folded { exit }
-    $0 ~ "^" key ":" {
-      buffer = $0
-      sub("^" key ":[[:space:]]*", "", buffer)
-      if (buffer ~ /^[>|][-+]?$/) { folded = 1; buffer = ""; next }
-      exit
-    }
-    END { print buffer }
-  ' "$doc")
-  # a quoted scalar is the same string once parsed, so its quotes never count against the cap
-  value=${value#\"}; value=${value%\"}
-  value=${value#\'}; value=${value%\'}
-  printf '%s' "$value"
 }
 
 # ==============
@@ -204,51 +170,12 @@ check_pair() {
 }
 
 # the wayfinder now lives in the sidecar, which carries the whole pair; the doc keeps frontmatter
-# as its orientation, so a reader gets the map from one file rather than two that can disagree
+# as its orientation, and export-readme judges that frontmatter at its readme source
 check_doc_wayfinding() {
   local doc=$1 name
   name=$(trigger_name "$doc")
   if grep -q '^```javascript' "$doc"; then
     err "$doc" 1 doc_wayfinder "the wayfinder belongs in $name.sh; the doc keeps frontmatter only"
-  fi
-  if [ "$(sed -n '1p' "$doc")" != '---' ]; then
-    err "$doc" 1 frontmatter "line 1 opens the frontmatter, which is what orients a reader now"
-  fi
-  if ! grep -qE '^name:[[:space:]]*'"$name"'[[:space:]]*$' "$doc"; then
-    err "$doc" 1 frontmatter "frontmatter needs 'name: $name', matching its folder"
-  fi
-  if ! grep -qE '^description:[[:space:]]*\S' "$doc"; then
-    err "$doc" 1 frontmatter "frontmatter needs a description; it is the only listing a reader sees"
-  fi
-}
-
-# the listing a model reads before opening anything is `description` plus `when_to_use`, and the
-# harness truncates that pair at 1536 characters. past the cap the tail is dropped with no warning,
-# which is `silent trigger loss`: the skill still lists, and the clause naming when to fire is gone
-check_listing_budget() {
-  local doc=$1 description when_to_use total line
-  description=$(frontmatter_field "$doc" description)
-  when_to_use=$(frontmatter_field "$doc" when_to_use)
-  total=$(( ${#description} + ${#when_to_use} ))
-  line=$(where "$doc" '^description:')
-
-  printf '%s|%s\n' "$total" "$doc" >> "$BUDGETS"
-
-  if [ "$total" -gt "$LISTING_CAP" ]; then
-    err "$doc" "$line" listing_cap \
-      "description + when_to_use is $total chars; the listing truncates at $LISTING_CAP"
-  elif [ "$total" -gt "$LISTING_WARN" ]; then
-    warn "$doc" "$line" listing_budget \
-      "description + when_to_use is $total chars, inside $LISTING_WARN of a $LISTING_CAP cap"
-  fi
-}
-
-# "ran only on explicit `@gitautomation` commands" — the whole safety model rests on this line
-check_trigger() {
-  local doc=$1 name
-  name=$(trigger_name "$doc")
-  if ! grep -qE '^disable-model-invocation:[[:space:]]*(true|yes|on|1)[[:space:]]*$' "$doc"; then
-    err "$doc" 1 trigger "frontmatter needs 'disable-model-invocation: true'; prose is not a gate"
   fi
 }
 
@@ -471,22 +398,14 @@ check_scrub() {
 }
 
 # a trigger acts on the repo and is invoked deliberately; a spec describes a shape and should load
-# whenever the model touches the thing it describes. the two earn opposite frontmatter, so the
-# kind is declared rather than guessed; `metadata` exists for it and the harness ignores it
+# whenever the model touches the thing it describes. the kind gates which body checks run here;
+# whether it is declared correctly is export-readme's rule, judged at the readme source
 skill_kind() {
   local doc=$1 declared
   declared=$(awk '/^metadata:/ { inside = 1; next }
                   inside && /^[^[:space:]]/ { inside = 0 }
                   inside && /^[[:space:]]+kind:/ { gsub(/^[[:space:]]+kind:[[:space:]]*/, ""); print; exit }' "$doc")
   printf '%s' "${declared:-unset}"
-}
-
-# a spec must NOT carry the invocation gate, since the whole point is that the model reaches for it
-check_spec() {
-  local doc=$1
-  if grep -qE '^disable-model-invocation:[[:space:]]*(true|yes|on|1)' "$doc"; then
-    err "$doc" 1 spec_gated "a spec is meant to auto-load; drop disable-model-invocation"
-  fi
 }
 
 # --- run list (add new checks here) ---
@@ -500,23 +419,20 @@ for pair in "${PAIRS[@]}"; do
   # every skill earns the shape checks; only a trigger earns the ones about being invoked
   check_pair            "$pair"
   check_doc_wayfinding  "$pair"
-  check_listing_budget  "$pair"
   check_sidecar_header  "$pair"
   check_sidecar_lint    "$pair"
   check_scrub           "$pair"
   check_body            "$pair"
   check_block_name      "$pair"
   case "$(skill_kind "$pair")" in
-    spec)
-      check_spec        "$pair";;
+    spec) ;;
     trigger)
-      check_trigger     "$pair"
       check_invocation  "$pair"
       check_branches    "$pair"
       check_artifact    "$pair"
       check_index       "$pair";;
     *)
-      err "$pair" 1 no_kind "frontmatter needs 'metadata:' with 'kind: trigger' or 'kind: spec'";;
+      warn "$pair" 1 no_kind "kind unset, so the trigger checks were skipped; export-readme owns the rule";;
   esac
 done
 
@@ -527,23 +443,12 @@ ERRORS=$(grep -c '^ERROR|' "$FINDINGS" || true)
 WARNINGS=$(grep -c '^WARN|' "$FINDINGS" || true)
 SECRETS=$(grep -c '|secret|' "$FINDINGS" || true)
 
-# the widest listing, reported whether or not it crossed anything: the useful number is headroom,
-# and by the time a finding fires the text is already being dropped
-LISTING_PEAK=0
-LISTING_PEAK_DOC='none'
-if [ -s "$BUDGETS" ]; then
-  PEAK_ROW=$(sort -t'|' -k1,1nr "$BUDGETS" | head -n 1)
-  LISTING_PEAK=${PEAK_ROW%%|*}
-  LISTING_PEAK_DOC=${PEAK_ROW#*|}
-fi
-
 cat <<EOF
 
 === check-skills telemetry ===
 template: $TEMPLATE
 scanned: ${#PAIRS[@]} pair(s)
 index: ${INDEX:-none found}
-listing: $LISTING_PEAK/$LISTING_CAP chars at its widest ($LISTING_PEAK_DOC)
 errors: $ERRORS
 warnings: $WARNINGS
 secrets: $SECRETS
