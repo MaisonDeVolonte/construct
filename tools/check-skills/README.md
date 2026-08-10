@@ -17,6 +17,8 @@ a skill is one folder, named for its trigger, holding exactly two files:
 - `metadata.kind` is declared rather than guessed, and decides the rest of the frontmatter
 - `kind: trigger` acts on the repo, so it sets `disable-model-invocation: true`; prose is not a gate
 - `kind: spec` describes a shape, so it stays auto-loading and never sets that flag
+- every frontmatter rule above is judged by `tools/export-readme/export-readme.sh` at the readme
+  source; this pair's own checks stop at the body, the sidecar, the pairing, and the index
 
 ## the listing budget
 `description` and `when_to_use` are the whole listing; everything else loads only once a skill does:
@@ -28,6 +30,7 @@ a skill is one folder, named for its trigger, holding exactly two files:
 - the body is charged only when the skill loads, so long reference prose belongs under the frontmatter
 - longer still belongs in a sibling file the body names, which costs nothing until it is read
 - `metadata` is free-form and the harness ignores it, so it never counts against the cap
+- export-readme measures the cap at the readme source, where the text is edited, not here
 
 every trigger doc follows the same general shape:
 
@@ -104,6 +107,7 @@ git command two
 ```text
 VERIFY - not part of the trigger
 - RUN `tools/check-skills/check-skills.sh` after touching a trigger doc or its sidecar; pass a path to scope it
+- RUN `tools/export-readme/export-readme.sh` after touching frontmatter or a preamble; the readme is their source
 - FIX every ERROR, since each one breaks a rule this spec states outright
 - STOP on a `secret` finding and ask the user before truncating it; the key needs rotating first
 - JUSTIFY or fix every WARN; the sidecar tolerates them, the next reader may not
