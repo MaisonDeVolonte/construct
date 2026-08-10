@@ -1,17 +1,21 @@
 #!/bin/bash
-# ===============================================================================
-# @file guide.sh - build guide sidecar: names the target, then grades what landed
-# ===============================================================================
+# =============================================================================
+# @file quiz.sh - study quiz sidecar: names the target, then grades what landed
+# =============================================================================
 # @description
 # PAIR
-# - the only sidecar for `/retardify:guide`, which owns both halves of its own artifact
+# - the only sidecar for `/retardify:quiz`, which owns both halves of its own artifact
 # - the doc carries the shape; this file names where it lands and grades what landed there
 # - one skill is one SKILL.md and one sidecar, so nothing outside this pair decides its shape
+# STATE
+# - `absent` is a fresh sitting, `ungraded` waits on a grade, `graded` is closed evidence
+# - the doc branches on that word, since generating and grading are two different runs
+# - generation writes NO answer, so a verdict line on an ungraded quiz is a leak and an error
 # RUN
 # - no flag runs the trigger half, so every existing invocation is unchanged
 # - `--check [paths]` runs the validator half; with no paths it grades the whole artifact dir
 # - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
-# @see plugins/retardify/skills/guide/SKILL.md, .operator/guides/, plugins/retardify/skills/plan/SKILL.md, plugins/retardify/shared/secrets.sh
+# @see plugins/retardify/skills/quiz/SKILL.md, .construct/retardify/quiz/, plugins/retardify/skills/manual/SKILL.md, plugins/retardify/shared/secrets.sh
 
 set -euo pipefail
 
@@ -24,16 +28,19 @@ else
     echo "fatal: not a git repository" >&2; exit 1; fi
   cd "$(git rev-parse --show-toplevel)"
 
-  ARTIFACTS=".operator/guides"
-  TEMPLATE="plugins/retardify/skills/guide/SKILL.md"
-  VALIDATOR="plugins/retardify/skills/guide/guide.sh --check"
+  ARTIFACTS=".construct/retardify/quiz"
+  TEMPLATE="plugins/retardify/skills/quiz/SKILL.md"
+  VALIDATOR="plugins/retardify/skills/quiz/quiz.sh --check"
+  TODAY=$(date +%Y-%m-%d)
 
   FEATURE="$*"
   if [ -z "$FEATURE" ]; then
-    echo "fatal: /write-guide needs a feature, as in: /write-guide the settings audit" >&2; exit 1; fi
+    echo "fatal: /retardify:quiz needs a feature, as in: /retardify:quiz the settings audit" >&2
+    exit 1
+  fi
 
   # the validator accepts lowercase letters, digits and hyphens only, so everything else collapses;
-  # there is no date in this name, which is what makes a rewrite land on top of the old guide
+  # the date leads the name, so retaking the same feature later lands beside the first sitting
   SLUG=$(printf '%s' "$FEATURE" | tr '[:upper:]' '[:lower:]' \
     | sed -e 's/[^a-z0-9]/-/g' -e 's/--*/-/g' -e 's/^-//' -e 's/-$//' | cut -c1-60)
   SLUG=${SLUG%-}
@@ -41,27 +48,42 @@ else
     echo "fatal: the feature has no letters or digits to build a filename from" >&2; exit 1; fi
 
   mkdir -p "$ARTIFACTS"
-  TARGET="$ARTIFACTS/$SLUG.md"
-  if [ -e "$TARGET" ]; then COLLISION=yes; else COLLISION=no; fi
+  TARGET="$ARTIFACTS/$TODAY-$SLUG.md"
+
+  # the three states the doc branches on: a fresh sitting writes questions, a taken one gets
+  # graded, and a closed one is never rewritten, since a score is evidence of a moment
+  if [ ! -e "$TARGET" ]; then STATE=absent
+  elif grep -q '^- graded:' "$TARGET"; then STATE=graded
+  else STATE=ungraded; fi
+
+  TAKEN=0
+  if [ -f "$TARGET" ]; then
+    TAKEN=$(grep -c '^- \[x\] [A-D]\. ' "$TARGET" || true); fi
   EXISTING=$(find "$ARTIFACTS" -maxdepth 1 -type f -name '*.md' | wc -l | tr -d ' ')
 
-  echo "=== /write-guide telemetry ==="
+  echo "=== /retardify:quiz telemetry ==="
   echo "feature: $FEATURE"
   echo "slug: $SLUG"
   echo "target: $TARGET"
-  echo "collision: $COLLISION"
-  echo "existing_guides: $EXISTING"
+  echo "state: $STATE"
+  echo "picks_marked: $TAKEN"
+  echo "questions: 20"
+  echo "existing_quizzes: $EXISTING"
   echo "template: $TEMPLATE"
   echo "validator: $VALIDATOR"
 
-  echo "--- guides already written ---"
+  echo "--- quizzes already written ---"
   find "$ARTIFACTS" -maxdepth 1 -type f -name '*.md' | sort | head -10 || true
 
-  if [ "$COLLISION" = yes ]; then
-    echo "--- ask first ---"
-    echo "$TARGET already exists; replacing it discards the guide that is there"
-  fi
-  echo "=============================="
+  case "$STATE" in
+    ungraded)
+      echo "--- grade it ---"
+      echo "$TAKEN pick(s) marked; skip to the grading step rather than writing a new quiz";;
+    graded)
+      echo "--- ask first ---"
+      echo "$TARGET is already scored; a graded quiz is evidence and is never rewritten";;
+  esac
+  echo "================================"
   exit 0
 fi
 
@@ -77,18 +99,18 @@ if [ ! -f "$SHARED/secrets.sh" ]; then
 . "$SHARED/secrets.sh"
 
 # character counts, not byte counts: bash's ${#var} is multibyte-aware under a utf-8 locale, and
-# every arrow in a model line is 3 bytes — a byte count would flag lines legally under the cap
+# every arrow and check mark in a quiz is 3 bytes — a byte count would flag legal lines
 UTF8_LOCALE=$(locale -a 2>/dev/null | grep -iE '^(C|en_US)\.(utf-?8)$' | head -n 1 || true)
 if [ -n "$UTF8_LOCALE" ]; then export LC_ALL="$UTF8_LOCALE"; fi
 
 MAX_WIDTH=100
 STRICT=0
 KEEP=0
-TEMPLATE="plugins/retardify/skills/guide/SKILL.md"
-ARTIFACTS=".operator/guides"
+TEMPLATE="plugins/retardify/skills/quiz/SKILL.md"
+ARTIFACTS=".construct/retardify/quiz"
 
-# the template's own section order, which is the one thing every guide must agree on
-EXPECTED_SECTIONS=$'Model\nPattern'
+# the template's own section order, which is the one thing every quiz must agree on
+EXPECTED_SECTIONS=$'Files\nModel\nPattern\nQuiz'
 
 # "the one idea to walk away with, 1-3 lines, no more"
 MAX_MODEL_LINES=3
@@ -96,36 +118,42 @@ MAX_MODEL_LINES=3
 # below this, a list is too short to have an order worth reading anything into
 MIN_ORDERED_FILES=3
 
-GUIDES=()
+# the sitting the shape describes; fewer is allowed and reported, since a short quiz still grades
+EXPECTED_QUESTIONS=20
+
+# every question offers exactly these, in this order, so a pick is unambiguous to read back
+OPTION_LABELS='A B C D'
+
+QUIZZES=()
 for arg in "$@"; do
   case "$arg" in
     --strict) STRICT=1;;
     --keep) KEEP=1;;
-    -h|--help) sed -n '2,11p' "$0"; exit 0;;
+    -h|--help) sed -n '2,17p' "$0"; exit 0;;
     -*) echo "fatal: unknown flag $arg" >&2; exit 1;;
-    *) GUIDES+=("$arg");;
+    *) QUIZZES+=("$arg");;
   esac
 done
 
 # no paths given: scan the whole artifact directory, anchored to the repo root so the default
-# works from any subdirectory — same posture as the @git* sidecars
-if [ ${#GUIDES[@]} -eq 0 ]; then
+# works from any subdirectory — same posture as the plan and manual sidecars
+if [ ${#QUIZZES[@]} -eq 0 ]; then
   if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     echo "fatal: not a git repository, and no paths given" >&2; exit 1; fi
   cd "$(git rev-parse --show-toplevel)"
   if [ ! -d "$ARTIFACTS" ]; then echo "fatal: no $ARTIFACTS/ to scan" >&2; exit 1; fi
-  GUIDES=("$ARTIFACTS"/*.md)
+  QUIZZES=("$ARTIFACTS"/*.md)
 fi
 
-# a directory argument expands to the guides inside it
+# a directory argument expands to the quizzes inside it
 EXPANDED=()
-for path in "${GUIDES[@]}"; do
+for path in "${QUIZZES[@]}"; do
   if [ -d "$path" ]; then
     for nested in "$path"/*.md; do [ -f "$nested" ] && EXPANDED+=("$nested"); done
   elif [ -f "$path" ]; then EXPANDED+=("$path")
-  else echo "fatal: no such guide: $path" >&2; exit 1; fi
+  else echo "fatal: no such quiz: $path" >&2; exit 1; fi
 done
-GUIDES=("${EXPANDED[@]}")
+QUIZZES=("${EXPANDED[@]}")
 
 # repo-local scratch: the sandbox denies writes outside cwd, and macos mktemp ignores TMPDIR
 TMPROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tmp"
@@ -152,50 +180,47 @@ section() {
   ' "$1"
 }
 
-# emit "LINENO<TAB>TEXT" for the file list, which owns everything between the two-line header and
-# the first section heading
-filelist() {
-  awk 'NR > 2 { if (/^## /) exit; print NR "\t" $0 }' "$1"
-}
+# a graded quiz carries the verdicts; an ungraded one is the same file before anything was scored
+is_graded() { grep -q '^- graded:' "$1"; }
 
 # ==============
 # CHECKS
-#   each takes a guide path and appends findings; to add one, write a function and list it below
+#   each takes a quiz path and appends findings; to add one, write a function and list it below
 # ==============
 
-# "one file per feature/workflow, `.operator/guides/`, named `<feature>.md` in kebab-case"
+# "`.construct/retardify/quiz/YYYY-MM-DD-<feature>.md`, kebab-case, one per sitting"
 check_filename() {
   local file=$1 base dir
   base=$(basename "$file")
   dir=$(dirname "$file")
-  if ! printf '%s' "$base" | grep -qE '^[a-z0-9]+(-[a-z0-9]+)*\.md$'; then
-    err "$file" 1 filename "one guide per feature, named <feature>.md in kebab-case"
+  if ! printf '%s' "$base" | grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9]+(-[a-z0-9]+)*\.md$'; then
+    err "$file" 1 filename "expected YYYY-MM-DD-<feature>.md in kebab-case"
   fi
   case "$dir" in
     "$ARTIFACTS"|"./$ARTIFACTS"|*"/$ARTIFACTS") ;;
-    *) warn "$file" 1 location "guides live in $ARTIFACTS/";;
+    *) warn "$file" 1 location "quizzes live in $ARTIFACTS/";;
   esac
 }
 
-# "# GUIDE: Short Title" then "one line 'big idea' description of the topic"
+# "# QUIZ: Short Title" then "one line 'big idea' description of the topic"
 check_header() {
   local file=$1 title summary blank
   title=$(sed -n '1p' "$file")
   summary=$(sed -n '2p' "$file")
   blank=$(sed -n '3p' "$file")
   case "$title" in
-    "# GUIDE: "*) ;;
-    *) err "$file" 1 title "line 1 must read '# GUIDE: <short title>'";;
+    "# QUIZ: "*) ;;
+    *) err "$file" 1 title "line 1 must read '# QUIZ: <short title>'";;
   esac
   if [ -z "$summary" ] || [ "${summary:0:1}" = "#" ]; then
-    err "$file" 2 summary "line 2 must be the one-line big idea of what the guide covers"
+    err "$file" 2 summary "line 2 must be the one-line big idea of what the quiz covers"
   fi
   if [ -n "$blank" ]; then
     err "$file" 3 summary "line 3 must be blank; the big idea is one line and never wraps"
   fi
 }
 
-# "sections run in this order: model, pattern" — the file list sits above both, unheaded
+# the four sections in the order the shape states them
 check_sections() {
   local file=$1 actual
   actual=$(grep -E '^## ' "$file" | sed 's/^## //' || true)
@@ -204,17 +229,17 @@ check_sections() {
   fi
 }
 
-# "one line per file: what it is, why it's in this spot, one clause max" — a checkbox, because a
-# guide is read once with something ticked off at each step
+# one line per file saying what it is and why it sits in that spot
+# a checkbox, since the study half is read once with something ticked off at each step
 check_files() {
   local file=$1 lineno text count=0
   while IFS=$'\t' read -r lineno text; do
     case "$text" in *[![:space:]]*) ;; *) continue;; esac
     case "$text" in
-      # a blockquote here is an annotation about the guide, not one of the files it lists
+      # a blockquote here is an annotation about the quiz, not one of the files it lists
       ">"*) continue;;
       "- [ ] "*|"- [x] "*) count=$((count + 1));;
-      "- "*) err "$file" "$lineno" file_shape "file lines are checkboxes: '- [ ] \`path\` is ...'"
+      "- "*) err "$file" "$lineno" file_shape "file lines are checkboxes: '- [x] \`path\` is ...'"
              count=$((count + 1))
              continue;;
       *) err "$file" "$lineno" wrapped_clause "one clause per file, and the line never wraps"
@@ -223,9 +248,9 @@ check_files() {
     if ! printf '%s' "$text" | grep -q '`'; then
       err "$file" "$lineno" file_unnamed "name the file in ticks, so the reader can open it"
     fi
-  done < <(filelist "$file")
+  done < <(section "$file" Files)
   if [ "$count" -eq 0 ]; then
-    err "$file" 3 file_list "no files listed; the list in build order is the guide"
+    err "$file" 3 file_list "no files listed; the list in build order is the study half"
   fi
 }
 
@@ -233,7 +258,7 @@ check_files() {
 # the one order that proves nobody thought about the order
 check_build_order() {
   local file=$1 count
-  filelist "$file" | cut -f2- | sed -n 's/^- \[[ x]\] `\([^`]*\)`.*/\1/p' > "$SCRATCH/files"
+  section "$file" Files | cut -f2- | sed -n 's/^- \[[ x]\] `\([^`]*\)`.*/\1/p' > "$SCRATCH/files"
   count=$(grep -c . "$SCRATCH/files" || true)
   if [ "$count" -lt "$MIN_ORDERED_FILES" ]; then return 0; fi
   if sort -c "$SCRATCH/files" 2>/dev/null; then
@@ -271,6 +296,81 @@ check_pattern() {
   fi
 }
 
+# one question's worth of accounting, run when the next question starts and once at the end
+# a verdict before the grade is the leak this whole skill exists to prevent, so it errors
+flush_question() {
+  local file=$1 num=$2 line=$3 opts=$4 labels=$5 marks=$6 verdicts=$7 graded=$8
+  [ -n "$num" ] || return 0
+  if [ "$opts" -ne 4 ]; then
+    err "$file" "$line" option_count "Q$num offers $opts options; every question offers four"
+  elif [ "$labels" != "$OPTION_LABELS" ]; then
+    err "$file" "$line" option_labels "Q$num labels its options '$labels'; expected $OPTION_LABELS"
+  fi
+  if [ "$graded" -eq 0 ]; then
+    if [ "$verdicts" -ne 0 ]; then
+      err "$file" "$line" answer_leak "Q$num carries a verdict before the quiz was graded"
+    fi
+    if [ "$marks" -gt 1 ]; then
+      err "$file" "$line" multi_pick "Q$num has $marks options marked; a pick is one answer"
+    fi
+  else
+    if [ "$verdicts" -ne 1 ]; then
+      err "$file" "$line" no_verdict "Q$num carries $verdicts verdict lines; a graded question has one"
+    fi
+    if [ "$marks" -lt 1 ] || [ "$marks" -gt 2 ]; then
+      err "$file" "$line" graded_marks "Q$num marks $marks options; a grade marks the pick and the answer"
+    fi
+  fi
+}
+
+# the quiz half: numbering, the four options, and whether any answer leaked before grading
+check_quiz() {
+  local file=$1 lineno text graded=0 num='' line=0 opts=0 labels='' marks=0 verdicts=0
+  local expected=1 total=0 opt
+  is_graded "$file" && graded=1
+
+  if ! grep -q '^- generated:' "$file"; then
+    err "$file" 1 no_generated "the quiz block opens with a '- generated:' timestamp"
+  fi
+
+  while IFS=$'\t' read -r lineno text; do
+    case "$text" in
+      '**Q'*)
+        flush_question "$file" "$num" "$line" "$opts" "${labels# }" "$marks" "$verdicts" "$graded"
+        num=$(printf '%s' "$text" | sed -n 's/^\*\*Q\([0-9]\{1,\}\).*/\1/p')
+        if [ -z "$num" ]; then continue; fi
+        total=$((total + 1))
+        line=$lineno
+        opts=0; labels=''; marks=0; verdicts=0
+        if [ "$num" -ne "$expected" ]; then
+          err "$file" "$lineno" question_order "Q$num where Q$expected was expected"
+        fi
+        expected=$((num + 1))
+        continue;;
+      "> ✓"*|"> ✗"*) verdicts=$((verdicts + 1)); continue;;
+    esac
+    opt=$(printf '%s' "$text" | sed -n 's/^- \[[ x]\] \([A-D]\)\. .*/\1/p')
+    if [ -n "$opt" ]; then
+      opts=$((opts + 1))
+      labels="$labels $opt"
+      case "$text" in "- [x] "*) marks=$((marks + 1));; esac
+    fi
+  done < <(section "$file" Quiz)
+  flush_question "$file" "$num" "$line" "$opts" "${labels# }" "$marks" "$verdicts" "$graded"
+
+  if [ "$total" -eq 0 ]; then
+    err "$file" 1 quiz_empty "no questions; the quiz is the point of the artifact"
+  elif [ "$total" -ne "$EXPECTED_QUESTIONS" ]; then
+    warn "$file" 1 question_count "$total questions; the shape describes $EXPECTED_QUESTIONS"
+  fi
+
+  # a score nobody can check against the questions is a number rather than a result
+  if [ "$graded" -eq 1 ] && ! grep -qE '^- graded:.*score [0-9]+/[0-9]+' "$file"; then
+    err "$file" "$(grep -n '^- graded:' "$file" | head -n 1 | cut -d: -f1)" no_score \
+      "a graded quiz states 'score N/M' on its graded line"
+  fi
+}
+
 # "`lines` carry a single clause, capped at 100 characters, and never wrap"
 check_width() {
   local file=$1 lineno=0 line
@@ -282,7 +382,7 @@ check_width() {
   done < "$file"
 }
 
-# a stray fence swallows the rest of the guide when rendered, so it is never cosmetic
+# a stray fence swallows the rest of the quiz when rendered, so it is never cosmetic
 check_fences() {
   local file=$1 count
   count=$(grep -cE '^[[:space:]]*```' "$file" || true)
@@ -293,29 +393,29 @@ check_fences() {
 
 # scaffolding left in a shipped artifact reads as fact to everyone downstream
 check_placeholders() {
-  local file=$1 hit token
+  local file=$1 hit token pattern
+  pattern='Short Title|big idea. description|\*example:\*|one line per file|YYYY-MM-DD HH:MM'
   while IFS= read -r hit; do
     if [ -z "$hit" ]; then continue; fi
-    token=$(printf '%s' "${hit#*:}" \
-      | grep -oE 'Short Title|big idea. description|\*example:\*|one line per file' | head -n 1)
+    token=$(printf '%s' "${hit#*:}" | grep -oE "$pattern" | head -n 1)
     err "$file" "${hit%%:*}" placeholder "template scaffolding survived: $token"
-  done < <(grep -nE 'Short Title|big idea. description|\*example:\*|one line per file' "$file" || true)
+  done < <(grep -nE "$pattern" "$file" || true)
 }
 
-
 # --- run list (add new checks here) ---
-for guide in "${GUIDES[@]}"; do
-  check_filename     "$guide"
-  check_header       "$guide"
-  check_sections     "$guide"
-  check_files        "$guide"
-  check_build_order  "$guide"
-  check_model        "$guide"
-  check_pattern      "$guide"
-  check_width        "$guide"
-  check_fences       "$guide"
-  check_placeholders "$guide"
-  scan_secrets       "$guide"
+for quiz in "${QUIZZES[@]}"; do
+  check_filename     "$quiz"
+  check_header       "$quiz"
+  check_sections     "$quiz"
+  check_files        "$quiz"
+  check_build_order  "$quiz"
+  check_model        "$quiz"
+  check_pattern      "$quiz"
+  check_quiz         "$quiz"
+  check_width        "$quiz"
+  check_fences       "$quiz"
+  check_placeholders "$quiz"
+  scan_secrets       "$quiz"
 done
 
 # ==============
@@ -324,13 +424,15 @@ done
 ERRORS=$(grep -c '^ERROR|' "$FINDINGS" || true)
 WARNINGS=$(grep -c '^WARN|' "$FINDINGS" || true)
 SECRETS=$(grep -c '|secret|' "$FINDINGS" || true)
+LEAKS=$(grep -c '|answer_leak|' "$FINDINGS" || true)
 
 cat <<EOF
 
-=== guide.sh sidecar ===
+=== quiz.sh sidecar ===
 template: $TEMPLATE
-scanned: ${#GUIDES[@]} guide file(s)
+scanned: ${#QUIZZES[@]} quiz file(s)
 width_cap: $MAX_WIDTH chars
+answer_leaks: $LEAKS
 errors: $ERRORS
 warnings: $WARNINGS
 secrets: $SECRETS
@@ -356,11 +458,12 @@ fi
 cat <<'EOF'
 --- needs a human (template rules no script can judge) ---
 - files are listed in ideal-build order, never alphabetical and never the order they were touched
-- written after the feature ships, to build a mental model rather than to document a reference
-- a map, not a textbook: every line earns its place, and nothing is here for completeness
-- each file line says what it is and why it sits in that spot, in one clause
-- the model is the single idea worth walking away with, even if the rest is forgotten
-- the pattern is how to build the next one of these, using this feature as the reference
+- written after the feature ships, to test the mental model rather than to document a reference
+- every question tests a why, a tradeoff or an order of operations, never trivia recall
+- no question is answerable from the study half above it; a quiz that quotes itself teaches nothing
+- the three wrong options are each plausible, since an obvious decoy tests nothing
+- a grade names the mechanism behind the right answer, not just the letter
+- every miss carries the transferable concept underneath it, which is the actual deliverable
 - a key that reached a commit is already leaked; rotate it before rewriting anything
 ========================
 EOF
