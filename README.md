@@ -1,6 +1,7 @@
 # TheConstruct: Secure Agentic Coding Infra
-**Claude Code Plugins Bundle: Sandboxed automations, masked credentials, deterministic conventions, and more**
-> known issues: go-based clis (`gh`, `terraform`, `kubectl`) cannot reach injectHosts domains on macos
+**Claude Code Plugins: Sandboxed automations, masked credentials, deterministic conventions, and more**
+> known issues (use `/operator:issues` to generate a fresh report): 
+> go-based clis (`gh`, `terraform`, `kubectl`) cannot reach injectHosts domains on macos
 > [(#26466)](https://github.com/anthropics/claude-code/issues/26466);
 > the sandbox ca never loads and there is no supported fix since `allowMachLookup` is not passed through
 > [(#82793)](https://github.com/anthropics/claude-code/issues/82793);
@@ -19,7 +20,7 @@ TABLE OF CONTENTS
 ├─ Installation ─── plugin marketplace · cloned repo
 ├─ Sandbox ──────── basic · repo · personal · managed · advanced
 ├─ Plugins & Skills
-├─ /operator ────── credentials · permissions · scripts · settings
+├─ /operator ────── credentials · permissions · scripts · settings · issues
 ├─ /gitgud ──────── audit · backup · continue · deliver · prune · nuke · rerun · ship
 ├─ /retardify ───── file · code · graph · plan · review · quiz · manual · todo · log
 ├─ Hooks ────────── sessionstart · pretooluse · posttooluse · taskcreated · taskcompleted · stop
@@ -36,7 +37,7 @@ TABLE OF CONTENTS
 | [:permissions](#permissions) | [:backup](#backup)     | :code              | [pretooluse](#pretooluse)       |
 | [:scripts](#scripts)         | [:continue](#continue) | [:graph](#graph)   | [posttooluse](#posttooluse)     |
 | [:settings](#settings)       | [:deliver](#deliver)   | [:plan](#plan)     | [taskcreated](#taskcreated)     |
-|                              | [:prune](#prune)       | [:manual](#manual) | [taskcompleted](#taskcompleted) |
+| [:issues](#issues)           | [:prune](#prune)       | [:manual](#manual) | [taskcompleted](#taskcompleted) |
 |                              | [:rerun](#rerun)       | [:review](#review) | [stop](#stop)                   |
 |                              | [:ship](#ship)         | [:todo](#todo)     |                                 |
 |                              | [:nuke](#nuke)         | [:quiz](#quiz)     |                                 |
@@ -457,7 +458,7 @@ model: opus
 effort: max
 license: MIT
 compatibility: requires bash, jq, curl
-description: Probe every credential-shaped variable in the active sandbox across 19 exfiltration vectors, then save a dated report to .construct/operator/credentials/ naming every leak to rotate first.
+description: probe all credential-shaped variables in the active sandbox across 19 vectors (saves report to .construct/)
 argument-hint: "[--strict] [--quick]"
 disable-model-invocation: true
 disallowed-tools: WebFetch, WebSearch
@@ -482,7 +483,7 @@ model: opus
 effort: max
 license: MIT
 compatibility: requires bash, jq, git
-description: Replay the labelled command corpus through the real PreToolUse hook, then audit the merged permission rules for drift, dead rules and wildcards that auto-approve.
+description: replay the corpus through the real PreToolUse hook, then audit the merged rules (saves report to .construct/)
 argument-hint: "[--strict]"
 disable-model-invocation: true
 disallowed-tools: Edit, Write
@@ -507,7 +508,7 @@ model: opus
 effort: max
 license: MIT
 compatibility: requires bash, jq, git
-description: Scan every workflow script, extract the commands it runs internally, then test each one against the merged settings and report what would be allowed, denied, asked, or matched by no rule at all.
+description: extract the commands your workflow scripts run, then verdict each of them (saves report to .construct/)
 argument-hint: "[--repo <name>] [--strict]"
 disable-model-invocation: true
 disallowed-tools: Edit, Write
@@ -532,7 +533,7 @@ model: opus
 effort: max
 license: MIT
 compatibility: requires bash, jq, git
-description: Audit every settings scope for faults that stay silent until they matter, then probe the live boundary to confirm the gate is not dead, or emit the setup commands for one scope instead.
+description: grade every settings scope for silent faults, then probe the live gate (saves report to .construct/)
 argument-hint: "[--audit] [--static] [--quick] [--local] [--project] [--user] [--managed] [--advanced]"
 disable-model-invocation: true
 disallowed-tools: Edit, Write
@@ -545,6 +546,29 @@ metadata:
 - static checks read the files; live probes exercise what the files only describe
 - a scope flag emits that scope's setup, resolved for either install method
 - never edits a settings file; every command it finds is yours to run
+
+#### Issues
+```
+/operator:issues
+```
+```yaml
+---
+name: issues
+license: MIT
+compatibility: requires bash, jq, curl
+description: search claude-code for issues on this surface and refresh every one cited here (saves report to .construct/)
+argument-hint: "[--tracked] [--sandbox] [--hooks] [--plugins] [--permissions] [--since <days>]"
+disable-model-invocation: true
+disallowed-tools: WebFetch, WebSearch
+metadata:
+  kind: trigger
+  artifact: .construct/operator/issues/
+---
+```
+**agents reread the threads, but you read one report:** upstream movement since you last looked
+- fetches every cited claude-code issue with plain curl, since the sandbox breaks `gh` itself
+- topical searches (`--sandbox`, `--hooks`, `--plugins`, `--permissions`) surface new candidates
+- ends by drafting the known-issues banner update, applied only when you confirm it
 
 ### /gitgud
 > the whole git dance; each pairs with a `.sh` sidecar that measures, then hands the commands back
@@ -564,7 +588,7 @@ model: opus
 effort: high
 license: MIT
 compatibility: requires bash, jq, git
-description: "Read-only whole-repo condition: composition, skill pairing, manifest agreement, artifact freshness."
+description: read the whole repo for composition, pairing, manifest agreement and freshness (saves report to .construct/)
 disable-model-invocation: true
 disallowed-tools: Edit
 metadata:
@@ -586,7 +610,7 @@ metadata:
 name: backup
 license: MIT
 compatibility: requires bash, git
-description: Snapshot history and working tree, verify the snapshot, then hand over the restore.
+description: snapshot the history and the working tree, verify that snapshot, then hand back every restore command
 disable-model-invocation: true
 metadata:
   kind: trigger
@@ -606,7 +630,7 @@ metadata:
 name: continue
 license: MIT
 compatibility: requires bash, git
-description: Measure the trunk delta, then run the sync it planned against four narrow allows.
+description: measure the trunk delta, then run the sync it planned against four narrow allows, ending on the trunk
 disable-model-invocation: true
 metadata:
   kind: trigger
@@ -628,7 +652,7 @@ model: opus
 effort: high
 license: MIT
 compatibility: requires bash, curl, git
-description: Bucket uncommitted work into atomic PRs, gate the plan, then hand over every block.
+description: bucket uncommitted work into atomic, single-purpose PRs, gate the plan, then hand back every block of it
 argument-hint: "[--debug] [--finished]"
 disable-model-invocation: true
 metadata:
@@ -649,7 +673,7 @@ metadata:
 name: prune
 license: MIT
 compatibility: requires bash, git
-description: Prune dead tracking refs and hand over the trunk sync and every branch delete.
+description: prune the dead tracking refs, report the trunk delta, then hand back every merged branch delete command
 disable-model-invocation: true
 metadata:
   kind: trigger
@@ -671,7 +695,7 @@ model: opus
 effort: max
 license: MIT
 compatibility: requires bash, git
-description: Price a hard reset, take the backup itself, then hand over the destructive rest.
+description: price what a hard reset would take, take the backup that makes it survivable, then hand back the rest
 disable-model-invocation: true
 metadata:
   kind: trigger
@@ -691,7 +715,7 @@ metadata:
 name: rerun
 license: MIT
 compatibility: requires bash, jq, curl, git
-description: Merge the current default branch into a stale branch PR, which re-runs its CI, after /gitgud:deliver leaves a PR computed against a trunk that has since moved.
+description: merge the current default branch into a stale PR so its CI re-runs against a trunk that has since moved
 argument-hint: "[--watch]"
 disable-model-invocation: true
 metadata:
@@ -714,7 +738,7 @@ model: opus
 effort: max
 license: MIT
 compatibility: requires bash, jq, curl, git
-description: Verify every release precondition, then hand over the bump, push and promote.
+description: verify every release precondition, abort on any fault, then hand back the bump, push and promote steps
 disable-model-invocation: true
 metadata:
   kind: trigger
@@ -738,7 +762,7 @@ metadata:
 name: file
 license: MIT
 compatibility: requires bash, git
-description: "Everything about a source file except the logic: its name, its wayfinding header, its module order, and its inline comments. Validates all four."
+description: the name, wayfinding header, module order and inline comments on any source file, all four validated
 when_to_use: "Creating or editing any source file, since all four conventions apply to every one. Also when asked to wayfind, comment, rename or reorder imports, when a header has drifted from the file it describes, or when the posttooluse lint reports a finding."
 paths: "**/*.ts, **/*.tsx, **/*.js, **/*.jsx, **/*.mjs, **/*.cjs, **/*.sh, **/*.py, **/*.rb, **/*.go, **/*.rs"
 metadata:
@@ -762,7 +786,7 @@ model: opus
 effort: max
 license: MIT
 compatibility: requires bash, curl, git
-description: Turn work into a staged plan in .construct/retardify/plan/, with readiness tables, then validate it.
+description: turn work into a staged plan with per-stage readiness tables, then validate it (saves plan to .construct/)
 argument-hint: "<goal>"
 disable-model-invocation: true
 metadata:
@@ -786,7 +810,7 @@ model: opus
 effort: max
 license: MIT
 compatibility: requires bash, git
-description: Turn a goal into a fan-out spec prompt in .construct/retardify/graph/, then validate it against its spec.
+description: turn a goal into a fan-out spec prompt for a fresh session, then validate it (saves spec to .construct/)
 argument-hint: "<goal>"
 disable-model-invocation: true
 metadata:
@@ -810,7 +834,7 @@ model: fable
 effort: max
 license: MIT
 compatibility: requires bash, git
-description: Turn a shipped feature into a study map and an ungraded 20-question quiz in .construct/retardify/quiz/, then grade it on a second run.
+description: turn a shipped feature into a study map and an ungraded 20-question quiz (saves quiz to .construct/)
 argument-hint: "<feature>"
 disable-model-invocation: true
 metadata:
@@ -834,7 +858,7 @@ model: fable
 effort: max
 license: MIT
 compatibility: requires bash, git
-description: Distill a completed plan into a perfect-world build manual in .construct/retardify/manual/, then validate it.
+description: distill a completed plan into a perfect-world build manual, then validate it (saves manual to .construct/)
 argument-hint: "<plan>"
 disable-model-invocation: true
 metadata:
@@ -858,7 +882,7 @@ model: opus
 effort: max
 license: MIT
 compatibility: requires bash, git
-description: Adversarial read-only code review producing a graded scorecard saved to file.
+description: adversarial read-only code review grading documented claims against reality (saves scorecard to .construct/)
 disable-model-invocation: true
 disallowed-tools: Edit
 metadata:
@@ -880,7 +904,7 @@ metadata:
 name: log
 license: MIT
 compatibility: requires bash, git
-description: "Shape of a daily agent log in .construct/retardify/log/: threads, notes, and prompts."
+description: "the shape of a daily agent log: threads carrying their own notes and prompts (saves log to .construct/)"
 when_to_use: "Writing to .construct/retardify/log/, which the taskcompleted and stop hooks both demand before a turn closes. Also when asked to log, note or record what happened, or to recap the day's threads."
 metadata:
   kind: spec
@@ -903,7 +927,7 @@ model: opus
 effort: high
 license: MIT
 compatibility: requires bash, git
-description: Scan repo, docs and logs for what to work on next, saved to file.
+description: scan repo, docs and agent logs for what to work on next, ranked urgent/important (saves list to .construct/)
 disable-model-invocation: true
 disallowed-tools: Edit
 metadata:
