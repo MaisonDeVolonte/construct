@@ -1,6 +1,6 @@
 ---
 name: graph
-description: Turn a goal into a fan-out spec prompt in .operator/graphs/, then validate it against its spec.
+description: Turn a goal into a fan-out spec prompt in .construct/retardify/graph/, then validate it against its spec.
 argument-hint: <goal>
 disable-model-invocation: true
 metadata:
@@ -48,7 +48,7 @@ echo "sidecar exit: $?"
 ## the shape
 > the spec this skill writes against; the validator below grades what landed
 
-**the file:** `.operator/graphs/YYYY-MM-DD-operation-<title>.md`, one per spec
+**the file:** `.construct/retardify/graph/YYYY-MM-DD-operation-<title>.md`, one per spec
 - written on explicit `@graphspec --<artifact> <goal>`, where the flag defaults to `--plan`
 - the flag names what executing the spec must produce, so `--plan` yields a plan file
 - `--plan` is the only flag; the dated artifacts stay owned by their own triggers
@@ -68,7 +68,7 @@ echo "sidecar exit: $?"
 
 **the pipeline:** show the saved spec and STOP; fan out begins only on the user's explicit go
 - a fresh session executes the saved spec and writes whatever `output` names
-- `--plan` means `.operator/plans/<same-basename>.md` per `/retardify:plan`, and it must pass its sidecar
+- `--plan` means `.construct/retardify/plan/<same-basename>.md` per `/retardify:plan`, and it must pass its sidecar
 
 ▸ GRAPH SPEC
 
@@ -88,7 +88,7 @@ VERIFY:       describe a fresh agent that attacks each finding against DONE WHEN
               dropping whatever fails
 
 OUTPUT:       name the artifact executing this spec must produce, taken from the flag
-              --plan means .operator/plans/<same-basename>.md per the plan spec, passing its sidecar
+              --plan means .construct/retardify/plan/<same-basename>.md per the plan spec, passing its sidecar
 
 *example:*
 ```
@@ -133,7 +133,7 @@ RULES:        1. a finding without evidence does not survive verify
 VERIFY:       a fresh agent attacks each finding against DONE WHEN and CONTEXT
               evidence that fails to reproduce, or contradicts a known fact, kills the finding
 
-OUTPUT:       .operator/plans/2026-07-30-operation-monorepo.md, per the plan spec, passing its sidecar
+OUTPUT:       .construct/retardify/plan/2026-07-30-operation-monorepo.md, per the plan spec, passing its sidecar
 
 ```
 

@@ -11,7 +11,7 @@
 # - no flag runs the trigger half, so every existing invocation is unchanged
 # - `--check [paths]` runs the validator half; with no paths it grades the whole artifact dir
 # - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
-# @see plugins/operator/skills/credentials/SKILL.md, plugins/operator/shared/secrets.sh, .operator/credentials/, tools/check-skills/README.md, plugins/operator/skills/credentials/credentials.sh
+# @see plugins/operator/skills/credentials/SKILL.md, plugins/operator/shared/secrets.sh, .construct/operator/credentials/, tools/check-skills/README.md, plugins/operator/skills/credentials/credentials.sh
 
 set -euo pipefail
 
@@ -262,7 +262,7 @@ if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   echo "fatal: not a git repository" >&2; exit 1; fi
 cd "$(git rev-parse --show-toplevel)"
 
-if [ ${#TARGETS[@]} -eq 0 ]; then TARGETS=(".operator/credentials"); fi
+if [ ${#TARGETS[@]} -eq 0 ]; then TARGETS=(".construct/operator/credentials"); fi
 
 FILES=()
 for path in "${TARGETS[@]}"; do

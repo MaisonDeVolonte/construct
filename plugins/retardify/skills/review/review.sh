@@ -11,7 +11,7 @@
 # - no flag runs the trigger half, so every existing invocation is unchanged
 # - `--check [paths]` runs the validator half; with no paths it grades the whole artifact dir
 # - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
-# @see plugins/retardify/skills/review/SKILL.md, README.md, .operator/reviews/, tools/check-skills/README.md, plugins/retardify/skills/review/review.sh, plugins/retardify/shared/secrets.sh
+# @see plugins/retardify/skills/review/SKILL.md, README.md, .construct/retardify/review/, tools/check-skills/README.md, plugins/retardify/skills/review/review.sh, plugins/retardify/shared/secrets.sh
 
 set -euo pipefail
 
@@ -30,7 +30,7 @@ else
   # no scorecard leaves nothing; paths anchor to the repo root, not the caller's dir
   echo "--- REVIEW ARTIFACT ---"
   ROOT=$(git rev-parse --show-toplevel)
-  TODAYS_REVIEW=".operator/reviews/$(date +%Y-%m-%d).md"
+  TODAYS_REVIEW=".construct/retardify/review/$(date +%Y-%m-%d).md"
   # no file yet means no scorecards yet, which is the count the agent numbers its first one from
   if [ -f "$ROOT/$TODAYS_REVIEW" ];
   then REVIEW_COUNT=$(grep -c '^## Review #' "$ROOT/$TODAYS_REVIEW" || true)
@@ -99,7 +99,7 @@ MAX_WIDTH=100
 STRICT=0
 KEEP=0
 TEMPLATE="plugins/retardify/skills/review/SKILL.md"
-ARTIFACTS=".operator/reviews"
+ARTIFACTS=".construct/retardify/review"
 
 # the subsections every scorecard carries, which is the one thing every entry must agree on
 EXPECTED_SECTIONS=$'reality check\neffort vs output\nrisk & maintenance traps\ngrades'

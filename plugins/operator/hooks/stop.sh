@@ -10,9 +10,9 @@
 # - the hourly pass stays for what no grep can see, which is a prompt that was never captured
 # - a debounce keeps a stubborn thread from asking again before the agent has had a turn
 # - works with `claude`; does not work with `grok`
-# @see plugins/retardify/skills/log/SKILL.md, plugins/operator/hooks/taskcompleted.sh, .operator/logs/
+# @see plugins/retardify/skills/log/SKILL.md, plugins/operator/hooks/taskcompleted.sh, .construct/retardify/log/
 
-TODAYS_LOG=".operator/logs/$(date +%Y-%m-%d).md"
+TODAYS_LOG=".construct/retardify/log/$(date +%Y-%m-%d).md"
 
 # seconds between full passes, which is the backstop rather than the main trigger
 UPDATE_INTERVAL=3600
@@ -24,7 +24,7 @@ LAST_MODIFIED=$(stat -f %m "$TODAYS_LOG" 2>/dev/null || stat -c %Y "$TODAYS_LOG"
 
 # make today's log file if one doesn't exist
 if [ ! -f "$TODAYS_LOG" ];
-then mkdir -p .operator/logs; echo "# $TODAYS_LOG" > "$TODAYS_LOG"; fi
+then mkdir -p .construct/retardify/log; echo "# $TODAYS_LOG" > "$TODAYS_LOG"; fi
 
 ELAPSED_TIME=$((NOW - LAST_MODIFIED))
 

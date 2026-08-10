@@ -15,11 +15,11 @@
 # - a stale artifact directory means a writer skill stopped being run, not that it broke
 # - shared drift is the check `secrets.sh` names in its own header, since duplication needs one
 # ARTIFACT
-# - `.operator/git/YYYY-MM-DD.md`, one file per day, holding the condition report and its telemetry
+# - `.construct/gitgud/audit/YYYY-MM-DD.md`, one file per day, holding the condition report and its telemetry
 # - this skill owns the git kind outright: it names the target, and grades every entry that landed
 # - `triage.sh` used to report the target and no doc ever instructed the write, so nothing wrote it
 # - gitignored in this repo; read-only still holds, since no TRACKED file is ever touched
-# @see plugins/gitgud/skills/audit/SKILL.md, plugins/gitgud/shared/triage.sh, plugins/gitgud/shared/handover.sh, tools/check-skills/README.md, .operator/git/
+# @see plugins/gitgud/skills/audit/SKILL.md, plugins/gitgud/shared/triage.sh, plugins/gitgud/shared/handover.sh, tools/check-skills/README.md, .construct/gitgud/audit/
 
 set -euo pipefail
 
@@ -102,10 +102,10 @@ fi
 
 # artifacts: a directory whose newest file is old means its writer stopped being run
 echo "--- artifacts ---"
-# one directory per artifact kind, all at one level, so the walk needs no special case
-for d in .operator/*/; do
+# one directory per skill, nested under its plugin, so the walk runs two levels deep
+for d in .construct/*/*/; do
   [ -d "$d" ] || continue
-  label=${d#.operator/}; label=${label%/}
+  label=${d#.construct/}; label=${label%/}
   count=$({ find "$d" -name '*.md' 2>/dev/null || true; } | wc -l | tr -d ' ')
   latest=$({ find "$d" -name '*.md' 2>/dev/null || true; } | sort | tail -1)
   telemetry_line "$label" "files: $count | latest: ${latest:-none}"
@@ -284,7 +284,7 @@ check_artifact() {
 # archive: one file per day, many audits per file — reported never created, so this sidecar names
 # the target and the number the entry should carry, and the agent writes it
 echo "--- archive ---"
-TODAYS_AUDIT=".operator/git/$(date +%Y-%m-%d).md"
+TODAYS_AUDIT=".construct/gitgud/audit/$(date +%Y-%m-%d).md"
 # no file yet means no audits yet, which is the count the agent numbers its first one from
 if [ -f "$ROOT/$TODAYS_AUDIT" ];
 then AUDIT_COUNT=$(grep -c '^## Git Audit #' "$ROOT/$TODAYS_AUDIT" || true)
@@ -293,7 +293,7 @@ telemetry_line "audit_file" "$TODAYS_AUDIT"
 telemetry_line "audit_count" "$AUDIT_COUNT"
 telemetry_line "next_audit" "$((AUDIT_COUNT + 1))"
 telemetry_line "timestamp" "$(date '+%Y-%m-%d %H:%M')"
-check_artifact ".operator/git"
+check_artifact ".construct/gitgud/audit"
 
 echo "--- end ---"
 block_close

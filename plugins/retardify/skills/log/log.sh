@@ -7,17 +7,17 @@
 # - sidecar for `/retardify:log` — asserts a day's log matches the shape its SKILL.md documents
 # - the doc carries threads, notes and prompts; this file carries what a script can judge
 # ARTIFACT
-# - `.operator/logs/YYYY-MM-DD.md`, one file per day, holding the work and the prompts that drove it
+# - `.construct/retardify/log/YYYY-MM-DD.md`, one file per day, holding the work and the prompts that drove it
 # - gitignored in this repo; host projects decide for themselves whether to track it
 # - `sessionstart.sh` creates the day's file and `stop.sh` gates the session on it being written
 # - no trigger wraps it: a thread, a note or a synthesis is asked for in plain words
 # - a thread groups work by task or topic; notes and prompts append under the thread they belong to
 # - notes get absorbed into the thread's prose on synthesis; prompts stay a list and get pruned
 # RUN
-# - defaults to every file in `.operator/logs/`; pass files or a directory to scope it
+# - defaults to every file in `.construct/retardify/log/`; pass files or a directory to scope it
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
 # - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
-# @see plugins/retardify/skills/log/SKILL.md, plugins/operator/hooks/sessionstart.sh, plugins/operator/hooks/stop.sh, .operator/logs/, plugins/retardify/shared/secrets.sh
+# @see plugins/retardify/skills/log/SKILL.md, plugins/operator/hooks/sessionstart.sh, plugins/operator/hooks/stop.sh, .construct/retardify/log/, plugins/retardify/shared/secrets.sh
 
 set -euo pipefail
 
@@ -41,7 +41,7 @@ MAX_WIDTH=100
 STRICT=0
 KEEP=0
 TEMPLATE="plugins/retardify/skills/log/SKILL.md"
-ARTIFACTS=".operator/logs"
+ARTIFACTS=".construct/retardify/log"
 
 # the subsections every thread carries, which is the one thing every thread must agree on
 EXPECTED_SECTIONS=$'context\nchanges\ninsights\nadvice'

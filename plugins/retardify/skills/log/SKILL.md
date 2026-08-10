@@ -1,11 +1,11 @@
 ---
 name: log
-description: "Shape of a daily agent log in .operator/logs/: threads, notes, and prompts."
-when_to_use: "Writing to .operator/logs/, which the taskcompleted and stop hooks both demand before a turn closes. Also when asked to log, note or record what happened, or to recap the day's threads."
+description: "Shape of a daily agent log in .construct/retardify/log/: threads, notes, and prompts."
+when_to_use: "Writing to .construct/retardify/log/, which the taskcompleted and stop hooks both demand before a turn closes. Also when asked to log, note or record what happened, or to recap the day's threads."
 metadata:
   kind: spec
 ---
-# .operator/logs/YYYY-MM-DD.md
+# .construct/retardify/log/YYYY-MM-DD.md
 one file per day, holding both the work and the prompts that drove it:
 
 - gitignored in this repo; host projects decide for themselves whether to track it

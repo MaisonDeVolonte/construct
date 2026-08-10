@@ -11,7 +11,7 @@
 # - no flag runs the trigger half, so every existing invocation is unchanged
 # - `--check [paths]` runs the validator half; with no paths it grades the whole artifact dir
 # - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
-# @see plugins/retardify/skills/plan/SKILL.md, .operator/plans/, plugins/retardify/skills/graph/SKILL.md, plugins/retardify/skills/log/SKILL.md, plugins/retardify/shared/secrets.sh
+# @see plugins/retardify/skills/plan/SKILL.md, .construct/retardify/plan/, plugins/retardify/skills/graph/SKILL.md, plugins/retardify/skills/log/SKILL.md, plugins/retardify/shared/secrets.sh
 
 set -euo pipefail
 
@@ -24,7 +24,7 @@ else
     echo "fatal: not a git repository" >&2; exit 1; fi
   cd "$(git rev-parse --show-toplevel)"
 
-  ARTIFACTS=".operator/plans"
+  ARTIFACTS=".construct/retardify/plan"
   TEMPLATE="plugins/retardify/skills/plan/SKILL.md"
   VALIDATOR="plugins/retardify/skills/plan/plan.sh --check"
   TODAY=$(date +%Y-%m-%d)
@@ -127,8 +127,8 @@ if [ ${#PLANS[@]} -eq 0 ]; then
   if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     echo "fatal: not a git repository, and no paths given" >&2; exit 1; fi
   cd "$(git rev-parse --show-toplevel)"
-  if [ ! -d .operator/plans ]; then echo "fatal: no .operator/plans/ to scan" >&2; exit 1; fi
-  PLANS=(.operator/plans/*.md)
+  if [ ! -d .construct/retardify/plan ]; then echo "fatal: no .construct/retardify/plan/ to scan" >&2; exit 1; fi
+  PLANS=(.construct/retardify/plan/*.md)
 fi
 
 # a directory argument expands to the plans inside it
@@ -222,7 +222,7 @@ stage_items() {
 #   each takes a plan path and appends findings; to add one, write a function and list it below
 # ==============
 
-# "one file per plan, `.operator/plans/`, named `YYYY-MM-DD-operation-<title>.md`"
+# "one file per plan, `.construct/retardify/plan/`, named `YYYY-MM-DD-operation-<title>.md`"
 # caps are allowed in the title because `-DONE` is the closed-plan suffix
 check_filename() {
   local file=$1 base dir
@@ -232,8 +232,8 @@ check_filename() {
     err "$file" 1 filename "expected YYYY-MM-DD-operation-<title>.md"
   fi
   case "$dir" in
-    .operator/plans|./.operator/plans|*/.operator/plans) ;;
-    *) warn "$file" 1 location "one plan per file, all of them in .operator/plans/";;
+    .construct/retardify/plan|./.construct/retardify/plan|*/.construct/retardify/plan) ;;
+    *) warn "$file" 1 location "one plan per file, all of them in .construct/retardify/plan/";;
   esac
 }
 

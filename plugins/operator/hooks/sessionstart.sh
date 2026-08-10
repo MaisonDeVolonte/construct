@@ -6,14 +6,14 @@
 # - injects the project's README.md and recent logs into session context
 # - runs before user begins typing
 # - stubs today's log file if none exists yet
-# @see plugins/retardify/skills/log/, plugins/operator/hooks/, .operator/logs/
+# @see plugins/retardify/skills/log/, plugins/operator/hooks/, .construct/retardify/log/
 
-TODAY_LOG=".operator/logs/$(date +%Y-%m-%d).md"
+TODAY_LOG=".construct/retardify/log/$(date +%Y-%m-%d).md"
 READ_ME="README.md"
 
 # stub today's log file if one doesn't exist
 if [ ! -f "$TODAY_LOG" ];
-then mkdir -p .operator/logs; echo "# $TODAY_LOG" > "$TODAY_LOG"; fi
+then mkdir -p .construct/retardify/log; echo "# $TODAY_LOG" > "$TODAY_LOG"; fi
 
 # the log skill owns its own budget; a missing log skill falls back rather than injecting nothing
 LOG_SKILL="$(dirname "${BASH_SOURCE[0]}")/../../retardify/skills/log/log.sh"
@@ -24,7 +24,7 @@ INJECT_THREADS=${INJECT_THREADS:-4}
 # threads begin at the `## Thread` heading to the line before the next one
 all_threads() {
   local file total
-  for file in $(ls -1 .operator/logs/*.md 2>/dev/null | sort); do
+  for file in $(ls -1 .construct/retardify/log/*.md 2>/dev/null | sort); do
     [ -e "$file" ] || continue
     total=$(wc -l < "$file" | tr -d ' ')
     awk -v f="$file" -v total="$total" '
