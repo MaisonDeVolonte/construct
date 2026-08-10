@@ -78,7 +78,7 @@ echo "sidecar exit: $?"
 ## the shape
 > the artifact this skill appends to; the sidecar grades what landed on its next run
 
-# .operator/settings/YYYY-MM-DD.md
+# .construct/operator/settings/YYYY-MM-DD.md
 one file per day, appended to by every deliberate run:
 
 - the heading reads `## Settings Audit #[next_audit]: [timestamp]`, both from the telemetry
@@ -111,7 +111,7 @@ one bullet per issue, leading with the label the sidecar printed
 | `coverage` | a rule with no why in the scope's `.md`, or a mirror claim that has diverged |
 | `guard` | nothing protects the policy directories, so this auditor is editable |
 | `probe` | a boundary that did not refuse, naming what got through |
-| `wrapped` | errors from the wrapped `/operator:permissions` or `/operator:scopes` run |
+| `wrapped` | errors from the wrapped `/operator:permissions` or `/operator:scripts` run |
 | `resolution_shape` `resolution_parity` | an older entry whose resolutions do not match its findings |
 
 *example:*

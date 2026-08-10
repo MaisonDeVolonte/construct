@@ -6,7 +6,7 @@
 # PAIR
 # - sidecar for `check-skills` — asserts every skill doc and its sidecar still hold together
 # - the doc carries the shape a trigger follows; this file carries what a script can judge
-# - the only spec whose sidecar scans `plugins/*/skills/`, not a `.operator/` artifact directory
+# - the only spec whose sidecar scans `plugins/*/skills/`, not a `.construct/` artifact directory
 # SHAPE
 # - a pair is one `SKILL.md` and one `<name>.sh`, sharing a folder named for the trigger
 # - the doc keeps frontmatter as its orientation; the wayfinder lives in the sidecar, here
@@ -80,6 +80,12 @@ trigger_name() {
   basename "$doc" .md
 }
 
+# plugins/<plugin>/skills/<name>/ — the plugin is the namespace half of every invocation, and the
+# first half of the artifact path, so two checks read it off the doc's own location
+plugin_of() {
+  printf '%s' "$1" | sed -n 's|.*plugins/\([a-z][a-z-]*\)/skills/.*|\1|p'
+}
+
 # the doc half of a pair is a SKILL.md inside a lowercase skill folder; anything else in the tree
 # is a reference doc rather than a trigger, and only the first kind is a pair
 is_trigger_name() {
@@ -91,7 +97,7 @@ is_trigger_name() {
 # listing them beats guessing, since nothing in the filename says which kind a script is
 is_subtool() {
   case "$(basename "$1")" in
-    permissions.sh|scopes.sh|secrets.sh|handover.sh|triage.sh) return 0;;
+    permissions.sh|scripts.sh|secrets.sh|handover.sh|triage.sh) return 0;;
     *) return 1;;
   esac
 }
@@ -278,28 +284,25 @@ check_branches() {
 
 # a trigger that writes a dated artifact has to name the template that artifact must match, or the
 # agent writing it has nothing to follow
-# an audit directory is named for the SUBJECT audited rather than for the skill that audits it, so
-# the two agree everywhere except `git`, which /gitgud:audit owns; every other kind is its own owner
-owner_of_kind() {
-  case "$1" in
-    git) printf 'audit';;
-    *)   printf '%s' "${1%s}";;
-  esac
-}
-
+# `.construct/<plugin>/<skill>/` names its own owner, so ownership is read off the path itself and
+# the kind list and its singular/plural lookup are both gone; a doc naming a path that is not its
+# own is reaching across a boundary, and that reference has to be an invocation rather than a path
 check_artifact() {
-  local doc=$1 type root owner
-  # one directory per kind, all at one level, so the root is the kind and needs no lookup
-  for type in graphs guides logs plans reviews todos files permissions scopes settings credentials git; do
-    root=".operator/$type/"
-    if ! grep -q "$root" "$doc"; then continue; fi
-    owner=$(owner_of_kind "$type")
-    # a cross-plugin reference is an invocation, since CLAUDE_PLUGIN_ROOT never leaves its plugin
-    if ! grep -qE "plugins/[a-z]+/skills/${owner}s?/SKILL\.md|/[a-z]+:${owner}s?([^a-z-]|$)" "$doc"; then
-      warn "$doc" "$(where "$doc" "$root")" artifact \
-        "writes $root without naming the skill that owns that shape"
+  local doc=$1 name plugin own ref refplugin refskill
+  name=$(trigger_name "$doc")
+  plugin=$(plugin_of "$doc")
+  [ -n "$plugin" ] || return 0
+  own=".construct/$plugin/$name/"
+  while IFS= read -r ref; do
+    [ -n "$ref" ] || continue
+    [ "$ref" = "$own" ] && continue
+    refplugin=$(printf '%s' "$ref" | cut -d/ -f2)
+    refskill=$(printf '%s' "$ref" | cut -d/ -f3)
+    if ! grep -qE "/$refplugin:$refskill([^a-z-]|$)" "$doc"; then
+      warn "$doc" "$(where "$doc" "$ref")" artifact \
+        "names $ref without the /$refplugin:$refskill invocation that owns it"
     fi
-  done
+  done < <(grep -oE '\.construct/[a-z-]+/[a-z-]+/' "$doc" | sort -u || true)
 }
 
 # a block header carries the name a user typed, so it survives a rename only if something checks it
@@ -309,8 +312,7 @@ check_block_name() {
   name=$(trigger_name "$doc")
   sidecar="$(dirname "$doc")/$name.sh"
   [ -f "$sidecar" ] || return 0
-  # plugins/<plugin>/skills/<name>/ — the plugin is the namespace half of every invocation
-  plugin=$(printf '%s' "$doc" | sed -n 's|.*plugins/\([a-z][a-z-]*\)/skills/.*|\1|p')
+  plugin=$(plugin_of "$doc")
   [ -n "$plugin" ] || return 0
   want="$plugin:$name"
   while IFS=$'\t' read -r n found; do
@@ -324,7 +326,7 @@ check_block_name() {
 # the body checks: a doc can be shape-correct in its frontmatter and its pairing and still be
 # structurally broken inside, which is how a pasted shape corrupted two docs with 0 errors reported
 check_body() {
-  local doc=$1 n num prev heading ticks kind found template
+  local doc=$1 n num prev heading ticks own plugin want found template
 
   # the first `# ` heading is where a doc stops instructing and starts templating, so it is the
   # boundary every check below needs: numbered lines above it are steps, below it they are example
@@ -358,29 +360,40 @@ check_body() {
     fi
   done < <(grep -nE '^#{1,6} ' "$doc" | sed 's/:/\t/' || true)
 
-  # an archive shape naming another skill's kind is what a pasted block leaves behind, and the
-  # agent silently corrects for it, so the artifacts on disk never show the doc is wrong
-  # the kind comes from the template's own h1, never from a mention: a findings example may name
-  # a sibling kind, and scanning for any `.operator/x/` reads that as ownership
   # an unfilled placeholder is the pasted generic shape itself, still carrying `<kind>` and
   # `<Kind>` where the skill's own name belongs. it reads as a template rather than a spec, and it
-  # is what a kind check can never catch, since a placeholder names no kind to disagree with
-  n=$(grep -nE '^# \.operator/<[a-z]+>/|^## <[A-Za-z]+> Audit #' "$doc" 2>/dev/null | head -1 | cut -d: -f1 || true)
+  # is what a path check can never catch, since a placeholder names no path to disagree with
+  n=$(grep -nE '^# \.construct/<|^## <[A-Za-z]+> Audit #' "$doc" 2>/dev/null | head -1 | cut -d: -f1 || true)
   if [ -n "$n" ]; then
     err "$doc" "$n" shape_placeholder \
       "the archive shape still carries its <kind> placeholders; write it for this skill"
     return 0
   fi
 
-  kind=$(sed -n 's|^# \.operator/\([a-z]\{1,\}\)/.*|\1|p' "$doc" | head -1)
-  [ -n "$kind" ] || return 0
+  # an archive shape naming another skill's artifact is what a pasted block leaves behind, and the
+  # agent silently corrects for it, so the artifacts on disk never show the doc is wrong
+  # the path is read off the template's own h1 and compared to the doc's own location, which is
+  # exact: a pasted shape carries the source skill's full path and disagrees on the first segment
+  own=$(sed -n 's|^# \(\.construct/[a-z-]*/[a-z-]*/\).*|\1|p' "$doc" | head -1)
+  [ -n "$own" ] || return 0
+  plugin=$(plugin_of "$doc")
+  [ -n "$plugin" ] || return 0
+  want=".construct/$plugin/$(trigger_name "$doc")/"
+  if [ "$own" != "$want" ]; then
+    n=$(where "$doc" '^# \.construct/')
+    err "$doc" "$n" shape_path "the archive shape writes $own where this skill owns $want"
+  fi
+
+  # every audit heading in one doc names the same subject; two vocabularies is half a paste
+  prev=''
   while IFS=$'\t' read -r n heading; do
     [ -n "$n" ] || continue
-    found=$(printf '%s' "$heading" | sed -n 's/^## \([A-Za-z]\{1,\}\) Audit #.*/\1/p' | tr '[:upper:]' '[:lower:]')
+    found=$(printf '%s' "$heading" | sed -n 's/^## \([A-Za-z]\{1,\}\) Audit #.*/\1/p')
     [ -n "$found" ] || continue
-    if [ "$found" != "$kind" ]; then
-      err "$doc" "$n" shape_kind "a '$found' audit heading in the skill that owns '$kind'"
+    if [ -n "$prev" ] && [ "$found" != "$prev" ]; then
+      err "$doc" "$n" shape_heading "a '$found' audit heading where the shape already said '$prev'"
     fi
+    prev=$found
   done < <(grep -nE '^## [A-Za-z]+ Audit #' "$doc" | sed 's/:/\t/' || true)
 }
 
@@ -430,16 +443,21 @@ check_sidecar_lint() {
 # a trigger the index never lists is a trigger nobody discovers, and one listed without its posture
 # is one nobody can judge the blast radius of before running it
 check_index() {
-  local doc=$1 name entry
+  local doc=$1 name plugin entry
   name=$(trigger_name "$doc")
-  if [ -z "$INDEX" ]; then return 0; fi
+  plugin=$(plugin_of "$doc")
+  if [ -z "$INDEX" ] || [ -z "$plugin" ]; then return 0; fi
+  # the readme names a skill two ways: a bare invocation fenced under its catalog entry, and a
+  # linked SKILL.md path in the audits list. either is discoverable, and only the second carries
+  # a posture, so the fenced form returns clean rather than warning on a column it never had
+  if grep -qE "^/$plugin:${name}[[:space:]]*$" "$INDEX"; then return 0; fi
   entry=$(grep -nE "\(plugins/[a-z]+/skills/$name/SKILL\.md\)" "$INDEX" | head -n 1 || true)
   if [ -z "$entry" ]; then
-    err "$doc" 1 unindexed "$INDEX does not list /$name; nobody will find it"
+    err "$doc" 1 unindexed "$INDEX does not list /$plugin:$name; nobody will find it"
     return 0
   fi
   if ! printf '%s' "$entry" | grep -qE "($POSTURES)"; then
-    warn "$INDEX" "${entry%%:*}" no_posture "@$name is listed without a posture keyword"
+    warn "$INDEX" "${entry%%:*}" no_posture "/$plugin:$name is listed without a posture keyword"
   fi
 }
 

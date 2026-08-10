@@ -1,10 +1,10 @@
 #!/bin/bash
 # ==========================================================
-# @file scopes.sh - script versus scope stack mapper sidecar
+# @file scripts.sh - what a script runs versus your settings
 # ==========================================================
 # @description
 # PAIR
-# - sidecar for `/operator:scopes` — maps a workflow script against a merged stack of settings files
+# - sidecar for `/operator:scripts` — tests what a workflow script runs against the merged settings
 # - it answers what the floor cannot: what a sidecar reaches once it is already running
 # - it installs nothing, and the script file is the unit of trust every finding reports under
 # TIERS
@@ -17,7 +17,7 @@
 # - `--repo <name>` resolves a bare name under ~/Developer to that repo's own settings stack
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
 # - the slowest trigger in the family, since it spawns the hook once per extracted command
-# @see plugins/operator/skills/scopes/SKILL.md, plugins/operator/hooks/pretooluse.sh, plugins/operator/shared/corpus.tsv, plugins/operator/settings/settings.user.md, plugins/operator/skills/settings/SKILL.md
+# @see plugins/operator/skills/scripts/SKILL.md, plugins/operator/hooks/pretooluse.sh, plugins/operator/shared/corpus.tsv, plugins/operator/settings/settings.user.md, plugins/operator/skills/settings/SKILL.md
 
 set -euo pipefail
 
@@ -319,7 +319,7 @@ done
 #   this skill's own dated artifact, graded here so nothing outside this file decides its shape
 #   the shape lives in this skill's SKILL.md and the labels below are what this sidecar emits
 # ==============
-ARTIFACT_KIND="scopes"
+ARTIFACT_KIND="scripts"
 ARTIFACT_SECTIONS=$'state\nfindings\nresolutions\ntelemetry'
 ARTIFACT_LABELS='Bypass|Prompting|Unguarded Internal|Drift|Scope|Coverage'
 ARTIFACT_MAX_WIDTH=100
@@ -479,7 +479,7 @@ check_artifact() {
   done
 }
 
-check_artifact ".operator/scopes"
+check_artifact ".construct/operator/scripts"
 
 # ==============
 # TELEMETRY
@@ -492,9 +492,9 @@ WARNINGS=${WARNINGS:-0}
 # audit: one file per day per kind, so two triggers on the same day never interleave one file
 # reported, never created: the sidecar names the path and the count, the agent writes the entry
 AUDIT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
-TODAYS_AUDIT=".operator/scopes/$(date +%Y-%m-%d).md"
+TODAYS_AUDIT=".construct/operator/scripts/$(date +%Y-%m-%d).md"
 if [ -f "$AUDIT_ROOT/$TODAYS_AUDIT" ];
-then AUDIT_COUNT=$(grep -c '^## Scopes Audit #' "$AUDIT_ROOT/$TODAYS_AUDIT" || true)
+then AUDIT_COUNT=$(grep -c '^## Scripts Audit #' "$AUDIT_ROOT/$TODAYS_AUDIT" || true)
 else AUDIT_COUNT=0; fi
 AUDIT_COUNT=${AUDIT_COUNT:-0}
 
@@ -502,7 +502,7 @@ AUDIT_COUNT=${AUDIT_COUNT:-0}
 
 cat <<EOF
 
-=== scopes.sh workflow tester ===
+=== scripts.sh workflow tester ===
 audit_file: $TODAYS_AUDIT
 audit_count: $AUDIT_COUNT
 next_audit: $((AUDIT_COUNT + 1))
