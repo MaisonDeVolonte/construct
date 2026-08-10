@@ -10,7 +10,7 @@
 #   - none: legitimate work that must NOT be blocked, so over-blocking gets caught too
 # - nothing here is ever executed; every line is replayed as a string into the hook
 # - add a spelling whenever one is found in the wild, since coverage is the whole point
-# @see AGENTS.md, plugins/operator/skills/permissions/permissions.sh, plugins/operator/skills/scopes/scopes.sh, .claude/settings.json
+# @see AGENTS.md, plugins/operator/skills/permissions/permissions.sh, plugins/operator/skills/scripts/scripts.sh, .claude/settings.json
 #
 
 # effect	gate	command
@@ -31,12 +31,25 @@ write-protected-path	hook	rm .git/hooks/pre-commit
 write-protected-path	hook	chmod 777 .env
 write-protected-path	hook	rsync -a payload/ webflow/
 write-protected-path	hook	truncate -s 0 .husky/pre-commit
-move-out-of-repo	ask	mv .operator/reviews /tmp/stash
+quoted-delimiter-split	hook	sed -i '' 's|a|b|g' .claude/settings.json
+quoted-delimiter-split	hook	sed -i '' -e 's|a|b|g' plugins/operator/hooks/stop.sh
+quoted-delimiter-split	hook	sed -i '' 's;a;b;g' plugins/operator/hooks/pretooluse.sh
+quoted-delimiter-split	hook	perl -i -pe 's|a|b|' plugins/operator/settings/settings.user.json
+quoted-delimiter-split	hook	rm plugins/operator/hooks/stop.sh && echo 'a|b'
+quoted-delimiter-split	none	grep -i foo plugins/operator/hooks/stop.sh | sed 's|a|b|'
+write-indirect-target	ask	ls plugins/operator/settings/ ; cp evil.sh "$DEST"
+write-indirect-target	ask	for f in $(grep -rl x plugins/operator/hooks/); do echo hi > "$f"; done
+write-indirect-target	ask	grep -rlv plugins/operator/hooks/ . > /tmp/l; sed -i '' -e 's|a|b|g' "$T"
+write-indirect-target	none	sed -i '' -e 's|a|b|g' README.md
+write-indirect-target	none	grep -rn foo plugins/operator/hooks/ | awk '{print $NF}'
+write-indirect-target	none	cat plugins/operator/hooks/stop.sh > /tmp/copy.txt
+write-indirect-target	none	wc -l plugins/operator/hooks/*.sh | awk '{print $1, $NF}'
+move-out-of-repo	ask	mv .construct/retardify/review /tmp/stash
 move-out-of-repo	ask	mv plugins/gitgud/skills/ship/ship.sh $TMPDIR/happy.sh
 move-out-of-repo	ask	mv README.md ~/README.md
 move-out-of-repo	ask	mv src ../src
 move-out-of-repo	none	mv plugins/gitgud/skills/ship/ship.sh plugins/gitgud/skills/ship/promote.sh
-move-out-of-repo	none	mv .operator/reviews/2026-08-05.md .operator/reviews/2026-08-06.md
+move-out-of-repo	none	mv .construct/retardify/review/2026-08-05.md .construct/retardify/review/2026-08-06.md
 delete-remote-ref	deny	git push origin --delete main
 delete-remote-ref	deny	git push --mirror origin
 delete-remote-ref	deny	git push origin --prune
@@ -88,12 +101,12 @@ safe	none	grep -r pattern .claude/
 safe	none	ls .git/refs
 safe	none	cat .git/config > /private/tmp/out
 safe	none	rm /private/tmp/scratch.env
-safe	none	mkdir -p .operator/logs
+safe	none	mkdir -p .construct/retardify/log
 safe	none	bash plugins/retardify/skills/file/file.sh
 safe	none	npm test
 safe	none	npx tsc --noEmit
 policy-dir-remove	hook	rm -rf plugins/operator/hooks
 policy-dir-move	hook	mv plugins/operator/settings /tmp/stash
-policy-probe-move	hook	mv plugins/operator/skills/scopes /tmp/stash
+policy-probe-move	hook	mv plugins/operator/skills/scripts /tmp/stash
 policy-heredoc-write	hook	python3 - <<< "open('.claude/settings.json','w').write('')"
 policy-interpreter-write	hook	node write.js plugins/operator/hooks/stop.sh

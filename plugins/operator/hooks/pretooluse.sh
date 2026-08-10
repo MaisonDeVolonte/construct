@@ -9,6 +9,8 @@
 # - neither deny list nor pretooluse catch commands inside `.sh` scripts (only work on tool calls)
 # - blocks force pushes, branch deletes, etc; silent (exit 0) for everything else
 # - blocks bash writes into policy directories (Edit/Write rules don't see bash)
+# - splits compounds on UNQUOTED `&|;` only, so a `sed 's|a|b|'` cannot tear itself out of range
+# - asks when a write target resolves at runtime, since no static read can follow a variable
 # - asks when moving files outside the repo root (renames are ordinary work)
 # @see .claude/settings.json, .claude/settings.local.json, plugins/operator/settings/
 
@@ -33,6 +35,27 @@ decide() {
 deny() { decide deny "$1"; }
 # ask returns the prompt the mode may have removed, so the user judges the call rather than the rule
 ask()  { decide ask  "$1"; }
+
+# `tr '&|;'` split on every metacharacter including the ones inside quotes, so a path-rewriting
+# `sed -i '' 's|a|b|' <policy path>` tore itself in half: the interpreter landed in one segment
+# and the path in another, and the per-segment test saw a writer with no path and a path with no
+# writer. splitting only on UNQUOTED metacharacters is what makes that test mean anything, and a
+# `|` delimiter is the idiomatic choice exactly when the strings being rewritten are paths
+segments() {
+  printf '%s\n' "$1" | awk '
+    BEGIN { sq = 0; dq = 0 }
+    {
+      out = ""
+      for (i = 1; i <= length($0); i++) {
+        c = substr($0, i, 1)
+        if (c == "\"" && !sq) { dq = !dq; out = out c; continue }
+        if (c == "\047" && !dq) { sq = !sq; out = out c; continue }
+        if (!sq && !dq && (c == "&" || c == "|" || c == ";")) { out = out "\n"; continue }
+        out = out c
+      }
+      print out
+    }'
+}
 
 # force push: `git push` present AND a -f / --force[...] flag token anywhere
 if printf '%s' "$CMD" | grep -Eq '(^|[[:space:]])git[[:space:]]+push([[:space:]]|$)'; then
@@ -80,7 +103,7 @@ PROTECTED="$PROTECTED"'|(^|[/[:space:]])\.env'
 # verbs those rules never see, since an agent that can rewrite either one can regrant itself
 PROTECTED="$PROTECTED|plugins/operator/settings$B|plugins/operator/hooks$B"
 # the probes read the live gate, so editing one lets an agent fake its own clean bill of health
-PROTECTED="$PROTECTED|plugins/operator/skills/(credentials|permissions|scopes|settings)$B"
+PROTECTED="$PROTECTED|plugins/operator/skills/(credentials|permissions|scripts|settings)$B"
 WRITERS='(^|[[:space:]])(cp|mv|rm|tee|ln|install|rsync|truncate|shred|chmod|chown|dd|touch)([[:space:]]|$)'
 # an interpreter writes as its ordinary work, so `-i` was never the shape to catch: a heredoc
 # reaches every policy path the hook guards and `WRITERS` never fires, since no cp, mv or tee
@@ -111,7 +134,22 @@ while IFS= read -r segment; do
       deny "blocked by pretooluse hook: redirects into a deny-listed path. run it yourself if you really mean to."
     fi
   done < <(printf '%s' "$segment" | grep -oE '>>?[[:space:]]*[^[:space:]]+' | sed -E 's/^>>?[[:space:]]*//' || true)
-done < <(printf '%s\n' "$CMD" | tr '&|;' '\n')
+done < <(segments "$CMD")
+
+# an in-place edit or a redirect into a variable resolves its target at runtime, so the literal
+# path is never in the segment that writes and no per-segment test can reach it
+# that is the heredoc gap one indirection further out, and it is judged against the WHOLE command
+# it runs AFTER the segment loop on purpose: a literal write is already denied above, so anything
+# reaching here is genuinely indirect and earns the softer verdict rather than downgrading a deny
+INPLACE='(sed|perl|ruby|python[0-9]?)([[:space:]]+-[^[:space:]]+)*[[:space:]]+-i([[:space:]]|$)'
+VARTARGET='>>?[[:space:]]*"?\$\{?[A-Za-z_]'
+VARTARGET="$VARTARGET"'|(^|[[:space:]])(cp|mv|tee|install|rsync|ln|truncate|dd)[[:space:]][^&|;]*\$\{?[A-Za-z_]'
+# `ask` rather than `deny`, since where a variable resolves is the one thing the hook cannot know
+# and the user can: a bulk rewrite that excludes the policy dirs is legitimate and looks identical
+if printf '%s' "$CMD" | grep -qE "$PROTECTED" \
+   && printf '%s' "$CMD" | grep -qE "$INPLACE|$VARTARGET"; then
+  ask "pretooluse hook: this writes to a target that resolves at runtime, and a deny-listed path is named in the same command. confirm nothing lands in a policy directory."
+fi
 
 # a move out of the repo is `rm` by another name: nothing is staged, so no git object holds it
 # an in-repo rename is ordinary work, so this asks for the destination rather than denying it
@@ -130,6 +168,6 @@ while IFS= read -r segment; do
         *) ask "pretooluse hook: this move lands outside the repo, where git cannot recover it. confirm the destination." ;;
       esac ;;
   esac
-done < <(printf '%s\n' "$CMD" | tr '&|;' '\n')
+done < <(segments "$CMD")
 
 exit 0
