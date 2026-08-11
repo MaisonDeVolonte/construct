@@ -7,7 +7,11 @@
 # - findings come back as context, agent fixes them on its next turn
 # - silent when nothing is wrong, so a clean file costs one exit and no context
 # - extracts the touched file path from claude payloads
+# - anchors to the project root first, so a relative payload path resolves the same from any cwd
 # @see plugins/retardify/skills/file/, .claude/settings.json
+
+# hooks inherit the session's cwd, so anchor first; every path below stays relative to the root
+cd "${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}" || exit 0
 
 # the sidecars report per finding, and a long file could bury the turn in style notes
 MAX_FINDINGS=20

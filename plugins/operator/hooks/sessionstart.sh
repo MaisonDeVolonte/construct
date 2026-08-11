@@ -6,7 +6,11 @@
 # - injects the project's README.md and recent logs into session context
 # - runs before user begins typing
 # - stubs today's log file if none exists yet
+# - anchors to the project root first, since a subdirectory cwd stubs a stray log and injects it
 # @see plugins/retardify/skills/log/, plugins/operator/hooks/, .construct/retardify/log/
+
+# hooks inherit the session's cwd, so anchor first; every path below stays relative to the root
+cd "${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}" || exit 0
 
 TODAY_LOG=".construct/retardify/log/$(date +%Y-%m-%d).md"
 READ_ME="README.md"
