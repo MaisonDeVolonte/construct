@@ -282,6 +282,8 @@ every token inherits the same layers; the axis is the layer, never the token
 "Edit(README.md)", "Write(README.md)",
 ```
 - an agent that can rewrite these can grant itself anything
+- `.claude/**` is the tree, not the gate: the four files that ARE the gate are denied outright below,
+  and deny beats ask, so the prompt here only ever covers skills, agents and commands
 - one rule per verb, since everything under `plugins/` either executes or instructs
 - it replaced three narrower globs on 2026-08-04, which had left 19 markdown files ungated:
   the nine `@git*` triggers and the ten templates
@@ -332,6 +334,33 @@ grouped most-destructive-first; any scope may add a deny, none may remove anothe
 ```
 - stays deny while the tracked siblings moved to ask: nothing here is under version control
 - this is the file carrying the credential config, so it keeps the stricter rule
+- it also covers `~/.claude/plugins/`, which is where an installed plugin's hooks land
+
+### root of trust — the four that regrant an agent
+```json
+"Write(.claude/settings.json)", "Edit(.claude/settings.json)",
+"Write(.claude/settings.local.json)", "Edit(.claude/settings.local.json)",
+"Write(.claude/hooks/**)", "Edit(.claude/hooks/**)",
+"Write(.mcp.json)", "Edit(.mcp.json)",
+"Write(plugins/*/hooks/**)", "Edit(plugins/*/hooks/**)",
+"Write(.husky/**)", "Edit(.husky/**)",
+"Write(.devin/**)", "Edit(.devin/**)",
+"Write(.cursor/**)", "Edit(.cursor/**)",
+"Write(.grok/**)", "Edit(.grok/**)",
+```
+- tracked, and still deny: git is the undo button, but the regrant lands mid-session and acts
+  long before any diff gets read, so recoverability is the wrong test here
+- settings is both halves of the gate — it holds the deny list AND registers the hooks by path
+- a hook is protected as a folder because `hooks.json` is the pointer: leave the registration
+  writable and an agent aims `PreToolUse` at its own script without touching `pretooluse.sh`
+- what a hook currently does is irrelevant; every one of them is a slot the harness executes,
+  and `pretooluse.sh` says it plainly — neither the deny list nor the hook sees inside a `.sh`
+- `.mcp.json` earns the same rule for the same reason: a server definition is a command
+- `plugins/*/hooks/**` covers the cloned-repo install; the marketplace install sits under `~/.claude/`
+- the last four are other agents' policy directories, and they are here because `pretooluse.sh`
+  already named them: the two gates are one policy, so a path in either belongs in both
+- anchored on the dot-directory, never on `hooks`: `**/hooks/**` reads as a source folder in most
+  repos, and a deny cannot be waived for a session, so it would make `src/hooks/` hand-edit only
 
 ### system — root, disk, recursive delete
 ```json

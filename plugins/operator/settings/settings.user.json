@@ -118,6 +118,10 @@
       "Edit(AGENTS.md)", "Write(AGENTS.md)",
       "Edit(plugins/**)", "Write(plugins/**)",
 
+      "Write(.claude/agents/**)", "Edit(.claude/agents/**)",
+      "Write(.claude/commands/**)", "Edit(.claude/commands/**)",
+      "Write(.claude/output-styles/**)", "Edit(.claude/output-styles/**)",
+
       "Bash(git mv *)", "Bash(git rm *)",
 
       "Bash(npx*)",
@@ -134,7 +138,18 @@
 
     "deny": [
       "Write(~/.claude/**)", "Edit(~/.claude/**)",
-      "Write(.claude/**)", "Edit(.claude/**)",
+
+      "Write(.claude/settings.json)", "Edit(.claude/settings.json)",
+      "Write(.claude/settings.local.json)", "Edit(.claude/settings.local.json)",
+      "Write(.claude/hooks/**)", "Edit(.claude/hooks/**)",
+
+      "Write(plugins/*/hooks/**)", "Edit(plugins/*/hooks/**)",
+
+      "Write(.mcp.json)", "Edit(.mcp.json)",
+      "Write(.husky/**)", "Edit(.husky/**)",
+      "Write(.devin/**)", "Edit(.devin/**)",
+      "Write(.cursor/**)", "Edit(.cursor/**)",
+      "Write(.grok/**)", "Edit(.grok/**)",
 
       "Bash(sudo *)",
       "Bash(mkfs*)", "Bash(dd *)",
