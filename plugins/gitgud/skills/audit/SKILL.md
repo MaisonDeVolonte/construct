@@ -11,6 +11,16 @@ metadata:
 - branch, remote and team state belong to `triage.sh`, so this never re-walks a branch
 - outputs a numbered condition list, each finding with the command that shows the detail
 
+## voice
+
+```!
+awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
+```
+
+- the block above already ran, and it is the output contract for this response
+- it holds for this turn even when the user's active output style is something else
+- an empty block means the plugin has no style file; continue, since voice never gates the work
+
 ## telemetry
 
 ```!
@@ -46,7 +56,7 @@ echo "sidecar exit: $?"
 
 5. close with the two reads this sidecar deliberately does not perform
   - `bash plugins/gitgud/shared/triage.sh` for branch, remote and team state
-  - `bash tools/check-skills/check-skills.sh` for the graded shape errors behind `pairing`
+  - `bash .claude/skills/skills/skills.sh` for the graded shape errors behind `pairing`
 
 ## the shape
 > the artifact this skill appends to; the sidecar grades what landed on its next run
@@ -92,7 +102,7 @@ one bullet per issue, leading with the label this doc assigns
 one checkbox per finding, in the same order, naming the command that closes it
 
 *example:*
-> - [ ] `bash tools/sync-secrets/sync-secrets.sh --write` to repoint the copies at the canonical
+> - [ ] `bash .claude/skills/secrets/secrets.sh --write` to repoint the copies at the canonical
 > - [ ] `/operator:credentials` to refresh the kind, or accept in writing that it is dormant
 > - [ ] set a real `version` in both manifests, then `claude plugin tag` each one
 

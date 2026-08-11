@@ -1,10 +1,10 @@
 #!/bin/bash
-# ====================================================
-# @file check-skills.sh - skill pair validator sidecar
-# ====================================================
+# ==============================================
+# @file skills.sh - skill pair validator sidecar
+# ==============================================
 # @description
 # PAIR
-# - sidecar for `check-skills` — asserts every skill doc and its sidecar still hold together
+# - sidecar for `skills` — asserts every skill doc and its sidecar still hold together
 # - the doc carries the shape a trigger follows; this file carries what a script can judge
 # - the only spec whose sidecar scans `plugins/*/skills/`, not a `.construct/` artifact directory
 # SHAPE
@@ -14,15 +14,15 @@
 # - the sidecar measures and never mutates, and sources `gitgud/shared/handover.sh` for its blocks
 # - a sidecar needing to mutate emits the command into a block instead of running it
 # SPLIT
-# - export-readme owns every frontmatter and preamble rule, judged at the readme source
+# - readme owns every frontmatter and preamble rule, judged at the readme source
 # - this sidecar owns the rest of the pair: the body, the sidecar, the pairing, and the index
 # - `metadata.kind` is still read here, since it decides which body checks a doc earns
-# - a kind nobody declared is export-readme's ERROR; here it only warns that checks were skipped
+# - a kind nobody declared is readme's ERROR; here it only warns that checks were skipped
 # RUN
 # - defaults to every pair in `plugins/*/skills/`; pass a doc, a sidecar, or a directory to scope it
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
 # - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
-# @see tools/check-skills/README.md, tools/export-readme/export-readme.sh, plugins/gitgud/shared/handover.sh, plugins/, plugins/operator/shared/secrets.sh, .github/workflows/ci.yml
+# @see .claude/skills/skills/SKILL.md, .claude/skills/readme/readme.sh, plugins/gitgud/shared/handover.sh, plugins/, plugins/operator/shared/secrets.sh, .github/workflows/ci.yml
 
 set -euo pipefail
 
@@ -31,19 +31,22 @@ set -euo pipefail
 # ==============
 # the shared scan sits beside this file, not beside the repo being scanned: resolve them before
 # anything cds to a repo root, since BASH_SOURCE arrives relative and would follow that cd
-SHARED=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../plugins/operator/shared" 2>/dev/null && pwd || true)
+SHARED=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../plugins/operator/shared" 2>/dev/null && pwd || true)
 if [ ! -f "$SHARED/secrets.sh" ]; then
   echo "fatal: no plugins/operator/shared/secrets.sh reachable from this sidecar" >&2; exit 1; fi
-# shellcheck source=../../plugins/operator/shared/secrets.sh
+# shellcheck source=../../../plugins/operator/shared/secrets.sh
 . "$SHARED/secrets.sh"
 
 STRICT=0
 KEEP=0
-TEMPLATE="tools/check-skills/README.md"
+TEMPLATE=".claude/skills/skills/SKILL.md"
 TRIGGERS="plugins"
 
 # the postures the index assigns; a trigger nobody can tell the blast radius of is a trap
 POSTURES='READ-ONLY|SAFE|GATED|DESTRUCTIVE|RELEASE'
+
+# the exact line every doc runs to inject its plugin's output style, frontmatter shed
+VOICE_CMD='awk '"'"'NR>1 && /^---$/ {p=1; next} p'"'"' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"'
 
 PAIRS=()
 for arg in "$@"; do
@@ -170,7 +173,7 @@ check_pair() {
 }
 
 # the wayfinder now lives in the sidecar, which carries the whole pair; the doc keeps frontmatter
-# as its orientation, and export-readme judges that frontmatter at its readme source
+# as its orientation, and readme judges that frontmatter at its readme source
 check_doc_wayfinding() {
   local doc=$1 name
   name=$(trigger_name "$doc")
@@ -367,6 +370,26 @@ check_sidecar_lint() {
   done < <(shellcheck -f gcc --severity=warning "$sidecar" 2>/dev/null || true)
 }
 
+# the style is opt-in, so the voice block is the only thing carrying it into a turn that did not
+# choose it; a paraphrased command cats nothing, so this compares byte for byte rather than by shape
+check_voice() {
+  local doc=$1 plugin
+  if ! grep -qFx -- "$VOICE_CMD" "$doc"; then
+    err "$doc" 1 no_voice "no voice block; the plugin style only reaches a turn when the doc cats it"
+    return 0
+  fi
+  if ! grep -qE '^## voice$' "$doc"; then
+    err "$doc" "$(where "$doc" 'output-styles/operator\.md')" voice_heading \
+      "the voice command runs under no '## voice' heading, so nothing names what the block is"
+  fi
+  plugin=$(plugin_of "$doc")
+  [ -n "$plugin" ] || return 0
+  if [ ! -f "plugins/$plugin/output-styles/operator.md" ]; then
+    err "$doc" 1 voice_missing_style \
+      "the block cats plugins/$plugin/output-styles/operator.md and the file is not there"
+  fi
+}
+
 # a trigger the index never lists is a trigger nobody discovers, and one listed without its posture
 # is one nobody can judge the blast radius of before running it
 check_index() {
@@ -399,7 +422,7 @@ check_scrub() {
 
 # a trigger acts on the repo and is invoked deliberately; a spec describes a shape and should load
 # whenever the model touches the thing it describes. the kind gates which body checks run here;
-# whether it is declared correctly is export-readme's rule, judged at the readme source
+# whether it is declared correctly is readme's rule, judged at the readme source
 skill_kind() {
   local doc=$1 declared
   declared=$(awk '/^metadata:/ { inside = 1; next }
@@ -424,6 +447,7 @@ for pair in "${PAIRS[@]}"; do
   check_scrub           "$pair"
   check_body            "$pair"
   check_block_name      "$pair"
+  check_voice           "$pair"
   case "$(skill_kind "$pair")" in
     spec) ;;
     trigger)
@@ -432,7 +456,7 @@ for pair in "${PAIRS[@]}"; do
       check_artifact    "$pair"
       check_index       "$pair";;
     *)
-      warn "$pair" 1 no_kind "kind unset, so the trigger checks were skipped; export-readme owns the rule";;
+      warn "$pair" 1 no_kind "kind unset, so the trigger checks were skipped; readme owns the rule";;
   esac
 done
 
@@ -445,7 +469,7 @@ SECRETS=$(grep -c '|secret|' "$FINDINGS" || true)
 
 cat <<EOF
 
-=== check-skills telemetry ===
+=== /skills telemetry ===
 template: $TEMPLATE
 scanned: ${#PAIRS[@]} pair(s)
 index: ${INDEX:-none found}

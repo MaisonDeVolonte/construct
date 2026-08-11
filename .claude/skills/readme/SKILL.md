@@ -1,11 +1,11 @@
 ---
-name: export-readme
+name: readme
 description: "The readme catalog is the source of truth: each skill section exports onto its SKILL.md top, drift reported first."
 when_to_use: "Editing any skill's frontmatter or preamble, reviewing catalog drift after a README.md edit, or wiring a new skill section into the export map. Also when a skill top and its readme entry disagree."
 metadata:
   kind: spec
 ---
-# export-readme
+# readme
 
 ## the shape
 the readme's `#### <Skill>` catalog sections are the source of truth for every skill's top:
@@ -14,9 +14,22 @@ the readme's `#### <Skill>` catalog sections are the source of truth for every s
 - the yaml fence's inner `--- ... ---` becomes the skill's frontmatter, verbatim
 - everything after the yaml fence, to the next heading, becomes the skill's preamble, verbatim
 - the invocation fence is readme display sugar and never lands in a skill file
-- `tools/export-readme/map.json` is one flat object: exact heading line -> SKILL.md path
+- `.claude/skills/readme/map.json` is one flat object: exact heading line -> target path
+- a value may be a list, so one section lands in every copy that has to agree byte for byte
 - a skill's managed region runs from line 1 to its first `# ` or `## ` body heading; the body
   below that heading belongs to the skill and is never touched
+
+## the output style
+`## Output Style` maps to one `output-styles/operator.md` per plugin, and the three copies exist
+only because a plugin has to reach its own file through `CLAUDE_PLUGIN_ROOT`:
+
+- a style file carries no body heading, so its managed region is the whole file
+- it earns `name` and `description` and nothing else; kind, license and the listing cap route an
+  invocation a style never has
+- `name:` must match the file, not a folder, since a style owns a file rather than a directory
+- full runs sweep `plugins/*/output-styles/*.md` too; an unmapped copy is an ERROR, since drifting
+  unseen is the exact failure the fan-out exists to stop
+- never edit a copy: fix the readme section, then re-export all three
 
 ## the two modes
 - check is the default, mutates nothing, and exits 1 on any drift or ERROR; this is the ci mode
@@ -55,8 +68,8 @@ drift can be legitimate in either direction, so nothing is written without a hum
 
 ```text
 VERIFY - not part of the tool
-- RUN `tools/export-readme/export-readme.sh` after editing README.md catalog sections or any skill top
+- RUN `.claude/skills/readme/readme.sh` after editing README.md catalog sections or any skill top
 - RECONCILE every drift row deliberately; source of truth means the readme wins by default, not always
 - FIX every ERROR in the readme section the finding points at, then re-run
-- RUN `tools/check-skills/check-skills.sh` after an apply, since the skill docs just changed
+- RUN `.claude/skills/skills/skills.sh` after an apply, since the skill docs just changed
 ```

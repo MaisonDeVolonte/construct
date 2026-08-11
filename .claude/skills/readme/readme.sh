@@ -1,14 +1,16 @@
 #!/bin/bash
-# =====================================================
-# @file export-readme.sh - readme to skill-top exporter
-# =====================================================
+# ==============================================
+# @file readme.sh - readme to skill-top exporter
+# ==============================================
 # @description
 # SOURCE
 # - the readme's catalog is the source of truth for every skill's frontmatter and preamble
 # - each mapped `#### <Skill>` section carries a yaml fence, then the preamble that follows it
 # - `map.json` beside this file names which readme heading feeds which SKILL.md
+# - a map value may be a list, so one section exports into every copy that has to agree
 # REGION
 # - a skill's managed region runs from line 1 to the first body heading after its frontmatter
+# - a style file has no such heading, so its whole file is the region and the export owns it
 # - export replaces that region with the section's yaml inner block plus its trailing markdown
 # - the bare invocation fence above the yaml block is readme display sugar and never lands
 # CHECKS
@@ -17,13 +19,14 @@
 # - `metadata.kind` is declared; a trigger sets disable-model-invocation: true, a spec must not
 # - `description` holds 100-110 chars; description + when_to_use stays under the 1536 listing cap
 # - `name` must match the skill's folder, and every SKILL.md on disk must appear in the map
+# - a style target earns name and description only; the rest route an invocation it never has
 # - any ERROR on a section blocks that one skill's export and never the others
 # RUN
 # - check is the default: prints the drift table, writes nothing, exits 1 on drift or ERROR
 # - `--diff` appends a unified diff per drifted skill; `--apply` rewrites the managed regions
 # - `--apply` prompts on a tty; an agent confirms in chat first, then re-runs with `--yes`
 # - pass skill names to scope either mode; `--map`/`--source` swap the config for tests
-# @see tools/export-readme/map.json, tools/export-readme/README.md, tools/check-skills/check-skills.sh, README.md
+# @see .claude/skills/readme/map.json, .claude/skills/readme/SKILL.md, .claude/skills/skills/skills.sh, README.md
 set -euo pipefail
 
 STRICT=0
@@ -31,9 +34,11 @@ APPLY=0
 DIFF=0
 YES=0
 KEEP=0
-MAP="tools/export-readme/map.json"
+MAP=".claude/skills/readme/map.json"
 SOURCE="README.md"
 REQUIRED="name license compatibility description"
+# a style carries no license, no compatibility and no kind; it is a prompt, not an invocation
+REQUIRED_STYLE="name description"
 # model and effort route an invocation, so only a trigger needs them; on a spec they are dead config
 REQUIRED_TRIGGER="model effort"
 DESC_MIN=100
@@ -74,7 +79,7 @@ jq -e 'type == "object"' "$MAP" >/dev/null 2>&1 \
 # repo-local scratch: the sandbox denies writes outside cwd, and macos mktemp ignores TMPDIR
 TMPROOT="$(git rev-parse --show-toplevel)/tmp"
 mkdir -p "$TMPROOT"
-SCRATCH=$(mktemp -d "$TMPROOT/export-readme.XXXXXX")
+SCRATCH=$(mktemp -d "$TMPROOT/readme.XXXXXX")
 cleanup() { st=$?; if [ "$KEEP" -eq 0 ]; then rm -rf "$SCRATCH"; fi; exit "$st"; }
 trap cleanup EXIT
 
@@ -139,7 +144,7 @@ strip_trailing() {
        END { for (i = 1; i <= last; i++) print buf[i] }' "$@"
 }
 
-# one frontmatter value, quotes shed, folded scalars unwrapped; mirrors check-skills.sh
+# one frontmatter value, quotes shed, folded scalars unwrapped; mirrors skills.sh
 field_of() {
   local yaml=$1 key=$2 value
   value=$(awk -v key="$key" '
@@ -161,12 +166,18 @@ field_of() {
   printf '%s' "$value"
 }
 
-# plugins/<plugin>/skills/<name>/ names the invocation; a fixture path outside plugins/ has none
+# plugins/<plugin>/ names the invocation half; a fixture path outside plugins/ has none
 plugin_of() {
-  printf '%s' "$1" | sed -n 's|.*plugins/\([a-z][a-z-]*\)/skills/.*|\1|p'
+  printf '%s' "$1" | sed -n 's|.*plugins/\([a-z][a-z-]*\)/.*|\1|p'
 }
 
-# metadata.kind, declared rather than guessed; empty when unset, mirrors check-skills.sh
+# an output style is mapped like a skill and checked like almost nothing: it carries no kind, no
+# invocation and no listing entry, so the fields that route one are dead config on it
+is_style() {
+  case "$1" in */output-styles/*.md) return 0;; *) return 1;; esac
+}
+
+# metadata.kind, declared rather than guessed; empty when unset, mirrors skills.sh
 kind_of() {
   awk '/^metadata:/ { inside = 1; next }
        inside && /^[^[:space:]]/ { inside = 0 }
@@ -197,7 +208,9 @@ pair=0
 
 while IFS=$'\t' read -r heading skill; do
   [ -n "$heading" ] || continue
-  name=$(basename "$(dirname "$skill")")
+  # a skill owns a folder and every doc is called SKILL.md; a style is one file and owns its name
+  if is_style "$skill"; then name=$(basename "$skill" .md)
+  else name=$(basename "$(dirname "$skill")"); fi
   plugin=$(plugin_of "$skill")
   label=${plugin:+$plugin:}$name
   in_scope "$name" "$label" || continue
@@ -239,12 +252,22 @@ while IFS=$'\t' read -r heading skill; do
     err "$SOURCE" "$hline" name_mismatch "'$heading' says 'name: $got' and maps to $skill"
     blocked=1
   fi
-  for key in $REQUIRED; do
+  required=$REQUIRED
+  if is_style "$skill"; then required=$REQUIRED_STYLE; fi
+  for key in $required; do
     if ! grep -qE "^$key:[[:space:]]*\S" "$newtop"; then
       err "$SOURCE" "$hline" missing_field "'$heading' yaml has no '$key:'; the field is required"
       blocked=1
     fi
   done
+
+  # a style is not listed, not invoked and has no kind, so the rules below judge fields it would
+  # never carry; everything after them is the drift compare, which is why a style is mapped at all
+  if is_style "$skill"; then
+    desc=''
+    wtu=''
+  else
+
   desc=$(field_of "$newtop" description)
   if [ -n "$desc" ]; then
     if [ ${#desc} -lt "$DESC_MIN" ] || [ ${#desc} -gt "$DESC_MAX" ]; then
@@ -293,6 +316,8 @@ while IFS=$'\t' read -r heading skill; do
       "'$heading' description + when_to_use is $total chars, inside $LISTING_WARN of a $LISTING_CAP cap"
   fi
 
+  fi
+
   if [ ! -f "$skill" ]; then
     err "$skill" 1 missing_file "the map names it and nothing is there; scaffold the skill first"
     BLOCKED=$((BLOCKED + 1))
@@ -333,7 +358,9 @@ while IFS=$'\t' read -r heading skill; do
   else
     printf '%s|%s|%s|%s\n' "$label" "$skill" "$boundary" "$newtop" >> "$QUEUE"
   fi
-done < <(jq -r 'to_entries[] | [.key, .value] | @tsv' "$MAP")
+done < <(jq -r 'to_entries[] | .key as $h
+                | (if (.value | type) == "array" then .value[] else .value end)
+                | [$h, .] | @tsv' "$MAP")
 
 if [ "$MAPPED" -eq 0 ]; then
   echo "fatal: nothing in $MAP matched ${ONLY[*]:-the map}" >&2; exit 1; fi
@@ -343,11 +370,18 @@ if [ "$MAPPED" -eq 0 ]; then
 #   a skill or heading the map misses escapes every rule above, so full runs sweep for both
 # ==============
 if [ ${#ONLY[@]} -eq 0 ]; then
-  jq -r '.[]' "$MAP" | sort > "$SCRATCH/mapped"
+  jq -r '.[] | if type == "array" then .[] else . end' "$MAP" | sort > "$SCRATCH/mapped"
   for doc in plugins/*/skills/*/SKILL.md; do
     [ -f "$doc" ] || continue
     if ! grep -qFx "$doc" "$SCRATCH/mapped"; then
       err "$doc" 1 unmapped_skill "no map entry, so no rule here ever judges this skill's top"
+    fi
+  done
+  # a style copy the map misses is the drift this fan-out exists to stop, so it is an ERROR too
+  for style in plugins/*/output-styles/*.md; do
+    [ -f "$style" ] || continue
+    if ! grep -qFx "$style" "$SCRATCH/mapped"; then
+      err "$style" 1 unmapped_style "no map entry, so this copy can drift from the readme unseen"
     fi
   done
   # catalog headings live between '## Plugins & Skills' and the next h2; one heading, one entry
@@ -373,10 +407,10 @@ if [ "$APPLY" -eq 1 ]; then MODE='apply'; fi
 
 cat <<EOF
 
-=== export-readme telemetry ===
+=== /readme telemetry ===
 source: $SOURCE
 map: $MAP
-mapped: $MAPPED skill(s)
+mapped: $MAPPED target(s)
 in_sync: $IN_SYNC
 drift: $DRIFTED
 blocked: $BLOCKED

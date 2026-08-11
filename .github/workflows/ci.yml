@@ -12,7 +12,7 @@
 # - a report shaped for judgement makes a poor required check, so its replacement is its own tool
 # - until that checker lands nothing gates references, and a broken `@see` reaches main unblocked
 # - this is the required check that lets `gh pr merge --auto` engage (see plugins/gitgud/skills/deliver/SKILL.md)
-# @see README.md, plugins/gitgud/skills/deliver/SKILL.md, plugins/retardify/skills/file/SKILL.md, tools/sync-secrets/sync-secrets.sh
+# @see README.md, plugins/gitgud/skills/deliver/SKILL.md, plugins/retardify/skills/file/SKILL.md, .claude/skills/secrets/secrets.sh
 
 name: ci
 
@@ -38,17 +38,17 @@ jobs:
           shellcheck --version
           # find rather than globs: a glob that matches nothing is a build failure, and which
           # directories hold scripts changes every time the plugin layout does
-          find plugins tools -name '*.sh' -print0 | xargs -0 shellcheck -x --severity=warning
+          find plugins .claude/skills -name '*.sh' -print0 | xargs -0 shellcheck -x --severity=warning
 
       # every script must at least parse, including any the lint globs above miss
       - name: syntax
         run: |
-          find plugins tools -name '*.sh' -print0 | xargs -0 -n1 bash -n
+          find plugins .claude/skills -name '*.sh' -print0 | xargs -0 -n1 bash -n
 
       # the shared files are copied per plugin rather than sourced across one, so nothing but this
       # compares them; a detector with no gate is how three identical copies drift apart
       - name: secrets drift
-        run: bash tools/sync-secrets/sync-secrets.sh --check
+        run: bash .claude/skills/secrets/secrets.sh --check
 
       # a sidecar measures and hands over; it never mutates the tree itself
       - name: sidecars stay read-only

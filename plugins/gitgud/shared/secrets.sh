@@ -12,8 +12,8 @@
 # - a merely credential-shaped string is a WARN, since most of them here are commit shas
 # - a suspect value opening with `$` or a backtick is skipped, since a literal credential never does
 # - without that, every `token=${VAR}` a sidecar declares would warn on every run forever
-# - edit this copy only; `tools/sync-secrets/sync-secrets.sh --write` propagates it to the siblings
-# @see tools/sync-secrets/sync-secrets.sh, plugins/gitgud/skills/audit/audit.sh, .github/workflows/ci.yml
+# - edit this copy only; `.claude/skills/secrets/secrets.sh --write` propagates it to the siblings
+# @see .claude/skills/secrets/secrets.sh, plugins/gitgud/skills/audit/audit.sh, .github/workflows/ci.yml
 
 # sourcing is the only supported use: run directly and it would define functions into a shell that
 # exits immediately afterwards, which looks like it worked and does nothing

@@ -1,10 +1,10 @@
 #!/bin/bash
-# =============================================================
-# @file sync-secrets.sh - holds every secrets.sh copy identical
-# =============================================================
+# ===============================================================
+# @file secrets.sh - holds every plugin secrets.sh copy identical
+# ===============================================================
 # @description
 # PAIR
-# - sidecar for `sync-secrets` — keeps the per-plugin `secrets.sh` copies byte-identical
+# - sidecar for `secrets` — keeps the per-plugin `secrets.sh` copies byte-identical
 # - a plugin install copies one plugin directory and never a sibling, so the file cannot be shared
 # - `/gitgud:audit` reports that drift and stays read-only; this tool is the half that repairs it
 # SHAPE
@@ -14,7 +14,7 @@
 # RUN
 # - `--check` is the default and the only mode ci runs; it exits 1 on any drift
 # - `--write` overwrites every stale copy from the canonical, and never edits the canonical
-# @see tools/check-skills/check-skills.sh, plugins/operator/shared/secrets.sh, .github/workflows/ci.yml
+# @see .claude/skills/secrets/SKILL.md, .claude/skills/skills/skills.sh, plugins/operator/shared/secrets.sh, .github/workflows/ci.yml
 
 set -euo pipefail
 
@@ -75,7 +75,7 @@ done
 # ==============
 cat <<EOF
 
-=== sync-secrets telemetry ===
+=== /secrets telemetry ===
 canonical: $CANONICAL
 copies: ${#COPIES[@]}
 mode: $MODE
@@ -95,10 +95,10 @@ if [ "$MODE" = check ] && [ "$DRIFTED" -gt 0 ]; then
   cat <<'EOF'
 --- handover ---
 # overwrite every stale copy from the canonical, then re-run the check
-tools/sync-secrets/sync-secrets.sh --write
+.claude/skills/secrets/secrets.sh --write
 EOF
 fi
-echo "=============================="
+echo "=========================="
 
 if [ "$MODE" = check ] && [ "$DRIFTED" -gt 0 ]; then exit 1; fi
 exit 0
