@@ -11,7 +11,7 @@
 # TRIGGER
 # - it prints one telemetry block; the doc turns that into a numbered condition report
 # - a plugin whose skill count is zero is a load failure rather than an empty plugin
-# - an unpaired doc or sidecar is the shape error `tools/check-skills` grades in detail
+# - an unpaired doc or sidecar is the shape error `/skills` grades in detail
 # - a stale artifact directory means a writer skill stopped being run, not that it broke
 # - shared drift is the check `secrets.sh` names in its own header, since duplication needs one
 # ARTIFACT
@@ -19,7 +19,7 @@
 # - this skill owns the git kind outright: it names the target, and grades every entry that landed
 # - `triage.sh` used to report the target and no doc ever instructed the write, so nothing wrote it
 # - gitignored in this repo; read-only still holds, since no TRACKED file is ever touched
-# @see plugins/gitgud/skills/audit/SKILL.md, plugins/gitgud/shared/triage.sh, plugins/gitgud/shared/handover.sh, tools/check-skills/README.md, .construct/gitgud/audit/
+# @see plugins/gitgud/skills/audit/SKILL.md, plugins/gitgud/shared/triage.sh, plugins/gitgud/shared/handover.sh, .claude/skills/skills/SKILL.md, .construct/gitgud/audit/
 
 set -euo pipefail
 
@@ -301,6 +301,6 @@ block_close
 handover_open "gitgud:audit"
 handover_note "branch, remote and team state is a separate read; this sidecar never re-walks them"
 handover_cmd "bash plugins/gitgud/shared/triage.sh"
-handover_note "shape errors are graded in detail by the repo-local tool, which is not a skill"
-handover_cmd "bash tools/check-skills/check-skills.sh"
+handover_note "shape errors are graded in detail by /skills, the maintainer skill this repo keeps"
+handover_cmd "bash .claude/skills/skills/skills.sh"
 block_close

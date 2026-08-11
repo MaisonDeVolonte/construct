@@ -75,7 +75,7 @@ if [ ${#STACK[@]} -eq 0 ]; then echo "fatal: no settings files found for $ROOT" 
 # nothing was passed, so test every workflow script this repo ships
 if [ ${#TARGETS[@]} -eq 0 ]; then
   while IFS= read -r found; do TARGETS+=("$found"); done < <(
-    find "$SELF/plugins" "$SELF/tools" -name '*.sh' -type f 2>/dev/null | sort
+    find "$SELF/plugins" "$SELF/.claude/skills" -name '*.sh' -type f 2>/dev/null | sort
   )
 fi
 if [ ${#TARGETS[@]} -eq 0 ]; then echo "fatal: no scripts to test" >&2; exit 1; fi

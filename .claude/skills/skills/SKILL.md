@@ -1,5 +1,5 @@
 ---
-name: check-skills
+name: skills
 description: "Shape every skill pair must hold: the SKILL.md, its sidecar, and the frontmatter that gates it. Validates them."
 when_to_use: "Authoring or editing any SKILL.md or its sidecar, adding a skill to a plugin, or deciding whether a skill is a trigger or a spec. Also when a listing looks truncated or a skill fails to load."
 metadata:
@@ -17,7 +17,7 @@ a skill is one folder, named for its trigger, holding exactly two files:
 - `metadata.kind` is declared rather than guessed, and decides the rest of the frontmatter
 - `kind: trigger` acts on the repo, so it sets `disable-model-invocation: true`; prose is not a gate
 - `kind: spec` describes a shape, so it stays auto-loading and never sets that flag
-- every frontmatter rule above is judged by `tools/export-readme/export-readme.sh` at the readme
+- every frontmatter rule above is judged by `.claude/skills/readme/readme.sh` at the readme
   source; this pair's own checks stop at the body, the sidecar, the pairing, and the index
 
 ## the listing budget
@@ -56,6 +56,22 @@ every trigger doc follows the same general shape:
   - generate ...
   - include ...
   ```
+
+## the voice block
+the output style is opt-in, so a user may be on Default while a plugin skill runs. the first body
+heading of every doc is `## voice`, and it cats that plugin's own style into the turn:
+
+```text
+awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
+```
+
+- it rides a ```! block, so it lands before the model reads a word of the doc
+- the command is compared byte for byte; a paraphrase cats nothing and reports the same clean run
+- `CLAUDE_PLUGIN_ROOT` resolves per plugin, so one identical line serves every skill in the tree
+- the awk sheds frontmatter, which is config for the picker and instruction to nobody
+- the block carries no numbered step, since step numbers climb once across a whole doc
+- a plugin that ships skills ships `output-styles/operator.md`, or the block cats an empty file
+- the copies are one readme section exported three ways, never three files edited three times
 
 ## the body
 frontmatter and pairing can both be correct while the body is structurally broken, which is how a
@@ -106,8 +122,8 @@ git command two
 
 ```text
 VERIFY - not part of the trigger
-- RUN `tools/check-skills/check-skills.sh` after touching a trigger doc or its sidecar; pass a path to scope it
-- RUN `tools/export-readme/export-readme.sh` after touching frontmatter or a preamble; the readme is their source
+- RUN `.claude/skills/skills/skills.sh` after touching a trigger doc or its sidecar; pass a path to scope it
+- RUN `.claude/skills/readme/readme.sh` after touching frontmatter or a preamble; the readme is their source
 - FIX every ERROR, since each one breaks a rule this spec states outright
 - STOP on a `secret` finding and ask the user before truncating it; the key needs rotating first
 - JUSTIFY or fix every WARN; the sidecar tolerates them, the next reader may not

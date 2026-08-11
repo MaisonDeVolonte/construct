@@ -1,4 +1,9 @@
 {
+  "## Output Style": [
+    "plugins/operator/output-styles/operator.md",
+    "plugins/gitgud/output-styles/operator.md",
+    "plugins/retardify/output-styles/operator.md"
+  ],
   "#### Credentials": "plugins/operator/skills/credentials/SKILL.md",
   "#### Permissions": "plugins/operator/skills/permissions/SKILL.md",
   "#### Scripts": "plugins/operator/skills/scripts/SKILL.md",

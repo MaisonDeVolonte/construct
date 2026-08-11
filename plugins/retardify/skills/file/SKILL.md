@@ -6,6 +6,16 @@ paths: "**/*.ts, **/*.tsx, **/*.js, **/*.jsx, **/*.mjs, **/*.cjs, **/*.sh, **/*.
 metadata:
   kind: spec
 ---
+## voice
+
+```!
+awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
+```
+
+- the block above already ran, and it is the output contract for this response
+- it holds for this turn even when the user's active output style is something else
+- an empty block means the plugin has no style file; continue, since voice never gates the work
+
 # file shapes
 everything about a source file that is not the logic inside it, in four conventions.
 `/retardify:code` owns the logic; this spec owns the frame around it.
@@ -92,7 +102,7 @@ form above. the doc keeps frontmatter as its orientation, and the block names bo
 > # PAIR
 > # - sidecar for `/gitgud:backup` — takes and verifies the snapshot, then hands the restore over
 > # - the doc holds the steps; this block holds the map for both halves of the pair
-> # @see plugins/gitgud/skills/backup/SKILL.md, tools/check-skills/README.md
+> # @see plugins/gitgud/skills/backup/SKILL.md, .claude/skills/skills/SKILL.md
 > ```
 
 ## what a drifted header looks like
