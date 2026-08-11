@@ -96,14 +96,25 @@ fi
 # denied, and taking the directory neutralises all six hooks at once (see #33). the boundary keeps
 # a bare prefix from matching a longer name, so `.git` never matches `.gitignore`
 B='([/[:space:]"'"'"']|$)'
-PROTECTED="\.claude$B|\.git$B|\.husky$B|\.devin$B|\.cursor$B|webflow$B"
+PROTECTED="\.claude$B|\.git$B|\.husky$B|\.devin$B|\.cursor$B|\.grok$B|webflow$B"
 PROTECTED="$PROTECTED"'|\.tfstate|docker-compose\.prod'
 PROTECTED="$PROTECTED"'|(^|[/[:space:]])\.env'
+# an mcp server definition is a command the harness runs, so it is policy the same way a hook is
+PROTECTED="$PROTECTED|\.mcp\.json$B"
 # the policy directories: settings rules gate the Edit and Write tools, and this gates the bash
 # verbs those rules never see, since an agent that can rewrite either one can regrant itself
-PROTECTED="$PROTECTED|plugins/operator/settings$B|plugins/operator/hooks$B"
+# every plugin's hooks and not just operator's: hooks.json is the pointer, so the folder is the unit
+PROTECTED="$PROTECTED|plugins/operator/settings$B|plugins/[a-z][a-z-]*/hooks$B"
 # the probes read the live gate, so editing one lets an agent fake its own clean bill of health
 PROTECTED="$PROTECTED|plugins/operator/skills/(credentials|permissions|scripts|settings)$B"
+
+# `.claude` is matched whole above, which swept in `.claude/skills/` and left this repo's own
+# maintainer skills unmaintainable: chmod, git add and rm were all denied on ordinary work
+# blanking the token beats an exception inside PROTECTED, since a command that ALSO names a
+# policy path still carries that path into the test and still earns its deny
+unpolicy() {
+  printf '%s' "$1" | sed -E 's#\.claude/skills(/[^[:space:]"'"'"']*)?#CLAUDE_SKILL#g'
+}
 WRITERS='(^|[[:space:]])(cp|mv|rm|tee|ln|install|rsync|truncate|shred|chmod|chown|dd|touch)([[:space:]]|$)'
 # an interpreter writes as its ordinary work, so `-i` was never the shape to catch: a heredoc
 # reaches every policy path the hook guards and `WRITERS` never fires, since no cp, mv or tee
@@ -117,20 +128,20 @@ INTERPRETER='(^|[[:space:]])(sed|perl|awk|python[0-9]?|ruby|node|deno|bun)([[:sp
 # that is the exact shape #47 called the worst case, so it is judged against the WHOLE command
 if printf '%s' "$CMD" | grep -q '<<' \
    && printf '%s' "$CMD" | grep -qE "$INTERPRETER" \
-   && printf '%s' "$CMD" | grep -qE "$PROTECTED"; then
+   && unpolicy "$CMD" | grep -qE "$PROTECTED"; then
   deny "blocked by pretooluse hook: heredoc into a deny-listed path. run it yourself if you really mean to."
 fi
 
 # a compound command splits first, so `cat .git/config > /tmp/x` is not misread as writing to .git
 while IFS= read -r segment; do
-  if ! printf '%s' "$segment" | grep -qE "$PROTECTED"; then continue; fi
+  if ! unpolicy "$segment" | grep -qE "$PROTECTED"; then continue; fi
   if printf '%s' "$segment" | grep -qE "$WRITERS" || printf '%s' "$segment" | grep -qE "$INTERPRETER"; then
     deny "blocked by pretooluse hook: writes into a deny-listed path. run it yourself if you really mean to."
   fi
   # only a redirect TARGET counts, since reading a protected file out to somewhere else is fine
   while IFS= read -r target; do
     if [ -z "$target" ]; then continue; fi
-    if printf '%s' "$target" | grep -qE "$PROTECTED"; then
+    if unpolicy "$target" | grep -qE "$PROTECTED"; then
       deny "blocked by pretooluse hook: redirects into a deny-listed path. run it yourself if you really mean to."
     fi
   done < <(printf '%s' "$segment" | grep -oE '>>?[[:space:]]*[^[:space:]]+' | sed -E 's/^>>?[[:space:]]*//' || true)
@@ -146,14 +157,14 @@ VARTARGET='>>?[[:space:]]*"?\$\{?[A-Za-z_]'
 VARTARGET="$VARTARGET"'|(^|[[:space:]])(cp|mv|tee|install|rsync|ln|truncate|dd)[[:space:]][^&|;]*\$\{?[A-Za-z_]'
 # `ask` rather than `deny`, since where a variable resolves is the one thing the hook cannot know
 # and the user can: a bulk rewrite that excludes the policy dirs is legitimate and looks identical
-if printf '%s' "$CMD" | grep -qE "$PROTECTED" \
+if unpolicy "$CMD" | grep -qE "$PROTECTED" \
    && printf '%s' "$CMD" | grep -qE "$INPLACE|$VARTARGET"; then
   ask "pretooluse hook: this writes to a target that resolves at runtime, and a deny-listed path is named in the same command. confirm nothing lands in a policy directory."
 fi
 
 # a move out of the repo is `rm` by another name: nothing is staged, so no git object holds it
 # an in-repo rename is ordinary work, so this asks for the destination rather than denying it
-REPO=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+REPO="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
 while IFS= read -r segment; do
   if ! printf '%s' "$segment" | grep -qE '(^|[[:space:]])mv([[:space:]]|$)'; then continue; fi
   # the destination is the last token, since `mv` takes no trailing option
