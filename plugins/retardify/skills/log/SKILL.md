@@ -5,6 +5,16 @@ when_to_use: "Writing to .construct/retardify/log/, which the taskcompleted and 
 metadata:
   kind: spec
 ---
+## voice
+
+```!
+awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
+```
+
+- the block above already ran, and it is the output contract for this response
+- it holds for this turn even when the user's active output style is something else
+- an empty block means the plugin has no style file; continue, since voice never gates the work
+
 # .construct/retardify/log/YYYY-MM-DD.md
 one file per day, holding both the work and the prompts that drove it:
 

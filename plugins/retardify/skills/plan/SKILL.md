@@ -11,6 +11,16 @@ metadata:
 - the checklist is the deliverable: numbered stages, each shipping as its own pr
 - readiness is what gates it, since a stage nobody can run is a stage that does not start
 
+## voice
+
+```!
+awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
+```
+
+- the block above already ran, and it is the output contract for this response
+- it holds for this turn even when the user's active output style is something else
+- an empty block means the plugin has no style file; continue, since voice never gates the work
+
 ## telemetry
 
 ```!
