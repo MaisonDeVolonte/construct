@@ -16,6 +16,16 @@ metadata:
 - a perfect-world rewrite: the build as it goes when every step lands clean on the first try
 - assumes the likeliest case at every fork; the dead ends and repairs stay in the plan
 
+## voice
+
+```!
+awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
+```
+
+- the block above already ran, and it is the output contract for this response
+- it holds for this turn even when the user's active output style is something else
+- an empty block means the plugin has no style file; continue, since voice never gates the work
+
 ## telemetry
 
 ```!

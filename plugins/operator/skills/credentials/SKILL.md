@@ -16,6 +16,16 @@ metadata:
 - `mask` hides the value and keeps the capability; `deny` hides it by removing the variable
 - an unruled credential is the finding that matters: it needs a rule AND a rotation
 
+## voice
+
+```!
+awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
+```
+
+- the block above already ran, and it is the output contract for this response
+- it holds for this turn even when the user's active output style is something else
+- an empty block means the plugin has no style file; continue, since voice never gates the work
+
 ## telemetry
 
 ```!
