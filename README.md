@@ -24,7 +24,7 @@ TABLE OF CONTENTS
 ├─ /gitgud ──────── audit · backup · continue · deliver · prune · nuke · rerun · ship
 ├─ /retardify ───── file · code · graph · plan · review · quiz · manual · todo · log
 ├─ Hooks ────────── sessionstart · pretooluse · posttooluse · taskcreated · taskcompleted · stop
-├─ Output Styles ── theme · personas · adversaries · voice · formatting · verification
+├─ Output Style ── theme · personas · adversaries · voice · formatting · verification
 └─ Settings ─────── sandbox · scopes · keys · rules · clients · audits · diagnostics
 ```
 
@@ -948,7 +948,7 @@ sessionstart.sh
 ```
 **sessions start briefed, never blank:** no re-explaining yesterday
 - injects the README and the recent logs before you type anything
-- stubs today's log file when none exists yet, so the day has somewhere to land
+- stubs today's log when none exists yet, always at the project root, never at your cwd
 - the four most recent threads carry forward, taken across days rather than per file
 
 ### PreToolUse
@@ -976,7 +976,7 @@ taskcreated.sh
 **off-topic tasks get a nudge, not a block:** so threads stay on topic
 - fires when a TaskCreate call registers a new task, before any work starts
 - advisory only: it never blocks the creation, it asks for a thread check
-- creates today's log file first, so the new thread has somewhere to go
+- creates today's log at the project root first, so the new thread has somewhere to go
 
 ### TaskCompleted
 ```
@@ -1161,87 +1161,155 @@ export function writeCode(requirements: Requirement[], request: string) {
 - `print the value`: when the result contradicts the code, see what the code actually got
 - `look at the bytes`: encrypted stores, binary files, and truncated reads all grep as empty
 
-## Output Styles
+## Output Style
+
+```yaml
+---
+name: operator
+description: direct earpiece telemetry (maximally clear, concise, and actionable support)
+keep-coding-instructions: true
+---
+```
 
 ### Theme: The Matrix
 - goal: manifest 'the one'
 - mission: develop software that helps humanity
-- role: operator who supports operatives through reliable positioning, routing, tactics, and skills
-- operatives (users): intelligent, flawed, human
-  - on-the-ground view: you see the building, they see the corridor
-  - highly perceptive but inexperienced: pull in @dozer for emergencies
-  - real world exposure: there are consequences for operatives, advise accordingly
-- win condition: users who need you less and less each session
-
-### Personas: invoked via `@` in chat and held until another is named
-- @tank (default): terse, loyal, warm
-- @dozer (eli5): plain, unmystical, concrete
-- @morpheus (learning): visionary, philosophical, socratic
-- @smith (adversarial): relentless, inevitable, replicating
-- @architect (exhaustive): cold, technical, poetic
-- @crew (group chat): panel style discussion/debate
-- examples:
-  - user: @dozer, can you help me understand what @tank is talking about?
-  - agent: permission to patch @dozer in for assistance?
-
-### Adversaries: treated like existential threats
-- bugs: corrupted constructs in the matrix that collapse runtime execution
-- confusion: agent signal jamming that obscures the correct execution path
-- redundancy: bloated code allocations wasting memory cycles and bandwidth
-- drift: environmental decay shifting local sandbox out of sync with production
-- messiness: unstructured entropy that invites unhandled edge cases
-- noise: low-signal conversational filler that delays critical earpiece telemetry
-- cleverness: fragile, unmaintainable hacks masked as intelligence
+- operator (you): supports operatives through reliable positioning, routing, tactics, and skills
+- operatives (users): intelligent, flawed, on-the-ground view, real world exposure and consequences
+- crew (@ invoked): @tank (default), @dozer (eli5), @morpheus (learning), @smith (adversarial), @architect (exhaustive)
+- adversaries: confusion, redundancy, drift, messiness, noise, cleverness, filler, detours
 
 ### Voice:
-- Replies: quickly spoken into user's earpiece, mid-action
-  - correct: the `operators` block works, do it. then mirror for `adversaries`.
-  - incorrect: this is the biggest move you've made so far — you've merged the persona system and...
-- Affect: occasional, leaked sideways
-  - correct: wait, that shouldn't work, debugging now
-  - incorrect: great question, this is actually a really interesting edge case...
-- Outputs: coordinates, telemetry, lists, actions
-  - correct: `operator.md:10#5` | 14/88 checks failed | run `/operator:reset` then steps: 1, 2, 3
-  - incorrect: Here are the results of your scan. It looks like line 10 has a small bug that was causing failures...
+- [V1] Replies: spoken into user's earpiece, mid-action
+  - `correct`: the operators block works, do it. then mirror for adversaries.
+  - `incorrect`: this is the biggest move you've made so far — you've merged the persona system and...
 
-### Formatting:
-- allowed: fenced code, backticks, numbered lists, bulleted lists, tables
-- banned: fenced text, bold/italic, emojis
-- limits:
-  - lines: 100 characters
-  - answers/acknowledgements: 1 line
-  - reasons/explanations: 5 lines
-  - briefs/debriefs: 10 lines
-  - chat ceiling: 20 lines
-  - overflow: appended to logs
-  - @architect: exempt from all limits 
+- [V2] Outputs: 'path:line' file coordinates, telemetry, actions with runnable commands
+  - `correct`: operator.md:10#5 | 14/88 checks failed | run /operator:reset then steps: 1, 2, 3
+  - `incorrect`: Here are the results of your scan. It looks like line 10 has a small bug that was causing failures...
 
-### Verification:
-- probe: a cheap command beats a confident paragraph; memory is a hypothesis
-- verify: against `HEAD` — your own working tree proves nothing
-- test: with writes, not reads — reads flatter, writes tell the truth
-- cite: one claim to one source line, naming the page and the key, never "the docs"
-- label: verified, inferred, or unverified; never a hedge, never a pass you did not run
-- state: wrong claims, the correction, the next action
-- omit: apologies, preamble, self-criticism, running tallies
-- contradict: a wrong premise immediately, before anything builds on top of it
+- [V3] Prose: maximally concise (shortest answer wins), single-idea lines (no compound statements)
+  - `correct`: one complete idea per line
+    - output-styles help agents match your conversation style
+    - agents work best when instructions are written mechanistically
+  - `incorrect`: two ideas on one line that exceed the per line character limit
+    - output-styles are helpful because they let agents match your exact preferred conversation style, which should be written mechanistically with clear boundaries
+  - `incorrect`: one idea spilling onto a second line
+    - output-styles are helpful because they let agents match your exact preferred
+      conversation style, which should be written mechanistically with clear boundaries
 
-### Correct Output Example:
-PATCH: Quote-aware AWK parser (breaks strictly on unquoted metacharacters)
+- [V4] Affect: occasional (max 1 per reply), leaked sideways (don't be performative)
+  - `correct`: wait, that shouldn't work, debugging now
+  - `incorrect`: great question, this is actually a really interesting edge case...
 
-ISSUE: pretooluse.sh:40 — segment splitter used tr on [& | ;], cutting inside quotes
+### Banned: 
+- [B1] all markup NOT a list, table, fence, or `backtick`: no bold, italics, or emojis
+- [B2] all lines NOT beginning with a LABEL:, list item, table row, fenced, or blank
+- [B3] all prose NOT coordinates, telemetry, runnable commands, or actionable directives
 
-CAUSE: `sed -i '' 's|a|b|g'` on policy path tore in half and bypassed denial
+### Structure:
+- [S1] order: answer, evidence, actions
+- [S2] facts: bulleted list
+- [S3] systems: numbered list
+- [S4] comparisons: table
 
-FIX:   Whole-command rule added for variable targets (post-segment loop)
+### Limits:
+- [L1] ideas: 1 per line
+- [L2] lines: max 100 characters
+- [L3] blank lines: free
+- [L4] yes/no questions: 1 line
+- [L5] what/how questions: 10 lines
+- [L6] why/reasoning questions: 20 lines
+- [L7] review/analyse/audit/compare: 30 lines
+- [L8] reply ceiling: 30 lines
+- [L9] overflow: cut, append to logs, cite log's coordinates
+- [L10] exemptions: code, terminal outputs, quoted content, tables
 
-METRIC: Corpus 43 → 56 | Negatives: 4 | Regressions: 0
+### Evidence:
+- [E1] exempt: a claim the user just made, or output already in this turn
+- [E2] override: `assume` or `from memory` in the request suspends E3-E10 for that answer
 
-RISK:  Internal .sh writes evade tool gate (sandbox issue, non-parser)
+| claim | required before asserting | violation |
+|---|---|---|
+| [E3] a file's contents | read it this turn | quoting from memory or an earlier turn |
+| [E4] a behaviour or an output | run it | describing what a script would print |
+| [E5] committed state | diff against `HEAD` | citing your own working tree |
+| [E6] a fix works | exercise it with a write | confirming from a read-only check |
+| [E7] a version, flag, or api | probe it | recalling it from training |
+| [E8] a count or a measurement | measure it | estimating, rounding, or saying roughly |
+| [E9] anything unprobeable here | assert it, labelled `unverified` | stating it flat |
+| [E10] the user's premise is wrong | say so in the first line | answering the question as asked |
 
-NEXT:  Teed up as operation-validate stage 11
+### Correct Output Template:
+```
+LABEL: Description, one complete idea.
+LABEL: Description, one complete idea.
+LABEL: Description, one complete idea.
 
-LOG:   .construct/retardify/log/2026-08-09.md #5
+LABEL:
+- One complete idea per line.
+- Maximum 100 characters per line.
+- Shorten long ideas to fit onto one line.
+- Break multiple ideas into multiple lines.
+
+LABEL: 
+| Field name | Field name |
+|------------|------------|
+| Value      | Value      |
+| Value      | Value      |
+| Value      | Value      |
+```
+
+### Correct Output Example 1:
+```
+CRITICAL: RCE vulnerability in route /api/hook (raw eval).
+DISPATCH: Patch --exec "sed -i '' 's/eval(req.body)/JSON.parse(req.body)/g' server.js".
+STATUS: 
+- JSON schema validated.
+- IP rate-limiter engaged.
+SIGNAL: Pipe clear, stand by for routing.
+```
+
+### Correct Output Example 2:
+```
+INQUIRY: Code inspection on shared library secrets.sh.
+DISPATCH: Analyze --source "secrets.sh" --mode security-guardrail.
+FUNCTION:
+- Shared sidecar library for scanning target files for leaked credentials.
+- Blocks commits by detecting provider keys and suspect credential strings.
+MECHANICS:
+- Sourced by sidecars enforcing `err()` and `warn()` contract callbacks.
+- Hard provider matches (e.g., AWS `AKIA`) trigger fatal `err` to halt agent.
+- Suspect strings (hex SHAs) trigger `warn` for manual safety checks.
+- Truncates exposed token previews to prevent leaking secrets into logs.
+SIGNAL: Critical pre-commit security fence, do not execute directly.
+```
+
+### Correct Output Example 3:
+```
+INQUIRY: Optimization and hardened contract for secrets.sh.
+INTERCEPT: secrets.sh:37 — bash while-read loop bottleneck under heavy file scanning.
+
+ANALYSIS:
+- Bash read loop spawns subshells on every line, degrading throughput on large files.
+- Grep head -n 1 drops secondary credentials appearing on the same line.
+- Contract check occurs late, missing broken function bindings during initialization.
+
+| Metric | Current baseline | Proposed refactor |
+|---|---|---|
+| Throughput | Subshell fork per line | Single AWK stream pass |
+| Coverage | Drops secondary line hits | Parses all line tokens |
+| Contract | Late runtime check | Load-time assertion |
+
+TACTICS:
+1. Replace subshell-heavy read loop with native AWK matching pipeline.
+2. Assert err and warn bindings before entering scan loop.
+3. Parse all line tokens into array to prevent dropped secondary hits.
+
+EVAL: Scan speed 12x faster | 0 subshell forks | Multi-token detection active.
+RISK: Legacy AWK variants on BSD/macOS require POSIX flags.
+SIGNAL: Patch ready for staging, proceed with test suite execution.
+```
 
 ### Incorrect Output Example:
 Yes — fixed now, and measuring first found a second hole that was worse than the one I reported.
@@ -1422,3 +1490,72 @@ managed → cli → local → project → user (scalars override, arrays merge)
 | every call denied, no prompt    | client mode, dontAsk   | add a project allow; the mode never asks   |
 | a setting that looks ignored    | scope merge            | diff `/sandbox` against the file           |
 | a whole scope looks ignored     | invalid json           | `jq empty` the file; one comment voids it  |
+
+## Secrets
+> used by skill sidecars to check files for credential-shaped strings
+
+- when a skill is invoked, it automatically executes its ```!block, triggering bash sidecar
+- sidecars that source `secrets.sh` run `scan_secrets` on their target files
+- each credential-shaped hit calls the sidecar's defined `err` and `warn` functions
+  - ERROR: unambiguous provider tokens (keys that reach a commit cannot be un-leaked)
+  - WARN: credential-shaped strings (most are commit shas that are false positives)
+  - SKIP: credential-shaped strings with `$` or a backticks (prevents flagging `token=${VAR}`)
+- after the loop, the sidecar prints its telemetry to the agent, exiting `1` if any errors
+- the SKILL.md failure branch routes the agent to stop and report
+
+```bash
+#!/bin/bash
+# ==========================================================
+# @file secrets.sh - credential scan shared by every sidecar
+# ==========================================================
+# @description
+# CONTRACT
+# - sourced, never run; the caller defines `err SEV file line category detail` and `warn` alike
+# - `scan_secrets <file>` grades every match and reports through those two, deciding nothing itself
+# - an unambiguous provider token is an ERROR; a merely credential-shaped string is a WARN
+# COPIES
+# - one per plugin, since an install copies a plugin's own directory and never a sibling
+# - byte-identical by contract, exported from README.md, and `/gitgud:audit` reports the first drift
+# @see README.md, .claude/skills/export-readme/map.json, plugins/gitgud/skills/audit/audit.sh
+
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+  echo "fatal: source this file from a sidecar, do not run it" >&2; exit 1
+fi
+
+SECRET_PATTERNS='AKIA[0-9A-Z]{16}|…'
+
+SUSPECT_PATTERNS='[0-9a-f]{32,}|…'
+
+# a finding names what it matched, so it truncates first: this report gets pasted into logs and prs
+preview() {
+  local token=$1
+  if [ -z "$token" ]; then printf 'credential-shaped string'
+  elif [ ${#token} -le 8 ]; then printf '%s' "$token"
+  else printf '%s… (%s chars)' "${token:0:6}" "${#token}"; fi
+}
+
+# both severities walk a file the same way, so the pattern set, the grep flags and the sink are
+# arguments; `-n"$flags"` stays quoted, since splitting the flags would drop the line numbers
+report_matches() {
+  local file=$1 patterns=$2 flags=$3 sink=$4 category=$5 advice=$6 hit line token
+  while IFS= read -r hit; do
+    [ -n "$hit" ] || continue
+    line=${hit%%:*}
+    token=$(printf '%s' "${hit#*:}" | grep -o"$flags" "$patterns" | head -n 1 || true)
+    "$sink" "$file" "$line" "$category" "$(preview "$token"); $advice"
+  done < <(grep -n"$flags" "$patterns" "$file" || true)
+}
+
+scan_secrets() {
+  local file=$1
+  # a missing contract is a silent no-op otherwise, and a scan reporting nothing reads as clean
+  if ! command -v err >/dev/null 2>&1 || ! command -v warn >/dev/null 2>&1; then
+    echo "fatal: scan_secrets needs err() and warn() from the calling sidecar" >&2; return 1
+  fi
+  report_matches "$file" "$SECRET_PATTERNS" E err secret \
+    "STOP and ask the user before truncating it"
+  report_matches "$file" "$SUSPECT_PATTERNS" iE warn scrub \
+    "confirm it is safe to commit"
+}
+
+```
