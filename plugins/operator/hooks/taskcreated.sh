@@ -8,7 +8,11 @@
 # - confirmed live: a blocked test task never got created, so this uses additionalContext
 # - creates today's log file if missing
 # - nudges the agent to check thread-relatedness, not enforced
+# - anchors to the project root first, since a subdirectory cwd stubs a stray log and names it
 # @see plugins/retardify/skills/log/SKILL.md, plugins/operator/hooks/taskcompleted.sh, .construct/retardify/log/
+
+# hooks inherit the session's cwd, so anchor first; every path below stays relative to the root
+cd "${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}" || exit 0
 
 TODAYS_LOG=".construct/retardify/log/$(date +%Y-%m-%d).md"
 
