@@ -27,6 +27,16 @@ metadata:
     on purpose, and a wrong call here ships half a feature
   - report what was left and why, one line each, before the first block
 
+## voice
+
+```!
+awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
+```
+
+- the block above already ran, and it is the output contract for this response
+- it holds for this turn even when the user's active output style is something else
+- an empty block means the plugin has no style file; continue, since voice never gates the work
+
 ## telemetry
 
 ```!
@@ -47,22 +57,24 @@ echo "sidecar exit: $?"
 - analyze changes and group into self-contained atomic `type(scope)` buckets
 - interdependent files needed to pass CI should be grouped together
 - tests are grouped with code they validate, matched via imports, routes, selectors, etc
-- types (derived from the following, in order of precedence):
-  - `new` → first-time features, functions
-  - `improve` → existing features, functions
-  - `fix` → defects, bugs, broken code
-  - `update` → content, text, properties, comments, rename, remove
+- types (derived from effect on behavior, in order of precedence):
+  - `new` → adding a new capability that did not exist before
+  - `fix` → editing an existing capability that was not working as expected
+  - `improve` → editing an existing capability that changes how it works
+  - `update` → editing an existing capability that doesn't change how it works
   - `debug` → logs, profiling scripts, temp instrumentation
-  - exceptions:
-    - `test` → test changes independent of other changes (no in-tree subject)
-- scopes (derived from the following, in order of precedence): 
-  - single file: file's `FullName.ext`
-  - multiple files: parent folder's name
-  - multiple folders: most logical domain name
-  - multiple domains: most dominant domain name
-  - multiple unrelated domains: `misc`
-  - exceptions: 
-    - `content` → any changes in `/content/` 
+  - `test` → test changes independent of other changes (no in-tree subject)
+- scopes (derived from context of change, in order of precedence): 
+  - `class` → singular noun of changed item (e.g. hook, skill, tool, etc)
+  - `domain` → plural noun of multiple changed items (e.g. docs, settings, config, etc)
+  - `most dominant domain` of changes spanning multiple domains
+  - `misc` for changes spanning multiple unrelated domains
+- titles: stated outcomes, verb first, doesn't repeat type or scope, in present tense
+- examples:
+  - correct: `new(skill): generate github issues report and analysis`
+  - incorrect: `new(issues): operator issues skill`
+  - correct: `improve(tool): migrate skill frontmatter checks to 'export-readme'`
+  - incorrect: `improve(check-skills): hand frontmatter rules to export-readme`
 
 3. plan EVERY bucket, then STOP and gate on the plan
 - sort the buckets by dependency and prioritize foundational changes
