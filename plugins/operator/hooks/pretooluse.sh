@@ -106,7 +106,7 @@ PROTECTED="$PROTECTED|\.mcp\.json$B"
 # every plugin's hooks and not just operator's: hooks.json is the pointer, so the folder is the unit
 PROTECTED="$PROTECTED|plugins/operator/settings$B|plugins/[a-z][a-z-]*/hooks$B"
 # the probes read the live gate, so editing one lets an agent fake its own clean bill of health
-PROTECTED="$PROTECTED|plugins/operator/skills/(credentials|permissions|scripts|settings)$B"
+PROTECTED="$PROTECTED|plugins/operator/skills/(audit|credentials|permissions|scripts|settings)$B"
 
 # `.claude` is matched whole above, which swept in `.claude/skills/` and left this repo's own
 # maintainer skills unmaintainable: chmod, git add and rm were all denied on ordinary work

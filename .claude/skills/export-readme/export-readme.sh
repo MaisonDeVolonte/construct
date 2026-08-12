@@ -8,10 +8,12 @@
 # - each mapped `#### <Skill>` section carries a yaml fence, then the preamble that follows it
 # - `map.json` beside this file names which readme heading feeds which target file
 # - a map value may be a list, so one section exports into every copy that has to agree
+# - the `README.md` entry names no section at all: the source file itself is what lands
 # REGION
 # - a skill's managed region runs from line 1 to the first body heading after its frontmatter
 # - a style file has no such heading, so its whole file is the region and the export owns it
 # - a script target (*.sh) is the same whole-file region, rendered from its section's bash fence
+# - a readme copy (plugins/*/README.md) is the source verbatim, so its compare is a byte compare
 # - export replaces that region with the section's yaml inner block plus its trailing markdown
 # - the bare invocation fence above the yaml block is readme display sugar and never lands
 # CHECKS
@@ -21,14 +23,20 @@
 # - `description` stays at or under 110 chars; description + when_to_use stays under the 1536 cap
 # - `name` must match the skill's folder, and every SKILL.md on disk must appear in the map
 # - a style target earns name and description only; a script earns a fence opening #!/bin/bash
+# - a readme copy carries no yaml, so drift is its only finding and an absent copy is drift too
 # - any ERROR on a section blocks that one skill's export and never the others
 # RUN
 # - check is the default: prints the drift table, writes nothing, exits 1 on drift or ERROR
+# - the NEWER column reads file mtimes: `copy` means the skill side moved last, so read it first
 # - `--diff` appends a unified diff per drifted skill; `--apply` rewrites the managed regions
 # - `--apply` prompts on a tty; an agent confirms in chat first, then re-runs with `--yes`
 # - pass skill names to scope either mode; `--map`/`--source` swap the config for tests
 # @see .claude/skills/export-readme/map.json, .claude/skills/export-readme/SKILL.md, .claude/skills/validate-skills/validate-skills.sh, README.md, .github/workflows/ci.yml
 set -euo pipefail
+
+# the doc is read only after this has already run, so help is refused here or not at all; the doc's
+# own '## Help' section owns the output, which is why this prints a marker rather than a usage text
+case " $* " in *" --help "*|*" -h "*) echo "help: requested"; exit 0;; esac
 
 STRICT=0
 APPLY=0
@@ -59,7 +67,6 @@ while [ $# -gt 0 ]; do
     --keep) KEEP=1;;
     --map) MAP=${2:?fatal: --map needs a path}; shift;;
     --source) SOURCE=${2:?fatal: --source needs a path}; shift;;
-    -h|--help) sed -n '2,29p' "$0"; exit 0;;
     -*) echo "fatal: unknown flag $1" >&2; exit 1;;
     *) ONLY+=("$1");;
   esac
@@ -88,7 +95,10 @@ trap cleanup EXIT
 FINDINGS="$SCRATCH/findings"
 ROWS="$SCRATCH/rows"
 QUEUE="$SCRATCH/queue"
-: > "$FINDINGS"; : > "$ROWS"; : > "$QUEUE"
+# the left side of a compare when the target is not there yet; a real file rather than /dev/null,
+# since the sandbox denies that too and a failed diff reports a delta of zero
+EMPTY="$SCRATCH/absent"
+: > "$FINDINGS"; : > "$ROWS"; : > "$QUEUE"; : > "$EMPTY"
 
 err()  { printf 'ERROR|%s|%s|%s|%s\n' "$1" "$2" "$3" "$4" >> "$FINDINGS"; }
 warn() { printf 'WARN|%s|%s|%s|%s\n' "$1" "$2" "$3" "$4" >> "$FINDINGS"; }
@@ -194,6 +204,24 @@ is_script() {
   case "$1" in *.sh) return 0;; *) return 1;; esac
 }
 
+# a readme copy is the source landed whole at a plugin root, so an install taking one plugin's
+# directory still carries the doc; with no section and no yaml, cmp is its every rule
+is_readme() {
+  case "$1" in */README.md) return 0;; *) return 1;; esac
+}
+
+# which side moved last, so a drift row says which copy to read before anything is written. file
+# mtimes rather than commit times, since the edit that caused the drift is usually still uncommitted
+# the source mtime is file-level, so editing one section marks it newer than every copy; the column
+# answers "did the readme move after this copy did", which is the question to ask before applying
+newer_side() {
+  local target=$1
+  if [ ! -f "$target" ]; then printf 'readme'; return 0; fi
+  if [ "$SOURCE" -nt "$target" ]; then printf 'readme'; return 0; fi
+  if [ "$target" -nt "$SOURCE" ]; then printf 'copy'; return 0; fi
+  printf 'same'
+}
+
 # metadata.kind, declared rather than guessed; empty when unset, mirrors validate-skills.sh
 kind_of() {
   awk '/^metadata:/ { inside = 1; next }
@@ -225,8 +253,10 @@ pair=0
 
 while IFS=$'\t' read -r heading skill; do
   [ -n "$heading" ] || continue
-  # a skill owns a folder and every doc is called SKILL.md; a style or a script is one file each
-  if is_style "$skill"; then name=$(basename "$skill" .md)
+  # a skill owns a folder and every doc is called SKILL.md; a style or a script is one file each,
+  # and a readme copy takes the scope word rather than its shouted basename, like every sibling
+  if is_readme "$skill"; then name=readme
+  elif is_style "$skill"; then name=$(basename "$skill" .md)
   elif is_script "$skill"; then name=$(basename "$skill" .sh)
   else name=$(basename "$(dirname "$skill")"); fi
   plugin=$(plugin_of "$skill")
@@ -235,6 +265,34 @@ while IFS=$'\t' read -r heading skill; do
   MAPPED=$((MAPPED + 1))
   pair=$((pair + 1))
   blocked=0
+
+  # a readme copy names no section, so every heading, yaml and fence rule below would judge text
+  # it does not have; the source file is the whole region and cmp is the whole compare
+  if is_readme "$skill"; then
+    if [ ! -d "$(dirname "$skill")" ]; then
+      err "$skill" 1 missing_plugin "the map lands a copy in a directory that is not there"
+      BLOCKED=$((BLOCKED + 1))
+      continue
+    fi
+    # an absent copy is drift and not a scaffold error: unlike a skill there is no body to invent,
+    # so a plugin added to the map earns its copy on the next apply
+    have=$skill
+    if [ ! -f "$have" ]; then have=$EMPTY; fi
+    if cmp -s "$have" "$SOURCE"; then
+      IN_SYNC=$((IN_SYNC + 1))
+      continue
+    fi
+    DRIFTED=$((DRIFTED + 1))
+    region='file (verbatim)'
+    if [ "$have" = "$EMPTY" ]; then region='file (absent)'; fi
+    delta=$(diff "$have" "$SOURCE" | grep -c '^[<>]' || true)
+    printf '%s|%s|%s|%s|%s|%s\n' \
+      "$label" "$skill" "$region" "$delta" "$(newer_side "$skill")" "$pair" >> "$ROWS"
+    # boundary 0 marks the whole-file copy the apply pass lands with cp, since a render that
+    # rewrote a single byte would break the one contract this target has
+    printf '%s|%s|%s|%s\n' "$label" "$skill" 0 "$SOURCE" >> "$QUEUE"
+    continue
+  fi
 
   hline=$(heading_line "$heading")
   if [ -z "$hline" ]; then
@@ -303,6 +361,14 @@ while IFS=$'\t' read -r heading skill; do
       warn "$SOURCE" "$hline" description_length \
         "'$heading' description is ${#desc} chars; the cap is $DESC_MAX"
     fi
+  fi
+
+  # every skill answers --help, and the hint is the only place the picker shows a flag before it is
+  # typed; leading with it keeps one skill from advertising the flag while its sibling hides it
+  if ! grep -qE '^argument-hint: "\[--help\]' "$newtop"; then
+    err "$SOURCE" "$hline" help_unhinted \
+      "'$heading' has no argument-hint leading with [--help]; every skill answers it"
+    blocked=1
   fi
 
   # the kind decides the rest of the frontmatter, so an undeclared one cannot export
@@ -388,7 +454,8 @@ while IFS=$'\t' read -r heading skill; do
   fi
   delta=$(diff "$curtop" "$newtop" | grep -c '^[<>]' || true)
 
-  printf '%s|%s|%s|%s|%s\n' "$label" "$skill" "$region" "$delta" "$pair" >> "$ROWS"
+  printf '%s|%s|%s|%s|%s|%s\n' \
+    "$label" "$skill" "$region" "$delta" "$(newer_side "$skill")" "$pair" >> "$ROWS"
   if [ "$blocked" -eq 1 ]; then
     BLOCKED=$((BLOCKED + 1))
   else
@@ -425,6 +492,14 @@ if [ ${#ONLY[@]} -eq 0 ]; then
     [ -f "$script" ] || continue
     if ! grep -qFx "$script" "$SCRATCH/mapped"; then
       err "$script" 1 unmapped_script "no map entry, so this copy can drift from the readme unseen"
+    fi
+  done
+  # a plugin root readme is the same fan-out again, and a stale one is the copy a marketplace
+  # install actually shows, so an unmapped one is the same failure
+  for copy in plugins/*/README.md; do
+    [ -f "$copy" ] || continue
+    if ! grep -qFx "$copy" "$SCRATCH/mapped"; then
+      err "$copy" 1 unmapped_readme "no map entry, so this copy can drift from the readme unseen"
     fi
   done
   # catalog headings live between '## Plugins & Skills' and the next h2; one heading, one entry
@@ -467,8 +542,8 @@ EOF
 if [ "$DRIFTED" -eq 0 ]; then
   echo "none — every managed region matches its readme section"
 else
-  printf '%-22s %-22s %-6s %s\n' 'SKILL' 'REGION' 'DELTA' 'FILE'
-  awk -F'|' '{ printf "%-22s %-22s %-6s %s\n", $1, $3, $4, $2 }' "$ROWS"
+  printf '%-22s %-22s %-6s %-7s %s\n' 'SKILL' 'REGION' 'DELTA' 'NEWER' 'FILE'
+  awk -F'|' '{ printf "%-22s %-22s %-6s %-7s %s\n", $1, $3, $4, $5, $2 }' "$ROWS"
 fi
 
 if [ "$ERRORS" -gt 0 ] || [ "$WARNINGS" -gt 0 ]; then
@@ -478,11 +553,18 @@ if [ "$ERRORS" -gt 0 ] || [ "$WARNINGS" -gt 0 ]; then
 fi
 
 if [ "$DIFF" -eq 1 ] && [ "$DRIFTED" -gt 0 ]; then
-  while IFS='|' read -r label skill region delta pair; do
+  while IFS='|' read -r label skill region delta newer pair; do
     [ -n "$pair" ] || continue
-    echo "--- diff: $label ---"
-    diff -u -L "$skill (managed region)" -L "$SOURCE (rendered)" \
-      "$SCRATCH/$pair.curtop" "$SCRATCH/$pair.newtop" || true
+    echo "--- diff: $label ($newer moved last) ---"
+    # a readme copy rendered nothing into scratch, and an absent one has no left side at all
+    if is_readme "$skill"; then
+      have=$skill
+      if [ ! -f "$have" ]; then have=$EMPTY; fi
+      diff -u -L "$skill (copy)" -L "$SOURCE (source)" "$have" "$SOURCE" || true
+    else
+      diff -u -L "$skill (managed region)" -L "$SOURCE (rendered)" \
+        "$SCRATCH/$pair.curtop" "$SCRATCH/$pair.newtop" || true
+    fi
   done < "$ROWS"
 fi
 
@@ -509,9 +591,15 @@ if [ "$APPLY" -eq 1 ]; then
     echo "--- apply ---"
     while IFS='|' read -r label skill boundary newtop; do
       [ -n "$label" ] || continue
-      out="$SCRATCH/out"
-      { cat "$newtop"; echo; sed -n "${boundary},\$p" "$skill"; } > "$out"
-      strip_trailing "$out" > "$skill"
+      # boundary 0 is the whole-file copy: cp, because the render below strips trailing blanks
+      # and would land a file that is one byte off the source it claims to be identical to
+      if [ "$boundary" -eq 0 ]; then
+        cp "$newtop" "$skill"
+      else
+        out="$SCRATCH/out"
+        { cat "$newtop"; echo; sed -n "${boundary},\$p" "$skill"; } > "$out"
+        strip_trailing "$out" > "$skill"
+      fi
       printf 'wrote %s (%s)\n' "$skill" "$label"
     done < "$QUEUE"
     echo "applied: $TODO file(s); re-run without --apply to confirm in_sync"

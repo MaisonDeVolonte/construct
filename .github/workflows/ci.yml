@@ -5,7 +5,8 @@
 # - the repo ships shell scripts that source each other, so ci gates exactly that and no more
 # - `shellcheck -x` lints every sidecar, hook, and validator at warning severity, sourced files too
 # - the shared files are linted directly as well, so a renamed variable fails the build (SC2034)
-# - `export-readme` gates every managed region against the readme: skill tops, style and secrets copies
+# - `export-readme` gates every managed region against the readme: skill tops, style, secrets and
+#   readme copies, the last three byte-identical per plugin because an install takes one directory
 # - `sidecars stay read-only` fails the build on an executed mutating git verb outside a handover
 # - it exists because `prune.sh` ran one for five deliveries and the sandbox half-applied each merge
 # - references are NOT gated here: `todo.sh` ranks opportunities, it never graded them
