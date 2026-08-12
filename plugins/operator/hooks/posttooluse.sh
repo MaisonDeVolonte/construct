@@ -3,9 +3,10 @@
 # @file posttooluse.sh - posttooluse hook script
 # ==============================================
 # @description
-# - runs `eslint --fix` and `/retardify:file` after a successful Write|Edit
+# - runs `eslint --fix`, then `/retardify:file` and `/retardify:code`, after a Write|Edit
+# - file grades the shape around the logic; code grades the mechanics inside it
 # - findings come back as context, agent fixes them on its next turn
-# - silent when nothing is wrong, so a clean file costs one exit and no context
+# - silent when nothing is wrong, so a clean file costs two exits and no context
 # - extracts the touched file path from claude payloads
 # - anchors to the project root first, so a relative payload path resolves the same from any cwd
 # @see plugins/retardify/skills/file/, .claude/settings.json
@@ -40,16 +41,31 @@ if [ ! -d "$SKILLS" ]; then
   exit 0
 fi
 
-# it exits 1 on ERROR, which is right for a gate and wrong here: this hook never fails a write,
-# so the exit code is absorbed and only what it printed is passed along
-FINDINGS=$(
-  bash "$SKILLS/file/file.sh" "$FILE" 2>/dev/null \
-    | grep -E '^(ERROR|WARN)[[:space:]]' | head -n "$MAX_FINDINGS" || true
-)
+# both sidecars exit 1 on ERROR, which is right for a gate and wrong here: this hook never fails
+# a write, so each exit code is absorbed and only what it printed is passed along
+lint() {
+  bash "$SKILLS/$1/$1.sh" "$FILE" 2>/dev/null | grep -E '^(ERROR|WARN)[[:space:]]' || true
+}
+
+SHAPE=$(lint file)
+LOGIC=$(lint code)
+
+# each sidecar gets half the budget, so a noisy shape report cannot crowd out every logic finding
+SHARE=$((MAX_FINDINGS / 2))
+FINDINGS=$({ printf '%s\n' "$SHAPE" | head -n "$SHARE"
+             printf '%s\n' "$LOGIC" | head -n "$SHARE"; } | grep -E '^(ERROR|WARN)' || true)
 
 if [ -z "$FINDINGS" ]; then exit 0; fi
 
-jq -n --arg ctx "file shape findings for $FILE (see /retardify:file);
+# a cap that hides its own truncation reads as a clean bill of health, so the count says otherwise
+FOUND=$(printf '%s\n%s\n' "$SHAPE" "$LOGIC" | grep -cE '^(ERROR|WARN)' || true)
+SHOWN=$(printf '%s\n' "$FINDINGS" | grep -cE '^(ERROR|WARN)' || true)
+if [ "$FOUND" -gt "$SHOWN" ]; then
+  FINDINGS="$FINDINGS
+$((FOUND - SHOWN)) more finding(s) hidden; run either sidecar on this path to see them all"
+fi
+
+jq -n --arg ctx "file and code findings for $FILE (see /retardify:file, /retardify:code);
 fix the ERRORs, justify or fix the WARNs:
 $FINDINGS" \
   '{hookSpecificOutput: {hookEventName: "PostToolUse", additionalContext: $ctx}}'

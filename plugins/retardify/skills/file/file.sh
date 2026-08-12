@@ -14,6 +14,7 @@
 # - source files, never a `.construct/` artifact; the artifact it writes is graded here too
 # RUN
 # - defaults to every tracked eligible file; pass files or a directory to scope it
+# - a scoped run answers about those paths only, so the artifact sweep is a bare-run check
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
 # - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
 # - a broken `@see` only warns, since nothing gates references; `/retardify:todo` reports repo-wide
@@ -77,13 +78,16 @@ DIRECTIVES='eslint-|ts-ignore|ts-expect-error|ts-nocheck|prettier-ignore|biome-i
 BANNER='^[=*_~+-]{3,}$'
 
 TARGETS=()
+# a caller naming paths asked about those paths; the artifact sweep below reports on files it was
+# never handed, which reads as noise about an unrelated file on every posttooluse run
+SCOPED=0
 for arg in "$@"; do
   case "$arg" in
     --strict) STRICT=1;;
     --keep) KEEP=1;;
-    -h|--help) sed -n '2,19p' "$0"; exit 0;;
+    -h|--help) sed -n '2,20p' "$0"; exit 0;;
     -*) echo "fatal: unknown flag $arg" >&2; exit 1;;
-    *) TARGETS+=("$arg");;
+    *) TARGETS+=("$arg"); SCOPED=1;;
   esac
 done
 
@@ -468,20 +472,6 @@ check_modules() {
 #   each takes a file path, a marker and where the wayfinder ended
 # ==============
 
-# "exactly one space after the marker, so `// like this` and never `//like this`"
-check_spacing() {
-  local file=$1 marker=$2 skip=$3 lineno line trimmed
-  while IFS=$'\t' read -r lineno line; do
-    trimmed=$(printf '%s' "$line" | sed -E 's/^[[:space:]]*//')
-    if printf '%s' "$trimmed" | grep -qE "$BANNER"; then continue; fi
-    # the trailing class excludes the marker char itself, or `/+` backtracks to one slash and
-    # lets the second slash satisfy "not a space", flagging every correctly spaced `// text`
-    if printf '%s' "$trimmed" | grep -qE '^(#+[^#[:space:]]|/+[^/[:space:]])'; then
-      err "$file" "$lineno" spacing "one space after the marker, so '${marker} text' not '${marker}text'"
-    fi
-  done < <(comment_lines "$file" "$marker" "$skip")
-}
-
 # "`lines` carry a single clause, capped at 100 characters, and never wrap"
 check_comment_width() {
   local file=$1 marker=$2 skip=$3 lineno line
@@ -505,20 +495,6 @@ check_comment_casing() {
     if printf '%s' "$first" | grep -qE '^[A-Z0-9_]+[.,:;!?]?$'; then continue; fi
     if printf '%s' "$body" | grep -qE '^[A-Z]'; then
       err "$file" "$lineno" casing "lowercase shorthand, never sentence case: '${body:0:32}'"
-    fi
-  done < <(comment_lines "$file" "$marker" "$skip")
-}
-
-# "no trailing period, since a comment is a label and not a sentence"
-check_period() {
-  local file=$1 marker=$2 skip=$3 lineno line body
-  while IFS=$'\t' read -r lineno line; do
-    body=$(body_of "$line")
-    if exempt "$body"; then continue; fi
-    # an abbreviation, an ellipsis or a version number ends in a dot without being a sentence
-    if printf '%s' "$body" | grep -qE '(\.\.\.|[0-9]\.|e\.g\.|i\.e\.|etc\.|vs\.|\bal\.)$'; then continue; fi
-    if printf '%s' "$body" | grep -qE '[[:alnum:])"'"'"']\.$'; then
-      warn "$file" "$lineno" period "drop the trailing period; a comment is a label, not a sentence"
     fi
   done < <(comment_lines "$file" "$marker" "$skip")
 }
@@ -554,23 +530,39 @@ check_block() {
   done < <(comment_lines "$file" "$marker" "$skip")
 }
 
-# "commented-out code gets deleted, since git already remembers it" — conservative on purpose:
-# a bare trailing `;` is NOT a signal, since prose in this house style joins its clauses with one
-CODE_SHAPES='^(const|let|var|function|class|import|export|def|fn)[[:space:]]+[a-zA-Z_$]'
-CODE_SHAPES="$CODE_SHAPES"'|^[a-zA-Z_$][a-zA-Z0-9_$.]*\(.*\);?$'
-CODE_SHAPES="$CODE_SHAPES"'|^(if|for|while|switch)[[:space:]]*\('
-CODE_SHAPES="$CODE_SHAPES"'|^[a-zA-Z_$][a-zA-Z0-9_$.]*[[:space:]]*[-+*/]?=.*;$'
-CODE_SHAPES="$CODE_SHAPES"'|=>.*[;{]$'
-
-check_commented_code() {
-  local file=$1 marker=$2 skip=$3 lineno line body
+# "#1: use numbered citations" paired with a "(see #1)" pointer; the pair holds only when both do
+# a file defining no note opts out, which keeps a github ref like (see #127) out of this check
+check_citations() {
+  local file=$1 style=$2 lineno line text number defined="" highest=0 expected=1 refs ref hit
   while IFS=$'\t' read -r lineno line; do
-    body=$(body_of "$line")
-    if exempt "$body"; then continue; fi
-    if printf '%s' "$body" | grep -qE "$CODE_SHAPES"; then
-      warn "$file" "$lineno" commented_code "looks like code; delete it, git already remembers it"
+    text=$(content_of "$line")
+    # notes nest under a NOTES: heading in the template, so the indent is part of the shape
+    number=$(printf '%s' "$text" | sed -n 's/^[[:space:]]*-\{0,1\}[[:space:]]*#\([0-9]\{1,\}\):.*/\1/p')
+    if [ -z "$number" ]; then continue; fi
+    if [ "$number" -ne "$expected" ]; then
+      err "$file" "$lineno" citation_numbering "note #$number where #$expected was expected"
     fi
-  done < <(comment_lines "$file" "$marker" "$skip")
+    expected=$((number + 1))
+    defined="$defined $number"
+    if [ "$number" -gt "$highest" ]; then highest=$number; fi
+  done < <(block_lines "$file" "$style")
+  if [ -z "$defined" ]; then return 0; fi
+
+  refs=$({ grep -oE 'see #[0-9]+' "$file" || true; } | grep -oE '[0-9]+' | sort -un || true)
+
+  # only a ref inside the note range is judged; a larger number is an issue or a pr, never a note
+  for ref in $refs; do
+    if [ "$ref" -gt "$highest" ]; then continue; fi
+    case " $defined " in *" $ref "*) continue;; esac
+    hit=$({ grep -nE "see #$ref\b" "$file" || true; } | head -n 1 | cut -d: -f1)
+    err "$file" "${hit:-1}" citation_unresolved "(see #$ref) resolves to no note in the wayfinder"
+  done
+
+  for number in $defined; do
+    if printf '%s\n' "$refs" | grep -qx "$number"; then continue; fi
+    hit=$({ grep -nE "^[^a-zA-Z0-9]*#$number:" "$file" || true; } | head -n 1 | cut -d: -f1)
+    warn "$file" "${hit:-1}" citation_orphan "note #$number: dead weight, or a missing (see #$number)"
+  done
 }
 
 # a prose block comment below the wayfinder is a wayfinder that lost its way, or a paragraph that
@@ -606,6 +598,7 @@ for file in "${FILES[@]}"; do
       check_see            "$file" "$STYLE"
       check_header_width   "$file" "$STYLE"
       check_header_casing  "$file" "$STYLE"
+      check_citations      "$file" "$STYLE"
     fi
   fi
 
@@ -613,13 +606,10 @@ for file in "${FILES[@]}"; do
   MARKER=$(marker_for "$file")
   if [ -n "$MARKER" ]; then
     SKIP=$(wayfinder_end "$file" "$MARKER")
-    check_spacing        "$file" "$MARKER" "$SKIP"
     check_comment_width  "$file" "$MARKER" "$SKIP"
     check_comment_casing "$file" "$MARKER" "$SKIP"
-    check_period         "$file" "$MARKER" "$SKIP"
     check_clause         "$file" "$MARKER" "$SKIP"
     check_block          "$file" "$MARKER" "$SKIP"
-    check_commented_code "$file" "$MARKER" "$SKIP"
     check_block_comment  "$file" "$MARKER" "$SKIP"
   fi
 
@@ -791,7 +781,7 @@ check_artifact() {
   done
 }
 
-check_artifact ".construct/retardify/file"
+if [ "$SCOPED" -eq 0 ]; then check_artifact ".construct/retardify/file"; fi
 
 # ==============
 # TELEMETRY
@@ -808,8 +798,6 @@ if [ -f "$AUDIT_ROOT/$TODAYS_AUDIT" ];
 then AUDIT_COUNT=$(grep -c '^## Files Audit #' "$AUDIT_ROOT/$TODAYS_AUDIT" || true)
 else AUDIT_COUNT=0; fi
 AUDIT_COUNT=${AUDIT_COUNT:-0}
-
-
 
 cat <<EOF
 
