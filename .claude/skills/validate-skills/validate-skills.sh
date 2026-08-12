@@ -1,10 +1,10 @@
 #!/bin/bash
-# ==============================================
-# @file skills.sh - skill pair validator sidecar
-# ==============================================
+# =======================================================
+# @file validate-skills.sh - skill pair validator sidecar
+# =======================================================
 # @description
 # PAIR
-# - sidecar for `skills` — asserts every skill doc and its sidecar still hold together
+# - sidecar for `validate-skills` — asserts every skill doc and its sidecar still hold together
 # - the doc carries the shape a trigger follows; this file carries what a script can judge
 # - the only spec whose sidecar scans `plugins/*/skills/`, not a `.construct/` artifact directory
 # SHAPE
@@ -14,15 +14,15 @@
 # - the sidecar measures and never mutates, and sources `gitgud/shared/handover.sh` for its blocks
 # - a sidecar needing to mutate emits the command into a block instead of running it
 # SPLIT
-# - readme owns every frontmatter and preamble rule, judged at the readme source
+# - export-readme owns every frontmatter and preamble rule, judged at the readme source
 # - this sidecar owns the rest of the pair: the body, the sidecar, the pairing, and the index
 # - `metadata.kind` is still read here, since it decides which body checks a doc earns
-# - a kind nobody declared is readme's ERROR; here it only warns that checks were skipped
+# - a kind nobody declared is export-readme's ERROR; here it only warns that checks were skipped
 # RUN
 # - defaults to every pair in `plugins/*/skills/`; pass a doc, a sidecar, or a directory to scope it
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
 # - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
-# @see .claude/skills/skills/SKILL.md, .claude/skills/readme/readme.sh, plugins/gitgud/shared/handover.sh, plugins/, plugins/operator/shared/secrets.sh, .github/workflows/ci.yml
+# @see .claude/skills/validate-skills/SKILL.md, .claude/skills/export-readme/export-readme.sh, plugins/gitgud/shared/handover.sh, plugins/, plugins/operator/shared/secrets.sh, .github/workflows/ci.yml
 
 set -euo pipefail
 
@@ -39,7 +39,7 @@ if [ ! -f "$SHARED/secrets.sh" ]; then
 
 STRICT=0
 KEEP=0
-TEMPLATE=".claude/skills/skills/SKILL.md"
+TEMPLATE=".claude/skills/validate-skills/SKILL.md"
 TRIGGERS="plugins"
 
 # the postures the index assigns; a trigger nobody can tell the blast radius of is a trap
@@ -173,7 +173,7 @@ check_pair() {
 }
 
 # the wayfinder now lives in the sidecar, which carries the whole pair; the doc keeps frontmatter
-# as its orientation, and readme judges that frontmatter at its readme source
+# as its orientation, and export-readme judges that frontmatter at its readme source
 check_doc_wayfinding() {
   local doc=$1 name
   name=$(trigger_name "$doc")
@@ -254,16 +254,30 @@ check_block_name() {
 }
 
 # the body checks: a doc can be shape-correct in its frontmatter and its pairing and still be
-# structurally broken inside, which is how a pasted shape corrupted two docs with 0 errors reported
+# structurally broken inside, which is how a pasted archive shape corrupted two docs and every gate
+# still reported clean
 check_body() {
-  local doc=$1 n num prev heading ticks own plugin want found template
+  local doc=$1 n num prev heading ticks own plugin want found template h1 h2
+
+  # the body opens on `# Instructions`, so a reader meets one h1 before any section; without it
+  # the doc starts on an h2 and the exported top runs straight into the steps with no seam
+  h1=$({ grep -nxF '# Instructions' "$doc" || true; } | head -1 | cut -d: -f1)
+  h2=$({ grep -nE '^## ' "$doc" || true; } | head -1 | cut -d: -f1)
+  if [ -z "$h1" ]; then
+    err "$doc" "${h2:-1}" no_h1 "the body opens on '# Instructions', and this doc has no h1"
+  elif [ -n "$h2" ] && [ "$h1" -gt "$h2" ]; then
+    err "$doc" "$h1" h1_position "'# Instructions' opens the body, so it sits above the first '## '"
+  fi
 
   # the first `# ` heading is where a doc stops instructing and starts templating, so it is the
   # boundary every check below needs: numbered lines above it are steps, below it they are example
   # content. a doc with no template region has no boundary and is scanned whole
   # `|| true` on every one of these: grep exits 1 when it matches nothing, which under `set -e`
   # and `pipefail` kills the run mid-walk and reports zero findings, reading exactly like a pass
-  template=$(grep -nE '^# ' "$doc" 2>/dev/null | head -1 | cut -d: -f1 || true)
+  # `# Instructions` opens every body, so it is never the template boundary; counting it as one
+  # put every numbered step below the line and switched the step check off without a finding
+  template=$({ grep -nE '^# ' "$doc" 2>/dev/null || true; } \
+    | { grep -v ':# Instructions$' || true; } | head -1 | cut -d: -f1)
   template=${template:-999999}
 
   # steps read in file order and must climb: a repeated number is two step 3s, and a number that
@@ -370,23 +384,64 @@ check_sidecar_lint() {
   done < <(shellcheck -f gcc --severity=warning "$sidecar" 2>/dev/null || true)
 }
 
-# the style is opt-in, so the voice block is the only thing carrying it into a turn that did not
+# the style is opt-in, so the contract block is the only thing carrying it into a turn that did not
 # choose it; a paraphrased command cats nothing, so this compares byte for byte rather than by shape
 check_voice() {
-  local doc=$1 plugin
+  local doc=$1 plugin head last
   if ! grep -qFx -- "$VOICE_CMD" "$doc"; then
-    err "$doc" 1 no_voice "no voice block; the plugin style only reaches a turn when the doc cats it"
+    err "$doc" 1 no_style "no contract block; the plugin style reaches a turn only when a doc cats it"
     return 0
   fi
-  if ! grep -qE '^## voice$' "$doc"; then
-    err "$doc" "$(where "$doc" 'output-styles/operator\.md')" voice_heading \
-      "the voice command runs under no '## voice' heading, so nothing names what the block is"
+  # a bare grep that finds nothing returns 1, and set -e would kill the run on the one doc this
+  # check exists to catch, so the miss is absorbed here rather than ending the scan silently
+  head=$({ grep -nxF '## Output Style' "$doc" || true; } | head -n 1 | cut -d: -f1)
+  if [ -z "$head" ]; then
+    err "$doc" "$(where "$doc" 'output-styles/operator\.md')" style_heading \
+      "the cat runs under no '## Output Style' heading, so nothing names the block"
+  else
+    # the block closes every doc, so its heading is the last `## ` outside a fence; a section
+    # after it would read as the doc's conclusion while the style is what actually is
+    last=$(awk '/^```/ { fence = !fence; next } !fence && /^## / { n = NR } END { print n + 0 }' "$doc")
+    if [ "$head" != "$last" ]; then
+      err "$doc" "$last" style_position \
+        "the style block closes a doc; a '## ' section follows it at line $last"
+    fi
   fi
   plugin=$(plugin_of "$doc")
   [ -n "$plugin" ] || return 0
   if [ ! -f "plugins/$plugin/output-styles/operator.md" ]; then
     err "$doc" 1 voice_missing_style \
       "the block cats plugins/$plugin/output-styles/operator.md and the file is not there"
+  fi
+}
+
+# a sidecar call injects its output wherever it sits, so the heading naming that output has to be
+# the line above it; a doc that runs one somewhere else hands the model telemetry nothing labelled
+check_telemetry() {
+  local doc=$1 call head after
+  call=$({ grep -nE 'CLAUDE_PLUGIN_ROOT.*/skills/[^/]+/[^/]+\.sh' "$doc" || true; } | head -1 | cut -d: -f1)
+  head=$({ grep -nxF '## Telemetry' "$doc" || true; } | head -1 | cut -d: -f1)
+
+  if [ -n "$call" ] && [ -z "$head" ]; then
+    err "$doc" "$call" no_telemetry "a sidecar runs here under no '## Telemetry' heading"
+    return 0
+  fi
+  [ -n "$head" ] || return 0
+
+  after=$(sed -n "$((head + 1))p" "$doc")
+  if [ "$after" != '```!' ]; then
+    err "$doc" "$((head + 1))" telemetry_shape "'## Telemetry' opens straight onto its \`\`\`! block"
+  fi
+}
+
+# a verify list is instructions, so it reads as a section like every other one; fenced, it renders
+# as sample output a reader can skip. presence is never required, since most docs fold the same
+# steps into their numbered procedure instead of carrying the list on its own
+check_verify() {
+  local doc=$1 fenced
+  fenced=$({ grep -nE '^VERIFY( -|$)' "$doc" || true; } | head -1 | cut -d: -f1)
+  if [ -n "$fenced" ]; then
+    err "$doc" "$fenced" verify_fenced "a verify list is instructions, so it reads under '## Verify'"
   fi
 }
 
@@ -422,7 +477,7 @@ check_scrub() {
 
 # a trigger acts on the repo and is invoked deliberately; a spec describes a shape and should load
 # whenever the model touches the thing it describes. the kind gates which body checks run here;
-# whether it is declared correctly is readme's rule, judged at the readme source
+# whether it is declared correctly is export-readme's rule, judged at the readme source
 skill_kind() {
   local doc=$1 declared
   declared=$(awk '/^metadata:/ { inside = 1; next }
@@ -448,6 +503,8 @@ for pair in "${PAIRS[@]}"; do
   check_body            "$pair"
   check_block_name      "$pair"
   check_voice           "$pair"
+  check_telemetry       "$pair"
+  check_verify          "$pair"
   case "$(skill_kind "$pair")" in
     spec) ;;
     trigger)
@@ -456,7 +513,7 @@ for pair in "${PAIRS[@]}"; do
       check_artifact    "$pair"
       check_index       "$pair";;
     *)
-      warn "$pair" 1 no_kind "kind unset, so the trigger checks were skipped; readme owns the rule";;
+      warn "$pair" 1 no_kind "kind unset, so the trigger checks were skipped; export-readme owns the rule";;
   esac
 done
 
@@ -469,7 +526,7 @@ SECRETS=$(grep -c '|secret|' "$FINDINGS" || true)
 
 cat <<EOF
 
-=== /skills telemetry ===
+=== /validate-skills telemetry ===
 template: $TEMPLATE
 scanned: ${#PAIRS[@]} pair(s)
 index: ${INDEX:-none found}

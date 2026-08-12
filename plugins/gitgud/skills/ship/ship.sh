@@ -15,7 +15,7 @@
 # - it bumps, pushes `main` with tags, fast-forwards `production`, pushes, then calls the release
 # - `deploy.yml` listens for that `production` push, so the push is what actually ships
 # - the release api call comes last, since the tag has to reach origin before it resolves
-# @see plugins/gitgud/skills/ship/SKILL.md, plugins/gitgud/shared/handover.sh, .github/workflows/deploy.yml, .claude/skills/skills/SKILL.md
+# @see plugins/gitgud/skills/ship/SKILL.md, plugins/gitgud/shared/handover.sh, .github/workflows/deploy.yml, .claude/skills/validate-skills/SKILL.md
 
 set -euo pipefail
 

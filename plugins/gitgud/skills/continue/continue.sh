@@ -15,7 +15,7 @@
 # TRIGGER
 # - the four sync forms are narrow allows, which the trigger runs one tool call at a time
 # - a diverged trunk is handed over instead, since a rebase and a merge commit both rewrite history
-# @see plugins/gitgud/skills/continue/SKILL.md, plugins/gitgud/skills/nuke/SKILL.md, plugins/gitgud/shared/handover.sh, .claude/skills/skills/SKILL.md
+# @see plugins/gitgud/skills/continue/SKILL.md, plugins/gitgud/skills/nuke/SKILL.md, plugins/gitgud/shared/handover.sh, .claude/skills/validate-skills/SKILL.md
 
 set -euo pipefail
 
