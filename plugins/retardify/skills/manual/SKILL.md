@@ -5,7 +5,7 @@ effort: max
 license: MIT
 compatibility: requires bash, git
 description: distill a completed plan into a perfect-world build manual, then validate it (saves manual to .construct/)
-argument-hint: "<plan>"
+argument-hint: "[--help] <plan>"
 disable-model-invocation: true
 metadata:
   kind: trigger
@@ -23,6 +23,7 @@ metadata:
 "${CLAUDE_PLUGIN_ROOT}"/skills/manual/manual.sh $ARGUMENTS
 echo "sidecar exit: $?"
 ```
+- `help: requested` → the run was refused before it started; `## Help` below is the whole turn
 - it already ran, so there is no command to issue
 - fail (`sidecar exit` > 0) → abort and report the raw terminal error inside a markdown code block
 - `completed: no` → STOP and name the open boxes; a manual distills finished work only
@@ -77,6 +78,28 @@ one line: what exists when the last step is done
 
 ## Done
 - one observable end-state check per hyphen bullet, provable by a command or a glance
+
+## Help
+> IF the invocation carries `--help` or `-h`, this section is the whole turn:
+
+```text
+SKILL: /plugin:name
+DESCRIPTION: <the `description` frontmatter, verbatim>
+POSTURE: <the readme index's keyword for this skill>
+FLAGS:
+- --flag: <what it changes, in the telemetry bullet's own words>
+ARGUMENTS:
+- <arg>: <what it names>
+ARTIFACT: <the `metadata.artifact` path, or none>
+OUTPUT: <what lands in the turn: an audit entry, a handover block, an inline report>
+SPEC: <this doc's own path>
+```
+
+- every field prints, in this order; one with nothing to say prints `none`
+- every value is COPIED from the source named beside it, never composed fresh
+- ask what they are actually trying to do, and what they have already tried
+- name the flag or the sibling skill that fits their answer, then STOP
+- run no step, write no file, and never fall through to step 1
 
 ## Output Style
 ```!

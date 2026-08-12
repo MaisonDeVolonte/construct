@@ -5,7 +5,7 @@ effort: high
 license: MIT
 compatibility: requires bash, curl, git
 description: bucket uncommitted work into atomic, single-purpose PRs, gate the plan, then hand back every block of it
-argument-hint: "[--debug] [--finished]"
+argument-hint: "[--help] [--debug] [--finished]"
 disable-model-invocation: true
 metadata:
   kind: trigger
@@ -19,9 +19,10 @@ metadata:
 
 ## Telemetry
 ```!
-"${CLAUDE_PLUGIN_ROOT}"/skills/deliver/deliver.sh
+"${CLAUDE_PLUGIN_ROOT}"/skills/deliver/deliver.sh $ARGUMENTS
 echo "sidecar exit: $?"
 ```
+- `help: requested` → the run was refused before it started; `## Help` below is the whole turn
 - it already ran, so there is no command to issue
 - fail (`sidecar exit` > 0) → abort and report: "<raw terminal error>"
 - success (`sidecar exit` = 0) → capture `default branch` from the telemetry
@@ -126,6 +127,28 @@ git switch -c "$ATOMIC_BRANCH" "$DEFAULT_BRANCH"
   - anything you cannot place with confidence stays UNFINISHED; the flag drains the tree partially
     on purpose, and a wrong call here ships half a feature
 - ELSE wait for the user, re-read `git status -s`, and repeat from step 2 until the tree is clean
+
+## Help
+> IF the invocation carries `--help` or `-h`, this section is the whole turn:
+
+```text
+SKILL: /plugin:name
+DESCRIPTION: <the `description` frontmatter, verbatim>
+POSTURE: <the readme index's keyword for this skill>
+FLAGS:
+- --flag: <what it changes, in the telemetry bullet's own words>
+ARGUMENTS:
+- <arg>: <what it names>
+ARTIFACT: <the `metadata.artifact` path, or none>
+OUTPUT: <what lands in the turn: an audit entry, a handover block, an inline report>
+SPEC: <this doc's own path>
+```
+
+- every field prints, in this order; one with nothing to say prints `none`
+- every value is COPIED from the source named beside it, never composed fresh
+- ask what they are actually trying to do, and what they have already tried
+- name the flag or the sibling skill that fits their answer, then STOP
+- run no step, write no file, and never fall through to step 1
 
 ## Output Style
 ```!

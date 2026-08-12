@@ -5,6 +5,7 @@ effort: max
 license: MIT
 compatibility: requires bash, git
 description: adversarial read-only code review grading documented claims against reality (saves scorecard to .construct/)
+argument-hint: "[--help]"
 disable-model-invocation: true
 disallowed-tools: Edit
 metadata:
@@ -20,9 +21,10 @@ metadata:
 
 ## Telemetry
 ```!
-"${CLAUDE_PLUGIN_ROOT}"/skills/review/review.sh
+"${CLAUDE_PLUGIN_ROOT}"/skills/review/review.sh $ARGUMENTS
 echo "sidecar exit: $?"
 ```
+- `help: requested` → the run was refused before it started; `## Help` below is the whole turn
 - it already ran, so there is no command to issue
 - fail (`sidecar exit` > 0) → abort and report: "<raw terminal error>"
 - success (`sidecar exit` = 0) → continue
@@ -123,6 +125,28 @@ specific files, ignored rules, or architectural landmines
 
 ## Review #2: repeat the above format for each `/retardify:review` run on the same day
 never edit an earlier scorecard; a grade that has not moved in a week is the finding
+
+## Help
+> IF the invocation carries `--help` or `-h`, this section is the whole turn:
+
+```text
+SKILL: /plugin:name
+DESCRIPTION: <the `description` frontmatter, verbatim>
+POSTURE: <the readme index's keyword for this skill>
+FLAGS:
+- --flag: <what it changes, in the telemetry bullet's own words>
+ARGUMENTS:
+- <arg>: <what it names>
+ARTIFACT: <the `metadata.artifact` path, or none>
+OUTPUT: <what lands in the turn: an audit entry, a handover block, an inline report>
+SPEC: <this doc's own path>
+```
+
+- every field prints, in this order; one with nothing to say prints `none`
+- every value is COPIED from the source named beside it, never composed fresh
+- ask what they are actually trying to do, and what they have already tried
+- name the flag or the sibling skill that fits their answer, then STOP
+- run no step, write no file, and never fall through to step 1
 
 ## Output Style
 ```!

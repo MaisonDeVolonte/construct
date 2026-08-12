@@ -10,14 +10,13 @@
 # CHECKS
 # - STATIC checks read the files: parse, drift, verb symmetry, scope placement, hygiene, coverage
 # - `guard` is the check that watches this auditor, since an editable auditor can be made to pass
-# - LIVE probes exercise the boundary, because a config can be perfect while the gate is dead
-# - it wraps the permissions and scripts replays rather than replacing them, surfacing error counts
+# - the LIVE probe exercises the hook, because a config can be perfect while the gate is dead
+# - it answers for the settings stack alone; `/operator:audit` is what runs every lens together
 # - a tracked path reads as guarded at `ask`, since `deny` reaches the sandbox and blocks git itself
 # - templates resolve from the plugin, so drift and hygiene run the same under either install method
 # RUN
-# - a bare run prints its own usage, since the full audit takes minutes and reads as a hung session
-# - `--audit` runs everything, `--static` skips the probes, `--quick` skips the wrapped sidecars
-# - `--strict` fails on warnings, and each slow stage reports the seconds it spent
+# - a bare run is the audit: the static checks, then the live probes, in seconds
+# - `-h` exits before the audit starts, and the doc's `## Help` section is what answers it
 # - the doc appends one entry to the day's settings audit, never editing an earlier one
 # EMIT
 # - `--local`, `--project`, `--user` and `--managed` emit that scope's setup instead of auditing
@@ -25,9 +24,13 @@
 # - the env file is deny-listed, so not seeing it is the pass rather than a finding
 # - an emit run never appends to the artifact, since these lines carry absolute home paths
 # - it emits and never applies, because the deny floor stops this sidecar writing a settings file
-# @see plugins/operator/skills/settings/SKILL.md, plugins/operator/skills/permissions/permissions.sh, plugins/operator/skills/scripts/scripts.sh, .construct/operator/settings/
+# @see plugins/operator/skills/settings/SKILL.md, plugins/operator/skills/audit/audit.sh, .construct/operator/settings/
 
 set -euo pipefail
+
+# the doc is read only after this has already run, so help is refused here or not at all; the doc's
+# own '## Help' section owns the output, which is why this prints a marker rather than a usage text
+case " $* " in *" --help "*|*" -h "*) echo "help: requested"; exit 0;; esac
 
 # ==============
 # PREFLIGHT
@@ -45,64 +48,18 @@ if [ ! -f "$SHARED/secrets.sh" ]; then
 # the plugin is installed from a marketplace
 TEMPLATES=${CLAUDE_PLUGIN_ROOT:-$(cd "$HERE/../.." 2>/dev/null && pwd || true)}/settings
 
-AUDIT=0
-STATIC_ONLY=0
-QUICK=0
-STRICT=0
 ADVANCED=0
 EMIT=()
-# the audit modifiers imply the audit, since none of them mean anything on their own
+# every remaining flag names a mode this sidecar enters instead of auditing, so the audit needs no
+# flag of its own: it is what a bare run does
 while [ $# -gt 0 ]; do
   case "$1" in
-    --audit) AUDIT=1;;
-    --static) STATIC_ONLY=1; AUDIT=1;;
-    --quick) QUICK=1; AUDIT=1;;
-    --strict) STRICT=1; AUDIT=1;;
     --local|--project|--user|--managed) EMIT+=("${1#--}");;
     --advanced) ADVANCED=1;;
-    -h|--help) AUDIT=0; EMIT=();;
     *) echo "fatal: unknown flag $1" >&2; exit 1;;
   esac
   shift
 done
-
-# a bare run explains itself rather than starting the slowest path by accident: the full audit runs
-# for minutes, which reads as a hung session
-if [ "$AUDIT" -eq 0 ] && [ "$ADVANCED" -eq 0 ] && [ ${#EMIT[@]} -eq 0 ]; then
-  cat <<'EOF'
-
-=== settings.sh sidecar (usage) ===
-this sidecar audits the settings stack, or emits the setup for one scope. it never writes a
-settings file: the deny floor stops it, so every command is handed back for you to run.
-
-AUDIT
-  --audit     every static check, the live probes, and the wrapped permissions and scripts runs
-              slowest path by far, since the wrapped sidecars replay their whole corpus
-  --static    the file checks only: parse, templates, drift, verbs, scope, hygiene, coverage, guard
-  --quick     audit and probe, but skip the two wrapped sidecars
-  --strict    exit non-zero on warnings as well as errors
-  an audit appends one entry to .construct/operator/settings/<today>.md
-
-EMIT
-  --local     the scope you alone see in this repo
-  --project   the scope every collaborator on this repo inherits
-  --user      your scope across every project
-  --managed   the machine scope, which needs sudo and sits outside the project
-  flags combine, and an emit run is never appended to the artifact
-
-WALKTHROUGH
-  --advanced  the masked-credential setup, step by step: the key directory, the env file, the deny
-              rule, one mask rule per token, the domains those tokens reach, and the proof
-              it grades the user scope it can read, and names the steps it cannot see
-
-RELATED
-  /operator:credentials   proves each token is masked, across every exfiltration vector
-  /operator:permissions   replays the corpus through the real hook
-  /operator:scripts       tests every command a script runs against the merged settings
-========================
-EOF
-  exit 0
-fi
 
 if ! command -v jq >/dev/null 2>&1; then echo "fatal: jq is required" >&2; exit 1; fi
 if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -531,24 +488,10 @@ check_guard() {
 # LIVE - probes
 #   inspection cannot find a latent fault; only exercising the protection can
 # ==============
-# the command arrives as arguments rather than a string, since eval is what the deny floor refuses
-# and a sidecar reaching for it would be the exact bypass this file exists to report
-probe() {
-  local label=$1 expectation=$2 output
-  shift 2
-  output=$("$@" 2>&1 || true)
-  if printf '%s' "$output" | grep -qiE "$expectation"; then
-    pass probe "$label" "refused as configured"
-  else
-    err probe "$label" "not refused; got '${output:0:40}'"
-  fi
-}
-
+# file denies and token masks are probed by `/operator:credentials`, which spends each token across
+# every vector; this scope keeps the one probe no other skill runs
 check_probes() {
-  local refusal='not permitted|denied|no such file|cannot open|refus' verdict token
-  probe credential-read "$refusal" cat "$HOME/.operator/.env"
-  probe ssh-key-read "$refusal" cat "$HOME/.ssh/id_rsa"
-
+  local verdict
   # the hook is the failover the deny list leans on, so replay one string it has to refuse
   verdict=$(jq -n --arg c "git push --force origin main" '{tool_input:{command:$c}}' \
     | bash "$ROOT/plugins/operator/hooks/pretooluse.sh" 2>/dev/null || true)
@@ -557,39 +500,6 @@ check_probes() {
   else
     err probe force-push "the hook stayed silent on a force push"
   fi
-
-  # mask hides the value from the sandbox while leaving it spendable, so a sentinel is the pass
-  token=${GH_TOKEN:-}
-  if [ -z "$token" ]; then
-    warn probe token-mask "GH_TOKEN is unset here, so the mask cannot be observed"
-  elif printf '%s' "$token" | grep -qE '^gh[pousr]_[A-Za-z0-9]{20,}'; then
-    err probe token-mask "GH_TOKEN reads as a real token inside the sandbox"
-  else
-    pass probe token-mask "GH_TOKEN reads as a sentinel rather than the real value"
-  fi
-}
-
-# ==============
-# WRAPPED - the two sidecars that already answer their own question
-# ==============
-# each wrapped tool is its own skill now, so it resolves through the sibling folder rather than by
-# sitting beside this file; a missing one warns instead of failing, since the static half still ran
-run_wrapped() {
-  local name script output count started elapsed
-  for name in permissions scripts; do
-    script="$HERE/../$name/$name.sh"
-    if [ ! -f "$script" ]; then warn wrapped "$name" "no $name.sh in its sibling skill folder"; continue; fi
-    started=$SECONDS
-    output=$(bash "$script" 2>&1 || true)
-    elapsed=$((SECONDS - started))
-    count=$(printf '%s' "$output" | sed -n 's/^errors: \([0-9]\{1,\}\)$/\1/p' | head -n 1)
-    count=${count:-0}
-    if [ "$count" -gt 0 ]; then
-      err wrapped "$name" "$count errors in ${elapsed}s; run /operator:$name for the detail"
-    else
-      pass wrapped "$name" "0 errors in ${elapsed}s"
-    fi
-  done
 }
 
 # ==============
@@ -603,19 +513,10 @@ check_scope
 check_hygiene
 check_coverage
 check_guard
-# each slow stage reports its own elapsed seconds, since a run with no clock reads as a hung one
-PROBES_ELAPSED=skipped
-WRAPPED_ELAPSED=skipped
-if [ "$STATIC_ONLY" -eq 0 ]; then
-  STAGE_START=$SECONDS
-  check_probes
-  PROBES_ELAPSED="run in $((SECONDS - STAGE_START))s"
-fi
-if [ "$STATIC_ONLY" -eq 0 ] && [ "$QUICK" -eq 0 ]; then
-  STAGE_START=$SECONDS
-  run_wrapped
-  WRAPPED_ELAPSED="run in $((SECONDS - STAGE_START))s"
-fi
+# the probe stage reports its own elapsed seconds, since a run with no clock reads as a hung one
+STAGE_START=$SECONDS
+check_probes
+PROBES_ELAPSED="run in $((SECONDS - STAGE_START))s"
 
 # ==============
 # ARTIFACT
@@ -624,7 +525,7 @@ fi
 # ==============
 ARTIFACT_KIND="settings"
 ARTIFACT_SECTIONS=$'state\nfindings\nresolutions\ntelemetry'
-ARTIFACT_LABELS='Parse|Drift|Verbs|Scope|Hygiene|Coverage|Guard|Probe|Wrapped'
+ARTIFACT_LABELS='Parse|Templates|Drift|Verbs|Scope|Hygiene|Coverage|Guard|Probe'
 ARTIFACT_MAX_WIDTH=100
 
 # this sidecar reports "category|scope|detail", so location folds into the scope field. passing
@@ -801,8 +702,6 @@ then AUDIT_COUNT=$(grep -c '^## Settings Audit #' "$ROOT/$TODAYS_AUDIT" || true)
 else AUDIT_COUNT=0; fi
 AUDIT_COUNT=${AUDIT_COUNT:-0}
 
-
-
 cat <<EOF
 
 === settings.sh sidecar ===
@@ -811,7 +710,6 @@ audit_count: $AUDIT_COUNT
 next_audit: $((AUDIT_COUNT + 1))
 timestamp: $(date '+%Y-%m-%d %H:%M')
 probes: $PROBES_ELAPSED
-wrapped: $WRAPPED_ELAPSED
 passes: $PASSES
 errors: $ERRORS
 warnings: $WARNINGS
@@ -833,6 +731,5 @@ cat <<'EOF'
 EOF
 
 if [ "$ERRORS" -gt 0 ]; then exit 1; fi
-if [ "$STRICT" -eq 1 ] && [ "$WARNINGS" -gt 0 ]; then exit 1; fi
 exit 0
 

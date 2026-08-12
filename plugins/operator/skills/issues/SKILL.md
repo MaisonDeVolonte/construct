@@ -5,7 +5,7 @@ effort: high
 license: MIT
 compatibility: requires bash, jq, curl
 description: search claude-code repo for relevant issues and update status in readme (saves report to .construct/)
-argument-hint: "[--tracked] [--sandbox] [--hooks] [--plugins] [--permissions] [--since <days>]"
+argument-hint: "[--help] [--tracked] [--sandbox] [--hooks] [--plugins] [--permissions] [--since <days>]"
 disable-model-invocation: true
 disallowed-tools: WebFetch, WebSearch
 metadata:
@@ -24,6 +24,7 @@ metadata:
 "${CLAUDE_PLUGIN_ROOT}"/skills/issues/issues.sh $ARGUMENTS
 echo "sidecar exit: $?"
 ```
+- `help: requested` → the run was refused before it started; `## Help` below is the whole turn
 - it already ran with whatever flags the invocation carried
 - a bare run covers tracked plus all four topics; `--tracked` is the cheap loop over cited issues
 - `--sandbox`, `--hooks`, `--plugins`, `--permissions` each scope the run to one topical search
@@ -128,6 +129,28 @@ the sidecar's whole output, fenced and unedited, so every claim above can be che
 
 ## Issues Report #2: repeat the above format for each deliberate run on the same day
 never edit an earlier report; a finding that stays unresolved is signal about how long it sat
+
+## Help
+> IF the invocation carries `--help` or `-h`, this section is the whole turn:
+
+```text
+SKILL: /plugin:name
+DESCRIPTION: <the `description` frontmatter, verbatim>
+POSTURE: <the readme index's keyword for this skill>
+FLAGS:
+- --flag: <what it changes, in the telemetry bullet's own words>
+ARGUMENTS:
+- <arg>: <what it names>
+ARTIFACT: <the `metadata.artifact` path, or none>
+OUTPUT: <what lands in the turn: an audit entry, a handover block, an inline report>
+SPEC: <this doc's own path>
+```
+
+- every field prints, in this order; one with nothing to say prints `none`
+- every value is COPIED from the source named beside it, never composed fresh
+- ask what they are actually trying to do, and what they have already tried
+- name the flag or the sibling skill that fits their answer, then STOP
+- run no step, write no file, and never fall through to step 1
 
 ## Output Style
 ```!

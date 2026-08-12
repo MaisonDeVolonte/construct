@@ -23,6 +23,17 @@
 
 set -euo pipefail
 
+# the doc is read only after this has already run, so help is refused here or not at all; the doc's
+# own '## Help' section owns the output, which is why this prints a marker rather than a usage text
+case " $* " in *" --help "*|*" -h "*) echo "help: requested"; exit 0;; esac
+
+# priced and gated here for the same reason help is: the doc is read only once this has already run.
+# the cost is the tree it walks, so the estimate measures that rather than naming a fixed duration
+ESTIMATE_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo .)
+ESTIMATE_SCALE=$({ git -C "$ESTIMATE_ROOT" ls-files 2>/dev/null || true; } | wc -l | tr -d ' ')
+echo "estimate: scales with the ${ESTIMATE_SCALE:-0} tracked files it walks, counting not executing"
+case " $* " in *" --confirm "*) ;; *) echo "confirm: required"; exit 0;; esac
+
 # probes: echo "key: $(some command 2>/dev/null || echo n/a)"
 
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || true)

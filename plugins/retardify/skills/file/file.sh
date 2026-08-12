@@ -22,6 +22,10 @@
 
 set -euo pipefail
 
+# the doc is read only after this has already run, so help is refused here or not at all; the doc's
+# own '## Help' section owns the output, which is why this prints a marker rather than a usage text
+case " $* " in *" --help "*|*" -h "*) echo "help: requested"; exit 0;; esac
+
 # ==============
 # PREFLIGHT
 # ==============
@@ -85,7 +89,6 @@ for arg in "$@"; do
   case "$arg" in
     --strict) STRICT=1;;
     --keep) KEEP=1;;
-    -h|--help) sed -n '2,20p' "$0"; exit 0;;
     -*) echo "fatal: unknown flag $arg" >&2; exit 1;;
     *) TARGETS+=("$arg"); SCOPED=1;;
   esac

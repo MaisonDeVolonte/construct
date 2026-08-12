@@ -5,6 +5,7 @@ effort: high
 license: MIT
 compatibility: requires bash, git
 description: scan repo, docs and agent logs for what to work on next, ranked urgent/important (saves list to .construct/)
+argument-hint: "[--help]"
 disable-model-invocation: true
 disallowed-tools: Edit
 metadata:
@@ -20,9 +21,10 @@ metadata:
 
 ## Telemetry
 ```!
-"${CLAUDE_PLUGIN_ROOT}"/skills/todo/todo.sh
+"${CLAUDE_PLUGIN_ROOT}"/skills/todo/todo.sh $ARGUMENTS
 echo "sidecar exit: $?"
 ```
+- `help: requested` → the run was refused before it started; `## Help` below is the whole turn
 - it already ran, so there is no command to issue
 - report-only; it never fails the run — capture its telemetry (broken references + code markers)
 
@@ -132,6 +134,28 @@ opportunities restated from an earlier report, with how many reports they have s
 
 ## Todo #2: repeat the above format for each `/retardify:todo` run on the same day
 never edit an earlier report; a recurring opportunity is signal about what keeps getting skipped
+
+## Help
+> IF the invocation carries `--help` or `-h`, this section is the whole turn:
+
+```text
+SKILL: /plugin:name
+DESCRIPTION: <the `description` frontmatter, verbatim>
+POSTURE: <the readme index's keyword for this skill>
+FLAGS:
+- --flag: <what it changes, in the telemetry bullet's own words>
+ARGUMENTS:
+- <arg>: <what it names>
+ARTIFACT: <the `metadata.artifact` path, or none>
+OUTPUT: <what lands in the turn: an audit entry, a handover block, an inline report>
+SPEC: <this doc's own path>
+```
+
+- every field prints, in this order; one with nothing to say prints `none`
+- every value is COPIED from the source named beside it, never composed fresh
+- ask what they are actually trying to do, and what they have already tried
+- name the flag or the sibling skill that fits their answer, then STOP
+- run no step, write no file, and never fall through to step 1
 
 ## Output Style
 ```!

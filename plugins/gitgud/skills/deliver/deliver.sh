@@ -22,6 +22,10 @@
 
 set -euo pipefail
 
+# the doc is read only after this has already run, so help is refused here or not at all; the doc's
+# own '## Help' section owns the output, which is why this prints a marker rather than a usage text
+case " $* " in *" --help "*|*" -h "*) echo "help: requested"; exit 0;; esac
+
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || true)
 SHARED=$(cd "$HERE/../../shared" 2>/dev/null && pwd || true)
 if [ ! -f "$SHARED/handover.sh" ]; then

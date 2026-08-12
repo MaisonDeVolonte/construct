@@ -5,7 +5,7 @@ effort: max
 license: MIT
 compatibility: requires bash, jq, git
 description: grade every settings scope for silent faults, then probe the live gate (saves report to .construct/)
-argument-hint: "[--audit] [--static] [--quick] [--local] [--project] [--user] [--managed] [--advanced]"
+argument-hint: "[--help] [--local] [--project] [--user] [--managed] [--advanced]"
 disable-model-invocation: true
 disallowed-tools: Edit, Write
 metadata:
@@ -21,19 +21,15 @@ metadata:
   - when a settings template will not parse, so pasting it breaks the file
   - when a scope has no `.md`, or carries rules with no explanation written down
   - when a doc claims to mirror another scope but the two have quietly diverged
-  - when your `.env` or your ssh key can still be read
   - when the hook stays silent on a force-push command fed straight to it
-  - when your token reads as the real value inside the sandbox
-  - when the permissions or scripts audit comes back with errors of its own
 - WARNS
   - when installed settings differ from the template they were copied from
   - when project settings carry machine-specific paths that break on the next clone
   - when duplicate rules are found, in a settings file or in a template
   - when a documented rule no longer exists in the json
   - when nothing stops an agent editing the settings and hooks this audit depends on
-  - when your token is unset here, so the mask cannot be observed at all
-  - when one of the wrapped audit scripts is missing from its folder
-- runs the permissions and scripts audits too, and reports how many errors each returned
+- answers for the settings stack alone; `/operator:audit` runs every lens together
+- leaves file denies and token masks to `/operator:credentials`, which probes every vector
 - walks you through masked-credential setup, and names the steps you already finished
 - prints the copy commands for whichever settings scope you name
 - never changes a settings file, it only hands back commands for you to run
@@ -45,16 +41,14 @@ metadata:
 "${CLAUDE_PLUGIN_ROOT}"/skills/settings/settings.sh $ARGUMENTS
 echo "sidecar exit: $?"
 ```
+- `help: requested` → the run was refused before it started; `## Help` below is the whole turn
 - it already ran with whatever flags the invocation carried
-- NO FLAG → the sidecar printed its own usage; relay it, answer what the user asked, and STOP
-- `--audit`, `--static`, `--quick`, `--strict` → an audit ran; continue to step 1
+- NO FLAG → the audit ran; continue to step 1
 - `--local`, `--project`, `--user`, `--managed` → an emit ran; skip to step 3
 - `--advanced` → the credential walkthrough ran; skip to step 4
 - fail (`sidecar exit` > 0) → findings exist; report them rather than rerunning
 - success (`sidecar exit` = 0) → the run is clean; record it in whichever step the flags selected
-- `--audit` takes minutes, since the wrapped sidecars replay their whole corpus; the `probes` and
-
-    `wrapped` telemetry lines carry the seconds each stage spent, so quote them when it ran long
+- the `probes` telemetry line carries the seconds that stage spent, so quote it when it ran long
 
 1. append one entry to `[audit_file]`, in the shape defined under `## the shape` below
     - the heading reads `## Settings Audit #[next_audit]: [timestamp]`, both from the telemetry
@@ -69,7 +63,7 @@ echo "sidecar exit: $?"
     NEVER edit a settings file to fix a finding, and never offer to; the audit is the deliverable
 
     - a `parse` error outranks everything else, since that scope's rules are not running at all
-    - a `verbs` error is only latent while no allow reaches the path, so read it with the allow list
+    - a `verbs` error stays latent while no allow reaches the path, which `/operator:audit` proves
     - a `drift` finding is a defect only when the installed copy is the stale one; check which
     - `templates` firing means drift and hygiene had nothing to read, so a clean run proves less
     - a scope with no file at all is a setup gap, so name the flag that emits it rather than a fix
@@ -136,12 +130,11 @@ one bullet per issue, leading with the label the sidecar printed
 | `coverage` | a rule with no why in the scope's `.md`, or a mirror claim that has diverged |
 | `guard` | nothing protects the policy directories, so this auditor is editable |
 | `probe` | a boundary that did not refuse, naming what got through |
-| `wrapped` | errors from the wrapped `/operator:permissions` or `/operator:scripts` run |
 | `resolution_shape` `resolution_parity` | an older entry whose resolutions do not match its findings |
 
 *example:*
 > - **coverage** — 12 rules in `settings.user.json` carry no why in `settings.user.md`
-> - **wrapped** — the permissions replay came back with 2 errors, so the gate itself is off
+> - **probe** — the hook stayed silent on a force push, so the failover is not running
 > - **drift** — the installed project copy carries 3 rules its template does not
 
 ### resolutions
@@ -149,7 +142,7 @@ one checkbox per finding, in the same order, naming the rule and the scope file 
 
 *example:*
 > - [ ] document the 12 undocumented rules in `settings.user.md`, or drop them from the json
-> - [ ] run `/operator:permissions` for the detail behind the wrapped count
+> - [ ] restore the force-push deny in `hooks/pretooluse.sh`, then rerun `/operator:settings`
 > - [ ] reconcile the project copy against `settings.project.json`, deciding which is stale
 
 ### telemetry
@@ -166,6 +159,28 @@ the sidecar's whole output, fenced and unedited, so every claim above can be che
 
 ## Settings Audit #2: repeat the above format for each deliberate run on the same day
 never edit an earlier audit; a stale finding is signal about how long it went unresolved
+
+## Help
+> IF the invocation carries `--help` or `-h`, this section is the whole turn:
+
+```text
+SKILL: /plugin:name
+DESCRIPTION: <the `description` frontmatter, verbatim>
+POSTURE: <the readme index's keyword for this skill>
+FLAGS:
+- --flag: <what it changes, in the telemetry bullet's own words>
+ARGUMENTS:
+- <arg>: <what it names>
+ARTIFACT: <the `metadata.artifact` path, or none>
+OUTPUT: <what lands in the turn: an audit entry, a handover block, an inline report>
+SPEC: <this doc's own path>
+```
+
+- every field prints, in this order; one with nothing to say prints `none`
+- every value is COPIED from the source named beside it, never composed fresh
+- ask what they are actually trying to do, and what they have already tried
+- name the flag or the sibling skill that fits their answer, then STOP
+- run no step, write no file, and never fall through to step 1
 
 ## Output Style
 ```!

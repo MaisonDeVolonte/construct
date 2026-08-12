@@ -3,6 +3,7 @@ name: log
 license: MIT
 compatibility: requires bash, git
 description: "the shape of a daily agent log: threads carrying their own notes and prompts (saves log to .construct/)"
+argument-hint: "[--help]"
 when_to_use: "Writing to .construct/retardify/log/, which the taskcompleted and stop hooks both demand before a turn closes. Also when asked to log, note or record what happened, or to recap the day's threads."
 metadata:
   kind: spec
@@ -122,6 +123,28 @@ synthesize pending notes when creating a new thread, and prune that thread's pro
 - STOP on a `secret` finding and ask the user before truncating it; the key needs rotating first
 - JUSTIFY or fix every WARN; the sidecar tolerates them, the next reader may not
 - ANSWER the checklist it prints, since those rules are the ones no script can judge
+
+## Help
+> IF the invocation carries `--help` or `-h`, this section is the whole turn:
+
+```text
+SKILL: /plugin:name
+DESCRIPTION: <the `description` frontmatter, verbatim>
+POSTURE: <the readme index's keyword for this skill>
+FLAGS:
+- --flag: <what it changes, in the telemetry bullet's own words>
+ARGUMENTS:
+- <arg>: <what it names>
+ARTIFACT: <the `metadata.artifact` path, or none>
+OUTPUT: <what lands in the turn: an audit entry, a handover block, an inline report>
+SPEC: <this doc's own path>
+```
+
+- every field prints, in this order; one with nothing to say prints `none`
+- every value is COPIED from the source named beside it, never composed fresh
+- ask what they are actually trying to do, and what they have already tried
+- name the flag or the sibling skill that fits their answer, then STOP
+- run no step, write no file, and never fall through to step 1
 
 ## Output Style
 ```!

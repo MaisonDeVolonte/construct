@@ -5,6 +5,7 @@ effort: max
 license: MIT
 compatibility: requires bash, git
 description: price what a hard reset would take, take the backup that makes it survivable, then hand back the rest
+argument-hint: "[--help]"
 disable-model-invocation: true
 metadata:
   kind: trigger
@@ -18,9 +19,10 @@ metadata:
 
 ## Telemetry
 ```!
-"${CLAUDE_PLUGIN_ROOT}"/skills/nuke/nuke.sh
+"${CLAUDE_PLUGIN_ROOT}"/skills/nuke/nuke.sh $ARGUMENTS
 echo "sidecar exit: $?"
 ```
+- `help: requested` → the run was refused before it started; `## Help` below is the whole turn
 - it already ran, so there is no command to issue
 - fail (`sidecar exit` > 0) → abort and report: "<raw terminal error>"
 - success (`sidecar exit` = 0) → continue to step 1
@@ -70,6 +72,28 @@ echo "sidecar exit: $?"
     - `git stash pop` restores the backup, and the floor allows it, but only on request
     - the deny list and `pretooluse.sh` both refuse the destructive commands, which is the design
       rather than an obstacle to work around: they are the user's to run, never the agent's
+
+## Help
+> IF the invocation carries `--help` or `-h`, this section is the whole turn:
+
+```text
+SKILL: /plugin:name
+DESCRIPTION: <the `description` frontmatter, verbatim>
+POSTURE: <the readme index's keyword for this skill>
+FLAGS:
+- --flag: <what it changes, in the telemetry bullet's own words>
+ARGUMENTS:
+- <arg>: <what it names>
+ARTIFACT: <the `metadata.artifact` path, or none>
+OUTPUT: <what lands in the turn: an audit entry, a handover block, an inline report>
+SPEC: <this doc's own path>
+```
+
+- every field prints, in this order; one with nothing to say prints `none`
+- every value is COPIED from the source named beside it, never composed fresh
+- ask what they are actually trying to do, and what they have already tried
+- name the flag or the sibling skill that fits their answer, then STOP
+- run no step, write no file, and never fall through to step 1
 
 ## Output Style
 ```!
