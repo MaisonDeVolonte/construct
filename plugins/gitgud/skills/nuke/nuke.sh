@@ -17,7 +17,7 @@
 # - `-u` and not `-a`, since a reset never touches ignored files and stashing them buys nothing
 # - clean, reset, switch -f and branch deletes stay denied, so the user runs every one
 # - the backup running first is the whole point: a handover the user half-pastes still has it
-# @see plugins/gitgud/skills/nuke/SKILL.md, plugins/gitgud/shared/triage.sh, plugins/gitgud/skills/backup/SKILL.md, plugins/gitgud/shared/handover.sh, .claude/skills/skills/SKILL.md
+# @see plugins/gitgud/skills/nuke/SKILL.md, plugins/gitgud/shared/triage.sh, plugins/gitgud/skills/backup/SKILL.md, plugins/gitgud/shared/handover.sh, .claude/skills/validate-skills/SKILL.md
 
 set -euo pipefail
 

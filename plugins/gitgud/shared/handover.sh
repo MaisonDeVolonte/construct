@@ -11,7 +11,7 @@
 # - a sidecar that needs to mutate emits the command instead of running it, into either block
 # - `protected_incoming` names the paths a sandboxed sync cannot write, so the sync is handed over
 # - a denied path leaves git's checkout half applied against an unmoved HEAD, never a clean failure
-# @see .claude/skills/skills/SKILL.md, plugins/operator/settings/settings.user.md, plugins/
+# @see .claude/skills/validate-skills/SKILL.md, plugins/operator/settings/settings.user.md, plugins/
 
 # ==============
 # PREFLIGHT

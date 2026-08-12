@@ -18,7 +18,7 @@
 # - github auth preflights through curl + bearer, since gh cannot verify tls in the sandbox
 # - github's git endpoints take only basic auth, which base64s past the proxy, so push needs a tty
 # - a delivered `.claude/settings.json` strands its checkout, so the pull after needs the hatch
-# @see plugins/gitgud/skills/deliver/SKILL.md, plugins/gitgud/skills/rerun/SKILL.md, plugins/gitgud/shared/handover.sh, .claude/skills/skills/SKILL.md
+# @see plugins/gitgud/skills/deliver/SKILL.md, plugins/gitgud/skills/rerun/SKILL.md, plugins/gitgud/shared/handover.sh, .claude/skills/validate-skills/SKILL.md
 
 set -euo pipefail
 

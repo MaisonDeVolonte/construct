@@ -11,7 +11,7 @@
 # - no flag runs the trigger half, so every existing invocation is unchanged
 # - `--check [paths]` runs the validator half; with no paths it grades the whole artifact dir
 # - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
-# @see plugins/operator/skills/credentials/SKILL.md, plugins/operator/shared/secrets.sh, .construct/operator/credentials/, .claude/skills/skills/SKILL.md, plugins/operator/skills/credentials/credentials.sh
+# @see plugins/operator/skills/credentials/SKILL.md, plugins/operator/shared/secrets.sh, .construct/operator/credentials/, .claude/skills/validate-skills/SKILL.md, plugins/operator/skills/credentials/credentials.sh
 
 set -euo pipefail
 
