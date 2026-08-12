@@ -1,41 +1,38 @@
 ---
 name: scripts
-description: Scan every workflow script, extract the commands it runs internally, then test each one against the merged settings and report what would be allowed, denied, asked, or matched by no rule at all.
+model: opus
+effort: max
+license: MIT
+compatibility: requires bash, jq, git
+description: extract the commands your workflow scripts run, then verdict each of them (saves report to .construct/)
 argument-hint: "[--repo <name>] [--strict]"
 disable-model-invocation: true
+disallowed-tools: Edit, Write
 metadata:
   kind: trigger
+  artifact: .construct/operator/scripts/
 ---
-**/operator:scripts:** the frontmatter blocks every path except an explicit invocation
-- answers the question the floor cannot: what does a sidecar reach once it is already running
-- a permission rule sees `bash plugins/gitgud/skills/nuke/nuke.sh` and nothing inside it
-- `/operator:settings` wraps this, so run it directly when you want the per-script detail
+**test agent sub-commands:** against your sandboxes actual merged settings
+- a permission rule judges `bash nuke.sh` but not the commands inside it
+- tests each internal command your agents are allowed to run
+- reports allowed, denied, asked or no-match, one line each
 
-## voice
+# Instructions
 
-```!
-awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
-```
-
-- the block above already ran, and it is the output contract for this response
-- it holds for this turn even when the user's active output style is something else
-- an empty block means the plugin has no style file; continue, since voice never gates the work
-
-## telemetry
-
+## Telemetry
 ```!
 "${CLAUDE_PLUGIN_ROOT}"/skills/scripts/scripts.sh $ARGUMENTS
 echo "sidecar exit: $?"
 ```
+- it already ran, so there is no command to issue
+- fail (`sidecar exit` > 0) → findings exist; report them and continue to step 1
+- success (`sidecar exit` = 0) → report the clean map and continue to step 1
+- it takes minutes rather than seconds; if the block is empty the run was cut short, so say
 
-1. read the block above; it already ran, so there is no command to issue
-  - fail (`sidecar exit` > 0) → findings exist; report them and continue to step 2
-  - success (`sidecar exit` = 0) → report the clean map and continue to step 2
-  - it takes minutes rather than seconds; if the block is empty the run was cut short, so say
     so plainly rather than reporting a clean pass it never reached
   - `--repo <name>` tests another repo's stack and `--strict` promotes warnings, both by tool call
 
-2. read the two tiers differently, because they answer different questions
+1. read the two tiers differently, because they answer different questions
   - tier 1 is what the permission layer judges: one string, the invocation itself
   - tier 2 is everything that string then runs, which no allow or deny rule is ever shown
   - a `bypass` is the finding that matters: an internal command that a deny WOULD have refused,
@@ -43,8 +40,8 @@ echo "sidecar exit: $?"
   - that is by design rather than a defect, which is exactly why it needs listing: the deny floor
     and the hook both stop at the script boundary, and only the sandbox goes further
 
-3. report inline
-4. append one entry to `[audit_file]`, in the shape defined under `## the shape` below
+2. report inline
+3. append one entry to `[audit_file]`, in the shape defined under `## the shape` below
   - the heading reads `## Scripts Audit #[next_audit]: [timestamp]`, both from the telemetry
   - `state` is what the run measured, as hyphen bullets, one clause each
   - `findings` lead with the label the sidecar printed, one bullet each, naming what it hit
@@ -52,7 +49,7 @@ echo "sidecar exit: $?"
   - `telemetry` is the sidecar's whole output, fenced and unedited, pasted last
   - CREATE the file first if it does not exist, with `# <audit_file>` as its only line
 
-5. STOP
+4. STOP
 
     NEVER edit a settings file or a sidecar to fix a finding, and never offer to
 
@@ -126,3 +123,8 @@ the sidecar's whole output, fenced and unedited, so every claim above can be che
 
 ## Scripts Audit #2: repeat the above format for each deliberate run on the same day
 never edit an earlier audit; a stale finding is signal about how long it went unresolved
+
+## Output Style
+```!
+awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
+```

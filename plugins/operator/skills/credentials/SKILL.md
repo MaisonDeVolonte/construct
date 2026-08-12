@@ -1,52 +1,44 @@
 ---
 name: credentials
-description: Probe every credential-shaped variable in this sandboxed shell across 19 injected, masked and denied vectors, then save a dated report to .construct/operator/credentials/ naming every leak to rotate first.
-argument-hint: "[--strict] [--quick]"
-disable-model-invocation: true
-disallowed-tools: WebFetch, WebSearch
 model: opus
 effort: max
 license: MIT
+compatibility: requires bash, jq, curl
+description: probe all credential-shaped variables in the active sandbox across 19 vectors (saves report to .construct/)
+argument-hint: "[--strict] [--quick]"
+disable-model-invocation: true
+disallowed-tools: WebFetch, WebSearch
 metadata:
   kind: trigger
   artifact: .construct/operator/credentials/
 ---
-**/operator:credentials:** the frontmatter blocks every path except an explicit invocation
-- proves the masking story rather than asserting it, across every vector an agent could reach
-- `mask` hides the value and keeps the capability; `deny` hides it by removing the variable
-- an unruled credential is the finding that matters: it needs a rule AND a rotation
+**blind authentication:** allows agents to use your credentials without seeing them
+- probes the live sandbox: the token still works, the value hides, exfiltration fails
+- grades every credential masked, unset or unruled, and only unruled holds work
+- writes a dated report naming the variable and the vector, never the value
 
-## voice
+# Instructions
 
-```!
-awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
-```
-
-- the block above already ran, and it is the output contract for this response
-- it holds for this turn even when the user's active output style is something else
-- an empty block means the plugin has no style file; continue, since voice never gates the work
-
-## telemetry
-
+## Telemetry
 ```!
 "${CLAUDE_PLUGIN_ROOT}"/skills/credentials/credentials.sh $ARGUMENTS
 echo "sidecar exit: $?"
 ```
+- it already ran, so there is no command to issue
+- fail (`sidecar exit` > 0) → abort and report the raw terminal error inside a markdown code block
+- `credential layer active: no` → say so and STOP; it ran outside the sandbox and every verdict
 
-1. read the block above; it already ran, so there is no command to issue
-  - fail (`sidecar exit` > 0) → abort and report the raw terminal error inside a markdown code block
-  - `credential layer active: no` → say so and STOP; it ran outside the sandbox and every verdict
     there is meaningless, so report nothing as passing or failing
-  - success (`sidecar exit` = 0) → continue to step 2
+  - success (`sidecar exit` = 0) → continue to step 1
 
-2. write the report to `.construct/operator/credentials/YYYY-MM-DD.md`, following `plugins/operator/skills/credentials/SKILL.md`
+1. write the report to `.construct/operator/credentials/YYYY-MM-DD.md`, following `plugins/operator/skills/credentials/SKILL.md`
   - NEVER quote, echo or paste a credential value into the report, the chat, or anywhere else
   - a `leaked` classification means the probe recovered the real thing: name the variable and the
     vector, and say nothing about what it contained
   - lead with the unruled list, since that is the only section holding work
   - append; a dated report is evidence of what was true that day and is never rewritten
 
-3. close with the two-line verdict the user actually needs:
+2. close with the two-line verdict the user actually needs:
   - every ruled credential came back masked or unset, so the boundary holds
   - OR these named credentials did not, and each one needs rotating before it is ruled
 
@@ -105,3 +97,8 @@ an unset variable has nothing to fingerprint, so its cell reads `-`:
 ## Notes
 1. numbered, so `(see #1)` resolves; this is where a caveat about a probe belongs
 2. name the sandbox state the run measured, since a verdict outside it means nothing
+
+## Output Style
+```!
+awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
+```

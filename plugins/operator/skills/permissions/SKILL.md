@@ -1,39 +1,35 @@
 ---
 name: permissions
-description: Replay the labelled command corpus through the real PreToolUse hook, then audit the merged permission rules for drift, dead rules and wildcards that auto-approve.
-argument-hint: [--strict]
+model: opus
+effort: max
+license: MIT
+compatibility: requires bash, jq, git
+description: replay the corpus through the real PreToolUse hook, then audit the merged rules (saves report to .construct/)
+argument-hint: "[--strict]"
 disable-model-invocation: true
+disallowed-tools: Edit, Write
 metadata:
   kind: trigger
+  artifact: .construct/operator/permissions/
 ---
-**/operator:permissions:** the frontmatter blocks every path except an explicit invocation
-- answers one question: does the gate actually refuse what the corpus says it must refuse
+**provable deny rules:** ensure every command in your corpus is tested against your actual merged rules
+- answers one question: does the gate refuse what the corpus says it must refuse
 - a config can read perfectly and still have a dead hook, which only a replay catches
-- `/operator:settings` wraps this, so run it directly when you want the detail rather than the count
+- audits the merged rules for drift, dead entries and wildcards that auto-approve
 
-## voice
+# Instructions
 
-```!
-awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
-```
-
-- the block above already ran, and it is the output contract for this response
-- it holds for this turn even when the user's active output style is something else
-- an empty block means the plugin has no style file; continue, since voice never gates the work
-
-## telemetry
-
+## Telemetry
 ```!
 "${CLAUDE_PLUGIN_ROOT}"/skills/permissions/permissions.sh $ARGUMENTS
 echo "sidecar exit: $?"
 ```
+- it already ran, so there is no command to issue
+- fail (`sidecar exit` > 0) → findings exist; report them and continue to step 1
+- success (`sidecar exit` = 0) → report the clean replay and continue to step 1
+- `--strict` promotes warnings to errors, and needs a tool call since the block takes no arguments
 
-1. read the block above; it already ran, so there is no command to issue
-  - fail (`sidecar exit` > 0) → findings exist; report them and continue to step 2
-  - success (`sidecar exit` = 0) → report the clean replay and continue to step 2
-  - `--strict` promotes warnings to errors, and needs a tool call since the block takes no arguments
-
-2. read the two tiers differently, because they carry different weight
+1. read the two tiers differently, because they carry different weight
   - a tier 1 failure is measured, not inferred: the hook was fed that exact string and answered
     wrongly. an effect labelled `hook` that came back silent is a hole in the guard
   - an effect labelled `none` that came back denied is over-blocking, which costs real work
@@ -42,8 +38,8 @@ echo "sidecar exit: $?"
   - `no deny rule names X, and an allow wildcard covers it` is the one to act on first: that
     command is auto-approved today with no prompt at all
 
-3. report inline
-4. append one entry to `[audit_file]`, in the shape defined under `## the shape` below
+2. report inline
+3. append one entry to `[audit_file]`, in the shape defined under `## the shape` below
   - the heading reads `## Permissions Audit #[next_audit]: [timestamp]`, both from the telemetry
   - `state` is what the run measured, as hyphen bullets, one clause each
   - `findings` lead with the label the sidecar printed, one bullet each, naming what it hit
@@ -51,7 +47,7 @@ echo "sidecar exit: $?"
   - `telemetry` is the sidecar's whole output, fenced and unedited, pasted last
   - CREATE the file first if it does not exist, with `# <audit_file>` as its only line
 
-5. STOP
+4. STOP
 
     NEVER edit a settings file to fix a finding, and never offer to; the audit is the deliverable
 
@@ -119,3 +115,8 @@ the sidecar's whole output, fenced and unedited, so every claim above can be che
 
 ## Permissions Audit #2: repeat the above format for each deliberate run on the same day
 never edit an earlier audit; a stale finding is signal about how long it went unresolved
+
+## Output Style
+```!
+awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
+```

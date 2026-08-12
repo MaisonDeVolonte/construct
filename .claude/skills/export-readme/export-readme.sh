@@ -1,32 +1,33 @@
 #!/bin/bash
-# ==============================================
-# @file readme.sh - readme to skill-top exporter
-# ==============================================
+# ===========================================================
+# @file export-readme.sh - readme to managed-region exporter
+# ===========================================================
 # @description
 # SOURCE
 # - the readme's catalog is the source of truth for every skill's frontmatter and preamble
 # - each mapped `#### <Skill>` section carries a yaml fence, then the preamble that follows it
-# - `map.json` beside this file names which readme heading feeds which SKILL.md
+# - `map.json` beside this file names which readme heading feeds which target file
 # - a map value may be a list, so one section exports into every copy that has to agree
 # REGION
 # - a skill's managed region runs from line 1 to the first body heading after its frontmatter
 # - a style file has no such heading, so its whole file is the region and the export owns it
+# - a script target (*.sh) is the same whole-file region, rendered from its section's bash fence
 # - export replaces that region with the section's yaml inner block plus its trailing markdown
 # - the bare invocation fence above the yaml block is readme display sugar and never lands
 # CHECKS
 # - every frontmatter rule lives here now, judged at the readme source before anything lands
 # - required fields: name, license, compatibility, description; triggers add model and effort
 # - `metadata.kind` is declared; a trigger sets disable-model-invocation: true, a spec must not
-# - `description` holds 100-110 chars; description + when_to_use stays under the 1536 listing cap
+# - `description` stays at or under 110 chars; description + when_to_use stays under the 1536 cap
 # - `name` must match the skill's folder, and every SKILL.md on disk must appear in the map
-# - a style target earns name and description only; the rest route an invocation it never has
+# - a style target earns name and description only; a script earns a fence opening #!/bin/bash
 # - any ERROR on a section blocks that one skill's export and never the others
 # RUN
 # - check is the default: prints the drift table, writes nothing, exits 1 on drift or ERROR
 # - `--diff` appends a unified diff per drifted skill; `--apply` rewrites the managed regions
 # - `--apply` prompts on a tty; an agent confirms in chat first, then re-runs with `--yes`
 # - pass skill names to scope either mode; `--map`/`--source` swap the config for tests
-# @see .claude/skills/readme/map.json, .claude/skills/readme/SKILL.md, .claude/skills/skills/skills.sh, README.md
+# @see .claude/skills/export-readme/map.json, .claude/skills/export-readme/SKILL.md, .claude/skills/validate-skills/validate-skills.sh, README.md, .github/workflows/ci.yml
 set -euo pipefail
 
 STRICT=0
@@ -34,14 +35,14 @@ APPLY=0
 DIFF=0
 YES=0
 KEEP=0
-MAP=".claude/skills/readme/map.json"
+MAP=".claude/skills/export-readme/map.json"
 SOURCE="README.md"
 REQUIRED="name license compatibility description"
 # a style carries no license, no compatibility and no kind; it is a prompt, not an invocation
 REQUIRED_STYLE="name description"
 # model and effort route an invocation, so only a trigger needs them; on a spec they are dead config
 REQUIRED_TRIGGER="model effort"
-DESC_MIN=100
+# a cap, not a band: a short description that already says the whole thing needs no padding
 DESC_MAX=110
 # the harness truncates `description` + `when_to_use` at this many characters in the skill listing
 LISTING_CAP=1536
@@ -58,7 +59,7 @@ while [ $# -gt 0 ]; do
     --keep) KEEP=1;;
     --map) MAP=${2:?fatal: --map needs a path}; shift;;
     --source) SOURCE=${2:?fatal: --source needs a path}; shift;;
-    -h|--help) sed -n '2,24p' "$0"; exit 0;;
+    -h|--help) sed -n '2,29p' "$0"; exit 0;;
     -*) echo "fatal: unknown flag $1" >&2; exit 1;;
     *) ONLY+=("$1");;
   esac
@@ -126,6 +127,16 @@ render_top() {
   ' "$1"
 }
 
+# what a script file becomes: the first ```bash fence's inner lines and nothing else; the prose
+# around the fence is readme documentation and never lands in a copy
+render_script() {
+  awk '
+    state == 0 && /^```bash[[:space:]]*$/ { state = 1; next }
+    state == 1 && /^```[[:space:]]*$/ { state = 2; next }
+    state == 1 { print }
+  ' "$1"
+}
+
 # the managed region ends at the first `# ` or `## ` after the frontmatter closes; a heading
 # inside a fenced preamble example is content, so fences toggle here too
 region_end() {
@@ -144,7 +155,7 @@ strip_trailing() {
        END { for (i = 1; i <= last; i++) print buf[i] }' "$@"
 }
 
-# one frontmatter value, quotes shed, folded scalars unwrapped; mirrors skills.sh
+# one frontmatter value, quotes shed, folded scalars unwrapped; mirrors validate-skills.sh
 field_of() {
   local yaml=$1 key=$2 value
   value=$(awk -v key="$key" '
@@ -177,7 +188,13 @@ is_style() {
   case "$1" in */output-styles/*.md) return 0;; *) return 1;; esac
 }
 
-# metadata.kind, declared rather than guessed; empty when unset, mirrors skills.sh
+# a script target is a shell file exported whole from its section's bash fence; it has no yaml
+# at all, so it earns even fewer checks than a style and exactly the same drift compare
+is_script() {
+  case "$1" in *.sh) return 0;; *) return 1;; esac
+}
+
+# metadata.kind, declared rather than guessed; empty when unset, mirrors validate-skills.sh
 kind_of() {
   awk '/^metadata:/ { inside = 1; next }
        inside && /^[^[:space:]]/ { inside = 0 }
@@ -208,8 +225,9 @@ pair=0
 
 while IFS=$'\t' read -r heading skill; do
   [ -n "$heading" ] || continue
-  # a skill owns a folder and every doc is called SKILL.md; a style is one file and owns its name
+  # a skill owns a folder and every doc is called SKILL.md; a style or a script is one file each
   if is_style "$skill"; then name=$(basename "$skill" .md)
+  elif is_script "$skill"; then name=$(basename "$skill" .sh)
   else name=$(basename "$(dirname "$skill")"); fi
   plugin=$(plugin_of "$skill")
   label=${plugin:+$plugin:}$name
@@ -234,7 +252,18 @@ while IFS=$'\t' read -r heading skill; do
   section="$SCRATCH/$pair.section"
   newtop="$SCRATCH/$pair.newtop"
   section_body "$heading" > "$section"
-  render_top "$section" | strip_trailing > "$newtop"
+  if is_script "$skill"; then render_script "$section" | strip_trailing > "$newtop"
+  else render_top "$section" | strip_trailing > "$newtop"; fi
+
+  # a script's whole contract at the source is its fence; every yaml rule below belongs to the
+  # kinds that carry frontmatter, so a script skips from here to the drift compare
+  if is_script "$skill"; then
+    if [ ! -s "$newtop" ] || [ "$(sed -n '1p' "$newtop")" != '#!/bin/bash' ]; then
+      err "$SOURCE" "$hline" no_fence "'$heading' carries no \`\`\`bash fence opening with #!/bin/bash"
+      BLOCKED=$((BLOCKED + 1))
+      continue
+    fi
+  else
 
   if [ ! -s "$newtop" ] || [ "$(sed -n '1p' "$newtop")" != '---' ]; then
     err "$SOURCE" "$hline" no_yaml "'$heading' carries no \`\`\`yaml fence opening with ---"
@@ -270,9 +299,9 @@ while IFS=$'\t' read -r heading skill; do
 
   desc=$(field_of "$newtop" description)
   if [ -n "$desc" ]; then
-    if [ ${#desc} -lt "$DESC_MIN" ] || [ ${#desc} -gt "$DESC_MAX" ]; then
+    if [ ${#desc} -gt "$DESC_MAX" ]; then
       warn "$SOURCE" "$hline" description_length \
-        "'$heading' description is ${#desc} chars; the band is $DESC_MIN-$DESC_MAX"
+        "'$heading' description is ${#desc} chars; the cap is $DESC_MAX"
     fi
   fi
 
@@ -318,12 +347,14 @@ while IFS=$'\t' read -r heading skill; do
 
   fi
 
+  fi
+
   if [ ! -f "$skill" ]; then
     err "$skill" 1 missing_file "the map names it and nothing is there; scaffold the skill first"
     BLOCKED=$((BLOCKED + 1))
     continue
   fi
-  if [ "$(sed -n '1p' "$skill")" != '---' ]; then
+  if ! is_script "$skill" && [ "$(sed -n '1p' "$skill")" != '---' ]; then
     err "$skill" 1 skill_no_frontmatter "line 1 is not ---, so the managed region has no shape"
     BLOCKED=$((BLOCKED + 1))
     continue
@@ -339,16 +370,21 @@ while IFS=$'\t' read -r heading skill; do
   fi
   DRIFTED=$((DRIFTED + 1))
 
-  # which half moved: both tops open with ---, so the second --- splits them the same way
-  close_cur=$(awk 'NR > 1 && $0 == "---" { print NR; exit }' "$curtop")
-  close_new=$(awk 'NR > 1 && $0 == "---" { print NR; exit }' "$newtop")
+  # which half moved: both tops open with ---, so the second --- splits them the same way; a
+  # script has no such split, so its whole file is the one region a row can name
   region='frontmatter+preamble'
-  if [ -n "$close_cur" ] && [ -n "$close_new" ]; then
-    fm_same=0; pre_same=0
-    cmp -s <(sed -n "1,${close_cur}p" "$curtop") <(sed -n "1,${close_new}p" "$newtop") && fm_same=1
-    cmp -s <(sed -n "$((close_cur + 1)),\$p" "$curtop") <(sed -n "$((close_new + 1)),\$p" "$newtop") && pre_same=1
-    if [ "$fm_same" -eq 1 ] && [ "$pre_same" -eq 0 ]; then region='preamble'; fi
-    if [ "$fm_same" -eq 0 ] && [ "$pre_same" -eq 1 ]; then region='frontmatter'; fi
+  if is_script "$skill"; then
+    region='file'
+  else
+    close_cur=$(awk 'NR > 1 && $0 == "---" { print NR; exit }' "$curtop")
+    close_new=$(awk 'NR > 1 && $0 == "---" { print NR; exit }' "$newtop")
+    if [ -n "$close_cur" ] && [ -n "$close_new" ]; then
+      fm_same=0; pre_same=0
+      cmp -s <(sed -n "1,${close_cur}p" "$curtop") <(sed -n "1,${close_new}p" "$newtop") && fm_same=1
+      cmp -s <(sed -n "$((close_cur + 1)),\$p" "$curtop") <(sed -n "$((close_new + 1)),\$p" "$newtop") && pre_same=1
+      if [ "$fm_same" -eq 1 ] && [ "$pre_same" -eq 0 ]; then region='preamble'; fi
+      if [ "$fm_same" -eq 0 ] && [ "$pre_same" -eq 1 ]; then region='frontmatter'; fi
+    fi
   fi
   delta=$(diff "$curtop" "$newtop" | grep -c '^[<>]' || true)
 
@@ -384,6 +420,13 @@ if [ ${#ONLY[@]} -eq 0 ]; then
       err "$style" 1 unmapped_style "no map entry, so this copy can drift from the readme unseen"
     fi
   done
+  # the secrets copies fan out the same way the styles do, so an unmapped one is the same failure
+  for script in plugins/*/shared/secrets.sh; do
+    [ -f "$script" ] || continue
+    if ! grep -qFx "$script" "$SCRATCH/mapped"; then
+      err "$script" 1 unmapped_script "no map entry, so this copy can drift from the readme unseen"
+    fi
+  done
   # catalog headings live between '## Plugins & Skills' and the next h2; one heading, one entry
   while IFS= read -r found; do
     [ -n "$found" ] || continue
@@ -407,7 +450,7 @@ if [ "$APPLY" -eq 1 ]; then MODE='apply'; fi
 
 cat <<EOF
 
-=== /readme telemetry ===
+=== /export-readme telemetry ===
 source: $SOURCE
 map: $MAP
 mapped: $MAPPED target(s)

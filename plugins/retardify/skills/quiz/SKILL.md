@@ -4,47 +4,37 @@ model: fable
 effort: max
 license: MIT
 compatibility: requires bash, git
-description: Turn a shipped feature into a study map and an ungraded 20-question quiz in .construct/retardify/quiz/, then grade it on a second run.
+description: turn a shipped feature into a study map and an ungraded 20-question quiz (saves quiz to .construct/)
 argument-hint: "<feature>"
 disable-model-invocation: true
 metadata:
   kind: trigger
   artifact: .construct/retardify/quiz/
 ---
-**/retardify:quiz:** the frontmatter blocks every path except an explicit invocation
-- written after a feature ships, to test whether the mental model of it actually holds
-- generation writes the questions and NEVER the answers; grading is a separate later run
-- the miss is the deliverable: a wrong answer names the concept worth studying next
+**a graded quiz on your own shipped code:** you still learn what the agent wrote
+- a study map in build order, then 20 questions written against the code
+- generation ships NO answers, and a second run grades what you ticked
+- every miss names the transferable concept underneath it, not just the letter
 
-## voice
+# Instructions
 
-```!
-awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
-```
-
-- the block above already ran, and it is the output contract for this response
-- it holds for this turn even when the user's active output style is something else
-- an empty block means the plugin has no style file; continue, since voice never gates the work
-
-## telemetry
-
+## Telemetry
 ```!
 "${CLAUDE_PLUGIN_ROOT}"/skills/quiz/quiz.sh $ARGUMENTS
 echo "sidecar exit: $?"
 ```
+- it already ran, so there is no command to issue
+- fail (`sidecar exit` > 0) → abort and report the raw terminal error inside a markdown code block
+- `state: graded` → this quiz is already scored; ASK whether to write a fresh one, then WAIT
+- `state: ungraded` → the quiz is taken and waiting on a grade, so SKIP to step 3
+- success (`sidecar exit` = 0) and `state: absent` → take `target` and continue to step 1
 
-1. read the block above; it already ran, so there is no command to issue
-  - fail (`sidecar exit` > 0) → abort and report the raw terminal error inside a markdown code block
-  - `state: graded` → this quiz is already scored; ASK whether to write a fresh one, then WAIT
-  - `state: ungraded` → the quiz is taken and waiting on a grade, so SKIP to step 4
-  - success (`sidecar exit` = 0) and `state: absent` → take `target` and continue to step 2
-
-2. read the feature before writing a question about it
+1. read the feature before writing a question about it
   - read every file the feature touches, and follow the imports rather than guessing at them
   - work out the order somebody should read them in to understand it from nothing
   - that order is ideal-build order, which is neither alphabetical nor the order you opened them
 
-3. write `[target]` in the shape defined under `## the shape` below, then STOP
+2. write `[target]` in the shape defined under `## the shape` below, then STOP
   - `Files`, `Model` and `Pattern` are the study half, and they carry no questions
   - `Quiz` is 20 questions, each with four options and NO indication of which is right
   - questions test the why, the tradeoff and the order of operations, never trivia recall
@@ -55,14 +45,14 @@ echo "sidecar exit: $?"
     NEVER write the answer, mark an option, or hint at one, in any form, for any reason
     a quiz whose answers ship with it measures reading comprehension and nothing else
 
-4. grade the taken quiz, once the user has ticked their picks
+3. grade the taken quiz, once the user has ticked their picks
   - read each `- [x]` pick, work out the right answer from the code, and mark it `- [x]` too
   - add one `> ✓` line per correct answer, saying in one clause why it is right
   - add one `> ✗ picked <X>, answer <Y>` line per miss, explaining the actual mechanism
   - add a `> 📚 study:` line under each miss, naming the transferable concept and where to read it
   - stamp `- graded:` with the score, then close with the blind-spot map across every miss
 
-5. validate what landed, then show it and STOP
+4. validate what landed, then show it and STOP
   ```bash
   plugins/retardify/skills/quiz/quiz.sh --check [target]
   ```
@@ -146,3 +136,8 @@ how to build the next similar thing, using this as the reference
 *example:*
 > the single miss is not a feature gap; it is a general concept that happens to surface here.
 > the frontier is the transferable ideas underneath the system, not the system itself.
+
+## Output Style
+```!
+awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
+```

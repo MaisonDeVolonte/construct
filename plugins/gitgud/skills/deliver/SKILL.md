@@ -1,59 +1,38 @@
 ---
 name: deliver
-description: Bucket uncommitted work into atomic PRs, gate the plan, then hand over every block.
+model: opus
+effort: high
+license: MIT
+compatibility: requires bash, curl, git
+description: bucket uncommitted work into atomic, single-purpose PRs, gate the plan, then hand back every block of it
 argument-hint: "[--debug] [--finished]"
 disable-model-invocation: true
 metadata:
   kind: trigger
 ---
-**/gitgud:deliver:** Run ONLY on explicit `/gitgud:deliver` command
-- floats uncommitted changes onto the trunk, then drains them in atomic buckets
-- each atomic bucket: branch → commit → push → PR → auto-merge on green, then back to the trunk
-- the reasoning is the automation: bucketing, ordering, and message drafting are what it does for you
-- never runs a bucket; every one is handed over as a block you paste into your own terminal
-- leaves you on the trunk, not a feature branch — the trunk is your working surface
-- every change is either uncommitted on the trunk or committed on a pushed branch
-- re-run anytime to resume; git status drives the loop, so it picks up whatever's left
-- recover a failed `git switch -c` with `git switch "$DEFAULT_BRANCH"`, then `git branch -D "$ATOMIC_BRANCH"` (add `git push origin --delete "$ATOMIC_BRANCH"` if pushed)
+**a messy tree becomes single-purpose PRs:** bucketed, ordered and written, ready to paste
+- bucketing, ordering and message drafting are the reasoning it does for you
+- each bucket: branch, commit, push, PR, auto-merge, then back to the trunk
+- runs none of it; every bucket is a block you paste into your own terminal
 
-**FLAGS:**
-- `--debug`: plans every bucket as normal, but emits only the FIRST block
-- `--finished`: buckets ONLY work that reads as finished, and leaves the rest in the tree
-  - finished means: no `TODO`/`FIXME`/`XXX`/`WIP` added by the change, no commented-out block left
-    behind, no empty function body or `throw new Error("not implemented")`, no debug logging, and
-    no file whose diff is imports-only or scaffolding with no caller
-  - a file that only a finished file imports counts as finished, since shipping without it breaks
-  - anything you cannot place with confidence stays UNFINISHED; the flag drains the tree partially
-    on purpose, and a wrong call here ships half a feature
-  - report what was left and why, one line each, before the first block
+# Instructions
 
-## voice
-
-```!
-awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
-```
-
-- the block above already ran, and it is the output contract for this response
-- it holds for this turn even when the user's active output style is something else
-- an empty block means the plugin has no style file; continue, since voice never gates the work
-
-## telemetry
-
+## Telemetry
 ```!
 "${CLAUDE_PLUGIN_ROOT}"/skills/deliver/deliver.sh
 echo "sidecar exit: $?"
 ```
+- it already ran, so there is no command to issue
+- fail (`sidecar exit` > 0) → abort and report: "<raw terminal error>"
+- success (`sidecar exit` = 0) → capture `default branch` from the telemetry
+- IF the handover block names any prep command, hand it over and WAIT before step 2
+- the preflight measures only, so the tree is still wherever the user left it
+- bucketing against an unsynced trunk drafts commits the user then has to redo
+- IF `touches .claude/settings.json` reads `yes`, say so now: no sandboxed command can write
 
-1. read the block above; it already ran, so there is no command to issue
-  - fail (`sidecar exit` > 0) → abort and report: "<raw terminal error>"
-  - success (`sidecar exit` = 0) → capture `default branch` from the telemetry
-  - IF the handover block names any prep command, hand it over and WAIT before step 2
-    - the preflight measures only, so the tree is still wherever the user left it
-    - bucketing against an unsynced trunk drafts commits the user then has to redo
-  - IF `touches .claude/settings.json` reads `yes`, say so now: no sandboxed command can write
     that path, so the pull after the merge needs the retry hatch
 
-2. `git status -s` and `git diff`
+1. `git status -s` and `git diff`
 - analyze changes and group into self-contained atomic `type(scope)` buckets
 - interdependent files needed to pass CI should be grouped together
 - tests are grouped with code they validate, matched via imports, routes, selectors, etc
@@ -76,7 +55,7 @@ echo "sidecar exit: $?"
   - correct: `improve(tool): migrate skill frontmatter checks to 'export-readme'`
   - incorrect: `improve(check-skills): hand frontmatter rules to export-readme`
 
-3. plan EVERY bucket, then STOP and gate on the plan
+2. plan EVERY bucket, then STOP and gate on the plan
 - sort the buckets by dependency and prioritize foundational changes
 - populate these per bucket, for all of them, before emitting anything:
 ```
@@ -103,7 +82,7 @@ $ATOMIC_COMMIT # $ATOMIC_TYPE($ATOMIC_SCOPE): $ATOMIC_TITLE
 - ask: "does this bucketing look right? say go and I'll emit every block"
 - STOP here and WAIT; the plan is the gate, and a wrong bucket costs nothing to fix at this point
 
-4. verify every bucket before emitting a single block, since a red PR costs a round trip
+3. verify every bucket before emitting a single block, since a red PR costs a round trip
 - resolve every reference a bucket breaks against `git show HEAD:<file>`, NEVER the working copy
 - a path the working tree already fixed still reads broken to CI until its bucket lands
 - run the validators each bucket touches, plus the two checks CI runs: `shellcheck -x` and `bash -n`
@@ -111,7 +90,7 @@ $ATOMIC_COMMIT # $ATOMIC_TYPE($ATOMIC_SCOPE): $ATOMIC_TITLE
 - bucket 1 verifies against today's HEAD; every later bucket verifies against a trunk that does not
   exist yet, so say which buckets carry that weaker guarantee rather than implying one standard
 
-5. emit every block, in dependency order, then STOP
+4. emit every block, in dependency order, then STOP
 - ONE fenced bash block per bucket, every variable already expanded, numbered `# BUCKET n of N`
 - bucket 1 runs as written:
 ```bash
@@ -133,9 +112,22 @@ git switch -c "$ATOMIC_BRANCH" "$DEFAULT_BRANCH"
 - close with: paste them in order, and tell me if any CI goes red
 - a red bucket invalidates the rest of the plan, since it was computed against a trunk that never
   landed — say so, and re-run `/gitgud:deliver` rather than pasting on
+- recover a failed `git switch -c` with `git switch "$DEFAULT_BRANCH"`, then
+  `git branch -D "$ATOMIC_BRANCH"` (add `git push origin --delete "$ATOMIC_BRANCH"` if pushed)
 - a commit message naming a destructive command trips `pretooluse.sh`, so reword rather than quote
 
-6. check conditions before continuing:
+5. check conditions before continuing:
 - IF `--debug` → emit only bucket 1's block and report what the remaining plan holds
 - IF `--finished` → bucket only finished work, then report every file left behind and why
+  - finished means: no `TODO`/`FIXME`/`XXX`/`WIP` added by the change, no commented-out block left
+    behind, no empty function body or `throw new Error("not implemented")`, no debug logging, and
+    no file whose diff is imports-only or scaffolding with no caller
+  - a file that only a finished file imports counts as finished, since shipping without it breaks
+  - anything you cannot place with confidence stays UNFINISHED; the flag drains the tree partially
+    on purpose, and a wrong call here ships half a feature
 - ELSE wait for the user, re-read `git status -s`, and repeat from step 2 until the tree is clean
+
+## Output Style
+```!
+awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
+```

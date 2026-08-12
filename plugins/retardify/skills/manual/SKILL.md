@@ -4,53 +4,43 @@ model: fable
 effort: max
 license: MIT
 compatibility: requires bash, git
-description: Distill a completed plan into a perfect-world build manual in .construct/retardify/manual/, then validate it.
+description: distill a completed plan into a perfect-world build manual, then validate it (saves manual to .construct/)
 argument-hint: "<plan>"
 disable-model-invocation: true
 metadata:
   kind: trigger
   artifact: .construct/retardify/manual/
 ---
-**/retardify:manual:** the frontmatter blocks every path except an explicit invocation
-- intakes a completed `/retardify:plan` file from `.construct/retardify/plan/` and outputs the ideal path
-- a perfect-world rewrite: the build as it goes when every step lands clean on the first try
-- assumes the likeliest case at every fork; the dead ends and repairs stay in the plan
+**the messy build rewritten as the ideal path:** every dead end stays back in the plan
+- distills a closed plan into the build as it goes when every step lands clean
+- imperative, sorted, maximally concise; the dead ends stay in the plan
+- assumes the likeliest case at every fork, so edge cases never make the page
 
-## voice
+# Instructions
 
-```!
-awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
-```
-
-- the block above already ran, and it is the output contract for this response
-- it holds for this turn even when the user's active output style is something else
-- an empty block means the plugin has no style file; continue, since voice never gates the work
-
-## telemetry
-
+## Telemetry
 ```!
 "${CLAUDE_PLUGIN_ROOT}"/skills/manual/manual.sh $ARGUMENTS
 echo "sidecar exit: $?"
 ```
+- it already ran, so there is no command to issue
+- fail (`sidecar exit` > 0) → abort and report the raw terminal error inside a markdown code block
+- `completed: no` → STOP and name the open boxes; a manual distills finished work only
+- `collision: yes` → a manual already covers this plan; ASK whether to replace it, then WAIT
+- success (`sidecar exit` = 0) → take `target` from the telemetry and continue to step 1
 
-1. read the block above; it already ran, so there is no command to issue
-  - fail (`sidecar exit` > 0) → abort and report the raw terminal error inside a markdown code block
-  - `completed: no` → STOP and name the open boxes; a manual distills finished work only
-  - `collision: yes` → a manual already covers this plan; ASK whether to replace it, then WAIT
-  - success (`sidecar exit` = 0) → take `target` from the telemetry and continue to step 2
-
-2. read the whole source plan, notes included, and extract the straight path
+1. read the whole source plan, notes included, and extract the straight path
   - the checklist says what landed and the notes say what it cost; keep only what the finish needs
   - re-derive the order a builder follows knowing everything the plan learned, then sort by it
   - drop every probe, reversal, workaround and repair; a perfect world has nothing to recover from
   - where the plan branched, keep the branch that won, stated as the only way it goes
 
-3. write `[target]` in the shape defined under `## the shape` below
+2. write `[target]` in the shape defined under `## the shape` below
   - imperative voice, present tense: `write the manifest`, never `we wrote` or `you might`
   - every step assumes the one before it landed clean, so no step checks, hedges or retries
   - lines carry a single clause, capped at 100 characters, and never wrap
 
-4. validate what landed, then show it and STOP
+3. validate what landed, then show it and STOP
   ```bash
   plugins/retardify/skills/manual/manual.sh --check [target]
   ```
@@ -87,3 +77,8 @@ one line: what exists when the last step is done
 
 ## Done
 - one observable end-state check per hyphen bullet, provable by a command or a glance
+
+## Output Style
+```!
+awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
+```

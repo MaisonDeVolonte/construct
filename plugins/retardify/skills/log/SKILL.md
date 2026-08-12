@@ -1,19 +1,17 @@
 ---
 name: log
-description: "Shape of a daily agent log in .construct/retardify/log/: threads, notes, and prompts."
+license: MIT
+compatibility: requires bash, git
+description: "the shape of a daily agent log: threads carrying their own notes and prompts (saves log to .construct/)"
 when_to_use: "Writing to .construct/retardify/log/, which the taskcompleted and stop hooks both demand before a turn closes. Also when asked to log, note or record what happened, or to recap the day's threads."
 metadata:
   kind: spec
+  artifact: .construct/retardify/log/
 ---
-## voice
-
-```!
-awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
-```
-
-- the block above already ran, and it is the output contract for this response
-- it holds for this turn even when the user's active output style is something else
-- an empty block means the plugin has no style file; continue, since voice never gates the work
+**today's work, shaped for tomorrow's session:** the next agent reads it instead of asking you
+- threads group work by topic, carrying their own notes and prompts
+- `sessionstart` carries the four most recent threads forward across days
+- the stop hook demands it, so a turn cannot close on an unwritten day
 
 # .construct/retardify/log/YYYY-MM-DD.md
 one file per day, holding both the work and the prompts that drove it:
@@ -34,6 +32,8 @@ one file per day, holding both the work and the prompts that drove it:
 - focus on outcomes, not the conversation (no play-by-plays)
 - err on the side of brevity, not completeness; capture the meaningful signals, ignore the noise
 - scrub client names, tokens, and other sensitive detail before it lands in a commit
+
+# Instructions
 
 ## Thread #1: project - short description
 
@@ -116,11 +116,14 @@ synthesize pending notes when creating a new thread, and prune that thread's pro
 - prune a prompt once it is trivial, redundant, or superseded by the one after it
 - keep the prompt that changed direction, dropped a constraint, or corrected a wrong assumption
 
-```text
-VERIFY - not part of the artifact
+## Verify
 - RUN `plugins/retardify/skills/log/log.sh` after closing a thread, adding a note, or synthesizing
 - FIX every ERROR, since each one breaks a rule this spec states outright
 - STOP on a `secret` finding and ask the user before truncating it; the key needs rotating first
 - JUSTIFY or fix every WARN; the sidecar tolerates them, the next reader may not
 - ANSWER the checklist it prints, since those rules are the ones no script can judge
+
+## Output Style
+```!
+awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
 ```
