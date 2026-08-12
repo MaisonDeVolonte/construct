@@ -98,6 +98,15 @@ while IFS= read -r raw; do
     hard L2 "$LINE" "${#raw} chars against a $MAX_WIDTH cap; cut it, do not wrap it"
   fi
 
+# b4's shapes: an epigram is matchable where "plainly spoken" is not, so name the forms
+if [[ $text =~ (is|are)\ not\ .+,\ (it|that|they)\ (is|are) ]] \
+|| [[ $text =~ [a-z]\ beats\ [a-z] ]] \
+|| [[ $text =~ (^|[[:space:]])[Nn]o\ [a-z]+\ without\ [a-z] ]] \
+|| [[ $text =~ ,\ never\ [a-z]+([[:space:]][a-z]+)?$ ]] \
+|| [[ $text =~ ,\ not\ (a|an|the|its|their)?[[:space:]]?[a-z]+([[:space:]][a-z]+)?$ ]]; then
+soft B4 "$LINE" "epigram shape; name what it does, in the order it does it"
+fi
+
   # b2's own definition: anything that is none of the allowed shapes is a wrapped prose line
   if [[ ! $text =~ ^([-*+]|[0-9]+\.)[[:space:]] && ! $text =~ ^#{1,6}[[:space:]] \
      && ! $text =~ ^[A-Z][A-Z0-9\ /_-]*: ]]; then
