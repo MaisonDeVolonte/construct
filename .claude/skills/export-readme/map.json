@@ -1,4 +1,9 @@
 {
+  "README.md": [
+    "plugins/operator/README.md",
+    "plugins/gitgud/README.md",
+    "plugins/retardify/README.md"
+  ],
   "## Output Style": [
     "plugins/operator/output-styles/operator.md",
     "plugins/gitgud/output-styles/operator.md",
@@ -9,6 +14,7 @@
     "plugins/gitgud/shared/secrets.sh",
     "plugins/retardify/shared/secrets.sh"
   ],
+  "#### Suite Audit": "plugins/operator/skills/audit/SKILL.md",
   "#### Credentials": "plugins/operator/skills/credentials/SKILL.md",
   "#### Permissions": "plugins/operator/skills/permissions/SKILL.md",
   "#### Scripts": "plugins/operator/skills/scripts/SKILL.md",
