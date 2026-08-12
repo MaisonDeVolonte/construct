@@ -5,6 +5,7 @@ effort: max
 license: MIT
 compatibility: requires bash, jq, curl, git
 description: verify every release precondition, abort on any fault, then hand back the bump, push and promote steps
+argument-hint: "[--help]"
 disable-model-invocation: true
 metadata:
   kind: trigger
@@ -21,6 +22,7 @@ metadata:
 "${CLAUDE_PLUGIN_ROOT}"/skills/ship/ship.sh $ARGUMENTS
 echo "sidecar exit: $?"
 ```
+- `help: requested` → the run was refused before it started; `## Help` below is the whole turn
 - it already ran, so there is no command to issue
 - fail (`sidecar exit` > 0) → abort and report: "<raw terminal error>"
 - success (`sidecar exit` = 0) → continue to step 1
@@ -37,6 +39,28 @@ echo "sidecar exit: $?"
     - the release call is the last line and only resolves after the tag push above it lands
     - github's git endpoints take only basic auth, which base64s the masked sentinel past the
       proxy, so a push needs the user's tty and cannot work from a sandboxed command
+
+## Help
+> IF the invocation carries `--help` or `-h`, this section is the whole turn:
+
+```text
+SKILL: /plugin:name
+DESCRIPTION: <the `description` frontmatter, verbatim>
+POSTURE: <the readme index's keyword for this skill>
+FLAGS:
+- --flag: <what it changes, in the telemetry bullet's own words>
+ARGUMENTS:
+- <arg>: <what it names>
+ARTIFACT: <the `metadata.artifact` path, or none>
+OUTPUT: <what lands in the turn: an audit entry, a handover block, an inline report>
+SPEC: <this doc's own path>
+```
+
+- every field prints, in this order; one with nothing to say prints `none`
+- every value is COPIED from the source named beside it, never composed fresh
+- ask what they are actually trying to do, and what they have already tried
+- name the flag or the sibling skill that fits their answer, then STOP
+- run no step, write no file, and never fall through to step 1
 
 ## Output Style
 ```!

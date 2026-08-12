@@ -5,7 +5,7 @@ effort: max
 license: MIT
 compatibility: requires bash, curl, git
 description: turn work into a staged plan with per-stage readiness tables, then validate it (saves plan to .construct/)
-argument-hint: "<goal>"
+argument-hint: "[--help] <goal>"
 disable-model-invocation: true
 metadata:
   kind: trigger
@@ -23,6 +23,7 @@ metadata:
 "${CLAUDE_PLUGIN_ROOT}"/skills/plan/plan.sh $ARGUMENTS
 echo "sidecar exit: $?"
 ```
+- `help: requested` → the run was refused before it started; `## Help` below is the whole turn
 - it already ran, so there is no command to issue
 - fail (`sidecar exit` > 0) → abort and report the raw terminal error inside a markdown code block
 - `collision: yes` → STOP and name the file already holding that slug; never overwrite a plan
@@ -172,6 +173,28 @@ suggested rules to set in order for agents to work reliably:
 3. record what was ruled out and why, so a future reader does not relitigate it
 4. keep each note self-contained, since readers jump here from one line and jump straight back
 5. a note nothing points at is either dead weight or a missing `(see #x)` somewhere
+
+## Help
+> IF the invocation carries `--help` or `-h`, this section is the whole turn:
+
+```text
+SKILL: /plugin:name
+DESCRIPTION: <the `description` frontmatter, verbatim>
+POSTURE: <the readme index's keyword for this skill>
+FLAGS:
+- --flag: <what it changes, in the telemetry bullet's own words>
+ARGUMENTS:
+- <arg>: <what it names>
+ARTIFACT: <the `metadata.artifact` path, or none>
+OUTPUT: <what lands in the turn: an audit entry, a handover block, an inline report>
+SPEC: <this doc's own path>
+```
+
+- every field prints, in this order; one with nothing to say prints `none`
+- every value is COPIED from the source named beside it, never composed fresh
+- ask what they are actually trying to do, and what they have already tried
+- name the flag or the sibling skill that fits their answer, then STOP
+- run no step, write no file, and never fall through to step 1
 
 ## Output Style
 ```!

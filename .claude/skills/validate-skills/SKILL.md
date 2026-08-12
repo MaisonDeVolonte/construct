@@ -1,6 +1,7 @@
 ---
 name: validate-skills
 description: "Shape every skill pair must hold: the SKILL.md, its sidecar, and the frontmatter that gates it. Validates them."
+argument-hint: "[--help] [--strict] [--keep] [<path>]"
 when_to_use: "Authoring or editing any SKILL.md or its sidecar, adding a skill to a plugin, or deciding whether a skill is a trigger or a spec. Also when a listing looks truncated or a skill fails to load."
 metadata:
   kind: spec
@@ -51,6 +52,21 @@ a doc that runs a sidecar opens its body with one, in this shape and no other:
 - numbered steps start AFTER the block, at 1, since reading the output is not a step
 - a spec that runs nothing carries no telemetry section at all, and `log` is the one example
 - an auto-loading spec guards the call on `$ARGUMENTS`, since a bare load must run nothing
+
+## the help section
+every skill answers `--help` the same way, so the section is COPIED rather than written. it sits
+directly above `## Output Style`, and this doc's own `## Help` below is the canonical text:
+
+- the fence holds placeholders, never one skill's filled values, so all of them stay identical
+- that is what makes this one comparison instead of a shape per skill; a drift is a bad paste
+- `HELP_BLOCK` in the sidecar is the source, and the doc is compared to it whole
+- every field prints on every run, and one with nothing to say prints `none`
+- each value is copied from the source named beside it, so two runs of one skill agree
+- the sidecar carries the matching guard, since the ```! block runs before the doc is read
+- a help invocation refused only in prose has already paid for the run it was refusing
+- the guard prints `help: requested` and exits 0, so the doc branches on a line rather than silence
+- that marker earns a telemetry bullet, since a bare exit 0 otherwise reads as a clean run
+- a doc that runs no sidecar carries the section anyway, and `log` is the one example
 
 ## the output style
 the output style is opt-in, so a user may be on Default while a plugin skill runs. the LAST body
@@ -130,3 +146,25 @@ VERIFY - not part of the trigger
 - JUSTIFY or fix every WARN; the sidecar tolerates them, the next reader may not
 - ANSWER the checklist it prints, since those rules are the ones no script can judge
 ```
+
+## Help
+> IF the invocation carries `--help` or `-h`, this section is the whole turn:
+
+```text
+SKILL: /plugin:name
+DESCRIPTION: <the `description` frontmatter, verbatim>
+POSTURE: <the readme index's keyword for this skill>
+FLAGS:
+- --flag: <what it changes, in the telemetry bullet's own words>
+ARGUMENTS:
+- <arg>: <what it names>
+ARTIFACT: <the `metadata.artifact` path, or none>
+OUTPUT: <what lands in the turn: an audit entry, a handover block, an inline report>
+SPEC: <this doc's own path>
+```
+
+- every field prints, in this order; one with nothing to say prints `none`
+- every value is COPIED from the source named beside it, never composed fresh
+- ask what they are actually trying to do, and what they have already tried
+- name the flag or the sibling skill that fits their answer, then STOP
+- run no step, write no file, and never fall through to step 1

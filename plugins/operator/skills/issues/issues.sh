@@ -23,6 +23,10 @@
 
 set -euo pipefail
 
+# the doc is read only after this has already run, so help is refused here or not at all; the doc's
+# own '## Help' section owns the output, which is why this prints a marker rather than a usage text
+case " $* " in *" --help "*|*" -h "*) echo "help: requested"; exit 0;; esac
+
 # ==============
 # PREFLIGHT
 # ==============
@@ -69,7 +73,6 @@ while [ $# -gt 0 ]; do
     --plugins) RUN_PLUGINS=1;;
     --permissions) RUN_PERMISSIONS=1;;
     --since) shift; SINCE_DAYS="${1:-}";;
-    --help) usage; exit 0;;
     *) usage >&2; exit 2;;
   esac
   shift

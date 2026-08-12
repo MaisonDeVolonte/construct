@@ -5,24 +5,28 @@ effort: high
 license: MIT
 compatibility: requires bash, jq, git
 description: read the whole repo for composition, pairing, manifest agreement and freshness (saves report to .construct/)
+argument-hint: "[--help] [--confirm]"
 disable-model-invocation: true
 disallowed-tools: Edit
 metadata:
   kind: trigger
   artifact: .construct/gitgud/audit/
 ---
-**what a fresh clone would actually load:** drift you cannot see from inside your own tree
+**what a fresh clone would load:** drift you cannot see from inside your own tree
 - read-only: it counts and compares, and never mutates a tracked file
 - checks composition, skill pairing, manifest agreement and artifact freshness
+- prices the run against the tracked files it would walk, and asks before spending any of it
 - outputs a numbered list, each finding with the command that shows the detail
 
 # Instructions
 
 ## Telemetry
 ```!
-"${CLAUDE_PLUGIN_ROOT}"/skills/audit/audit.sh
+"${CLAUDE_PLUGIN_ROOT}"/skills/audit/audit.sh $ARGUMENTS
 echo "sidecar exit: $?"
 ```
+- `help: requested` → the run was refused before it started; `## Help` below is the whole turn
+- `confirm: required` → nothing ran; `## Confirm` below is the whole turn
 - it already ran, so there is no command to issue
 - fail (`sidecar exit` > 0) → abort and report: "<raw terminal error>"
 - success (`sidecar exit` = 0) → continue to step 1
@@ -37,6 +41,7 @@ echo "sidecar exit: $?"
   - `artifacts` → a directory whose latest file predates the last week means its writer stalled
 
 2. output a numbered condition list, worst first
+  - OPEN by naming what ran, the seconds it took, and the artifact path holding the copy
   - each entry names the finding, why it matters, and the one command that shows the detail
   - say plainly when a section is clean rather than padding the list to look thorough
   - never propose a fix the telemetry does not support; an unread directory is not a stale one
@@ -116,6 +121,46 @@ the sidecar's whole output, fenced and unedited, so every claim above can be che
 
 ## Git Audit #2: repeat the above format for each deliberate run on the same day
 never edit an earlier audit; a stale finding is signal about how long it went unresolved
+
+## Confirm
+> IF the telemetry reads `confirm: required`, this section is the whole turn:
+
+```text
+SKILL: /plugin:name
+SCOPE: <what one run covers, from the preamble bullets>
+COST: <the `estimate` line, verbatim>
+ARTIFACT: <the `metadata.artifact` path>
+RERUN: /plugin:name --confirm
+```
+
+- state the cost BEFORE asking, then ask once and STOP
+- run no step, write no file, and never fall through to step 1
+- a fast estimate still asks, since the user decides what is worth a turn
+- on a yes, hand back the RERUN line and say the run holds the turn until it returns
+- when a confirmed run returns, lead with what happened, the seconds it took, and the artifact path
+- an earlier confirmation never covers a later run
+
+## Help
+> IF the invocation carries `--help` or `-h`, this section is the whole turn:
+
+```text
+SKILL: /plugin:name
+DESCRIPTION: <the `description` frontmatter, verbatim>
+POSTURE: <the readme index's keyword for this skill>
+FLAGS:
+- --flag: <what it changes, in the telemetry bullet's own words>
+ARGUMENTS:
+- <arg>: <what it names>
+ARTIFACT: <the `metadata.artifact` path, or none>
+OUTPUT: <what lands in the turn: an audit entry, a handover block, an inline report>
+SPEC: <this doc's own path>
+```
+
+- every field prints, in this order; one with nothing to say prints `none`
+- every value is COPIED from the source named beside it, never composed fresh
+- ask what they are actually trying to do, and what they have already tried
+- name the flag or the sibling skill that fits their answer, then STOP
+- run no step, write no file, and never fall through to step 1
 
 ## Output Style
 ```!

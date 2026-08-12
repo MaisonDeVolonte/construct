@@ -1,6 +1,6 @@
 # TheConstruct: Secure Agentic Coding Infra
 **Claude Code Plugins: Sandboxed automations, masked credentials, deterministic conventions, and more**
-> known issues (use `/operator:issues` to generate a fresh report): 
+> known issues (use `/operator:issues` to generate a fresh report):
 > go-based clis (`gh`, `terraform`, `kubectl`) cannot reach injectHosts domains on macos
 > [(#26466)](https://github.com/anthropics/claude-code/issues/26466);
 > the sandbox ca never loads and there is no supported fix since `allowMachLookup` is not passed through
@@ -20,12 +20,13 @@ TABLE OF CONTENTS
 ├─ Installation ─── plugin marketplace · cloned repo
 ├─ Sandbox ──────── basic · repo · personal · managed · advanced
 ├─ Plugins & Skills
-├─ /operator ────── credentials · permissions · scripts · settings · issues
+├─ /operator ────── audit · credentials · permissions · scripts · settings · issues
 ├─ /gitgud ──────── audit · backup · continue · deliver · prune · nuke · rerun · ship
-├─ /retardify ───── file · code · graph · plan · review · quiz · manual · todo · log
+├─ /retardify ───── file · code · plan · graph · quiz · manual · review · log · todo
 ├─ Hooks ────────── sessionstart · pretooluse · posttooluse · taskcreated · taskcompleted · stop
-├─ Output Style ── theme · personas · adversaries · voice · formatting · verification
-└─ Settings ─────── sandbox · scopes · keys · rules · clients · audits · diagnostics
+├─ Output Style ─── theme · voice · banned · structure · limits · evidence
+├─ Settings ─────── sandbox · scopes · keys · rules · clients · audits · diagnostics
+└─ Secrets ──────── sidecars · patterns · severities
 ```
 
 ## Features
@@ -33,15 +34,15 @@ TABLE OF CONTENTS
 
 | /operator                    | /gitgud                | /retardify         | hooks                           |
 |------------------------------|------------------------|--------------------|---------------------------------|
-| [:credentials](#credentials) | [:audit](#audit)       | [:file](#file)     | [sessionstart](#sessionstart)   |
-| [:permissions](#permissions) | [:backup](#backup)     | [:code](#code)     | [pretooluse](#pretooluse)       |
-| [:scripts](#scripts)         | [:continue](#continue) | [:graph](#graph)   | [posttooluse](#posttooluse)     |
-| [:settings](#settings)       | [:deliver](#deliver)   | [:plan](#plan)     | [taskcreated](#taskcreated)     |
-| [:issues](#issues)           | [:prune](#prune)       | [:manual](#manual) | [taskcompleted](#taskcompleted) |
-|                              | [:rerun](#rerun)       | [:review](#review) | [stop](#stop)                   |
-|                              | [:ship](#ship)         | [:todo](#todo)     |                                 |
-|                              | [:nuke](#nuke)         | [:quiz](#quiz)     |                                 |
-|                              |                        | [:log](#log)       |                                 |
+| [:audit](#suite-audit)       | [:audit](#audit)       | [:file](#file)     | [sessionstart](#sessionstart)   |
+| [:credentials](#credentials) | [:backup](#backup)     | [:code](#code)     | [pretooluse](#pretooluse)       |
+| [:permissions](#permissions) | [:continue](#continue) | [:plan](#plan)     | [posttooluse](#posttooluse)     |
+| [:scripts](#scripts)         | [:deliver](#deliver)   | [:graph](#graph)   | [taskcreated](#taskcreated)     |
+| [:settings](#settings)       | [:prune](#prune)       | [:quiz](#quiz)     | [taskcompleted](#taskcompleted) |
+| [:issues](#issues)           | [:nuke](#nuke)         | [:manual](#manual) | [stop](#stop)                   |
+|                              | [:rerun](#rerun)       | [:review](#review) |                                 |
+|                              | [:ship](#ship)         | [:log](#log)       |                                 |
+|                              |                        | [:todo](#todo)     |                                 |
 
 ## Examples
 
@@ -171,7 +172,7 @@ RULES:        1. a finding without evidence does not survive verify
 VERIFY:       a fresh agent attacks each finding against DONE WHEN and CONTEXT
               evidence that fails to reproduce, or contradicts a known fact, kills the finding
 
-OUTPUT:       retardify/plans/2026-07-31-operation-monorepo.md
+OUTPUT:       .construct/retardify/plan/2026-07-31-operation-monorepo.md
 
 ```
 
@@ -185,7 +186,7 @@ OUTPUT:       retardify/plans/2026-07-31-operation-monorepo.md
 > [troubleshooting](https://code.claude.com/docs/en/discover-plugins#troubleshooting)
 
 <details>
-<summary>Option A: Individual (testing/cross-project use, mix-n-match plugins, 5 mins)</summary>
+<summary>Option A: Individual (testing/cross-project use, mix-n-match plugins, ~5 mins)</summary>
 
 ```bash
 # install TheConstruct plugin marketplace
@@ -324,8 +325,8 @@ claude
 /sandbox
 ```
 ```
-# run operator's settings audit (could take a few minutes)
-/operator:settings --audit
+# run operator's full audit (could take a few minutes)
+/operator:audit
 ```
 
 </details>
@@ -346,8 +347,8 @@ claude
 /sandbox
 ```
 ```
-# run operator's settings audit (could take a few minutes)
-/operator:settings --audit
+# run operator's full audit (could take a few minutes)
+/operator:audit
 ```
 
 </details>
@@ -371,8 +372,8 @@ claude
 /sandbox
 ```
 ```
-# run operator's settings audit (could take a few minutes)
-/operator:settings --audit
+# run operator's full audit (could take a few minutes)
+/operator:audit
 ```
 
 </details>
@@ -393,8 +394,8 @@ claude
 /sandbox
 ```
 ```
-# run operator's settings audit (could take a few minutes)
-/operator:settings --audit
+# run operator's full audit (could take a few minutes)
+/operator:audit
 ```
 
 </details>
@@ -432,20 +433,46 @@ claude
 /sandbox
 ```
 ```
-# run operator's settings audit (could take a few minutes)
-/operator:settings --audit
-# run operator's credentials check (could take a few minutes)
-/operator:credentials
+# run operator's full audit, the credentials probe included (could take a few minutes)
+/operator:audit
 ```
 
 </details>
 
 ## Plugins & Skills
 
-### Operator
+### /operator
 ```bash
 claude plugin details operator@TheConstruct
 ```
+
+#### Suite Audit
+```
+/operator:audit
+```
+```yaml
+---
+name: audit
+model: opus
+effort: max
+license: MIT
+compatibility: requires bash, jq, git, curl
+description: run every operator lens and merge them into one report (saves report to .construct/)
+argument-hint: "[--help] [--confirm]"
+disable-model-invocation: true
+disallowed-tools: Edit, Write
+metadata:
+  kind: trigger
+  artifact: .construct/operator/audit/
+---
+```
+**built-in security suite:** lets you reach for a comprehensive audit of your entire claude code setup
+- runs settings, permissions, scripts, credentials and issues, then keeps each output whole
+- recomputes no verdict; each lens grades itself and this collects what they returned
+- correlates across lenses, which no single lens can do from inside itself
+- takes no lens flag, since one lens belongs to its own skill and its own artifact
+- prices the run against the sidecars it would replay, and asks before spending any of it
+- costs minutes, and names the seconds each lens spent so a long stage reads as work
 
 #### Credentials
 ```
@@ -459,7 +486,7 @@ effort: max
 license: MIT
 compatibility: requires bash, jq, curl
 description: probe all credential-shaped variables in the active sandbox across 19 vectors (saves report to .construct/)
-argument-hint: "[--strict] [--quick]"
+argument-hint: "[--help] [--strict] [--quick]"
 disable-model-invocation: true
 disallowed-tools: WebFetch, WebSearch
 metadata:
@@ -484,7 +511,7 @@ effort: max
 license: MIT
 compatibility: requires bash, jq, git
 description: replay the corpus through the real PreToolUse hook, then audit the merged rules (saves report to .construct/)
-argument-hint: "[--strict]"
+argument-hint: "[--help] [--strict] [--keep]"
 disable-model-invocation: true
 disallowed-tools: Edit, Write
 metadata:
@@ -509,7 +536,7 @@ effort: max
 license: MIT
 compatibility: requires bash, jq, git
 description: extract the commands your workflow scripts run, then verdict each of them (saves report to .construct/)
-argument-hint: "[--repo <name>] [--strict]"
+argument-hint: "[--help] [--repo <name>] [--strict]"
 disable-model-invocation: true
 disallowed-tools: Edit, Write
 metadata:
@@ -517,7 +544,7 @@ metadata:
   artifact: .construct/operator/scripts/
 ---
 ```
-**test agent sub-commands:** against your sandboxes actual merged settings
+**test agent sub-commands:** against your sandbox's actual merged settings
 - a permission rule judges `bash nuke.sh` but not the commands inside it
 - tests each internal command your agents are allowed to run
 - reports allowed, denied, asked or no-match, one line each
@@ -534,7 +561,7 @@ effort: max
 license: MIT
 compatibility: requires bash, jq, git
 description: grade every settings scope for silent faults, then probe the live gate (saves report to .construct/)
-argument-hint: "[--audit] [--static] [--quick] [--local] [--project] [--user] [--managed] [--advanced]"
+argument-hint: "[--help] [--local] [--project] [--user] [--managed] [--advanced]"
 disable-model-invocation: true
 disallowed-tools: Edit, Write
 metadata:
@@ -551,19 +578,15 @@ metadata:
   - when a settings template will not parse, so pasting it breaks the file
   - when a scope has no `.md`, or carries rules with no explanation written down
   - when a doc claims to mirror another scope but the two have quietly diverged
-  - when your `.env` or your ssh key can still be read
   - when the hook stays silent on a force-push command fed straight to it
-  - when your token reads as the real value inside the sandbox
-  - when the permissions or scripts audit comes back with errors of its own
 - WARNS
   - when installed settings differ from the template they were copied from
   - when project settings carry machine-specific paths that break on the next clone
   - when duplicate rules are found, in a settings file or in a template
   - when a documented rule no longer exists in the json
   - when nothing stops an agent editing the settings and hooks this audit depends on
-  - when your token is unset here, so the mask cannot be observed at all
-  - when one of the wrapped audit scripts is missing from its folder
-- runs the permissions and scripts audits too, and reports how many errors each returned
+- answers for the settings stack alone; `/operator:audit` runs every lens together
+- leaves file denies and token masks to `/operator:credentials`, which probes every vector
 - walks you through masked-credential setup, and names the steps you already finished
 - prints the copy commands for whichever settings scope you name
 - never changes a settings file, it only hands back commands for you to run
@@ -580,7 +603,7 @@ effort: high
 license: MIT
 compatibility: requires bash, jq, curl
 description: search claude-code repo for relevant issues and update status in readme (saves report to .construct/)
-argument-hint: "[--tracked] [--sandbox] [--hooks] [--plugins] [--permissions] [--since <days>]"
+argument-hint: "[--help] [--tracked] [--sandbox] [--hooks] [--plugins] [--permissions] [--since <days>]"
 disable-model-invocation: true
 disallowed-tools: WebFetch, WebSearch
 metadata:
@@ -595,8 +618,9 @@ metadata:
 
 ### /gitgud
 > the whole git dance; each pairs with a `.sh` sidecar that measures, then hands the commands back
-> two run part of their own block against narrow allows: `/gitgud:continue`'s sync, which is
-> recoverable throughout, and `/gitgud:nuke`'s backup stash, which is what makes its reset survivable
+> three run part of their own block against narrow allows: `/gitgud:continue`'s sync, which is
+> recoverable throughout, `/gitgud:backup`'s snapshot, which only ever writes, and `/gitgud:nuke`'s
+> backup stash, which is what makes its reset survivable
 - [triage.sh](plugins/gitgud/shared/triage.sh): shared branch triage and team probes, run by three siblings
 - [handover.sh](plugins/gitgud/shared/handover.sh): shared preflights, queries, and the telemetry/handover blocks
 
@@ -612,6 +636,7 @@ effort: high
 license: MIT
 compatibility: requires bash, jq, git
 description: read the whole repo for composition, pairing, manifest agreement and freshness (saves report to .construct/)
+argument-hint: "[--help] [--confirm]"
 disable-model-invocation: true
 disallowed-tools: Edit
 metadata:
@@ -619,9 +644,10 @@ metadata:
   artifact: .construct/gitgud/audit/
 ---
 ```
-**what a fresh clone would actually load:** drift you cannot see from inside your own tree
+**what a fresh clone would load:** drift you cannot see from inside your own tree
 - read-only: it counts and compares, and never mutates a tracked file
 - checks composition, skill pairing, manifest agreement and artifact freshness
+- prices the run against the tracked files it would walk, and asks before spending any of it
 - outputs a numbered list, each finding with the command that shows the detail
 
 #### Backup
@@ -636,6 +662,7 @@ effort: high
 license: MIT
 compatibility: requires bash, git
 description: snapshot the history and the working tree, verify that snapshot, then hand back every restore command
+argument-hint: "[--help]"
 disable-model-invocation: true
 metadata:
   kind: trigger
@@ -643,7 +670,7 @@ metadata:
 ```
 **a snapshot verified, not assumed:** worth typing before anything destructive
 - worth typing before any reset, rebase, history rewrite or bulk delete
-- takes no arguments; the destination is fixed and it overwrites nothing
+- nothing to configure; the destination is fixed and it overwrites nothing
 - never restores anything; the restore commands are handed back to you
 
 #### Continue
@@ -658,6 +685,7 @@ effort: high
 license: MIT
 compatibility: requires bash, git
 description: measure the trunk delta, then run the sync it planned against four narrow allows, ending on the trunk
+argument-hint: "[--help]"
 disable-model-invocation: true
 metadata:
   kind: trigger
@@ -680,7 +708,7 @@ effort: high
 license: MIT
 compatibility: requires bash, curl, git
 description: bucket uncommitted work into atomic, single-purpose PRs, gate the plan, then hand back every block of it
-argument-hint: "[--debug] [--finished]"
+argument-hint: "[--help] [--debug] [--finished]"
 disable-model-invocation: true
 metadata:
   kind: trigger
@@ -703,6 +731,7 @@ effort: high
 license: MIT
 compatibility: requires bash, git
 description: prune the dead tracking refs, report the trunk delta, then hand back every merged branch delete command
+argument-hint: "[--help]"
 disable-model-invocation: true
 metadata:
   kind: trigger
@@ -725,6 +754,7 @@ effort: max
 license: MIT
 compatibility: requires bash, git
 description: price what a hard reset would take, take the backup that makes it survivable, then hand back the rest
+argument-hint: "[--help]"
 disable-model-invocation: true
 metadata:
   kind: trigger
@@ -747,7 +777,7 @@ effort: high
 license: MIT
 compatibility: requires bash, jq, curl, git
 description: merge the current default branch into a stale PR so its CI re-runs against a trunk that has since moved
-argument-hint: "[--watch]"
+argument-hint: "[--help] [--watch]"
 disable-model-invocation: true
 metadata:
   kind: trigger
@@ -770,6 +800,7 @@ effort: max
 license: MIT
 compatibility: requires bash, jq, curl, git
 description: verify every release precondition, abort on any fault, then hand back the bump, push and promote steps
+argument-hint: "[--help]"
 disable-model-invocation: true
 metadata:
   kind: trigger
@@ -780,7 +811,7 @@ metadata:
 - computes the next version rather than applying it, since `npm version` commits
 - releases nothing; the bump, push and promote are handed over
 
-### /retardify (see `plugins/retardify/`)
+### /retardify
 > keeps machine output legible: what a convention is, whether the tree holds to it, and prose you can follow
 > the linters auto-load on a matching source file; the writers turn a conversation into one document
 
@@ -794,7 +825,7 @@ name: file
 license: MIT
 compatibility: requires bash, git
 description: file-shape linter run by PostToolUse or via <path> argument (saves audits to .construct/)
-argument-hint: "<path>"
+argument-hint: "[--help] <path>"
 when_to_use: "editing files, PostToolUse warnings, or when asked to review files"
 paths: "**/*.ts, **/*.tsx, **/*.js, **/*.jsx, **/*.mjs, **/*.cjs, **/*.sh, **/*.py, **/*.rb, **/*.go, **/*.rs"
 metadata:
@@ -862,7 +893,7 @@ name: code
 license: MIT
 compatibility: requires bash, git
 description: code-legibility linter run by PostToolUse or via <path> argument (saves audits to .construct/)
-argument-hint: "<path>"
+argument-hint: "[--help] <path>"
 when_to_use: "editing code, PostToolUse warnings, or when asked to review code"
 paths: "**/*.ts, **/*.tsx, **/*.js, **/*.jsx, **/*.mjs, **/*.cjs, **/*.sh, **/*.py, **/*.rb, **/*.go, **/*.rs"
 metadata:
@@ -962,7 +993,7 @@ effort: max
 license: MIT
 compatibility: requires bash, curl, git
 description: turn work into a staged plan with per-stage readiness tables, then validate it (saves plan to .construct/)
-argument-hint: "<goal>"
+argument-hint: "[--help] <goal>"
 disable-model-invocation: true
 metadata:
   kind: trigger
@@ -986,7 +1017,7 @@ effort: max
 license: MIT
 compatibility: requires bash, git
 description: turn a goal into a fan-out spec prompt for a fresh session, then validate it (saves spec to .construct/)
-argument-hint: "<goal>"
+argument-hint: "[--help] <goal>"
 disable-model-invocation: true
 metadata:
   kind: trigger
@@ -1010,14 +1041,14 @@ effort: max
 license: MIT
 compatibility: requires bash, git
 description: turn a shipped feature into a study map and an ungraded 20-question quiz (saves quiz to .construct/)
-argument-hint: "<feature>"
+argument-hint: "[--help] <feature>"
 disable-model-invocation: true
 metadata:
   kind: trigger
   artifact: .construct/retardify/quiz/
 ---
 ```
-**a graded quiz on your own shipped code:** you still learn what the agent wrote
+**an ungraded quiz on your own shipped code:** you still learn what the agent wrote
 - a study map in build order, then 20 questions written against the code
 - generation ships NO answers, and a second run grades what you ticked
 - every miss names the transferable concept underneath it, not just the letter
@@ -1034,7 +1065,7 @@ effort: max
 license: MIT
 compatibility: requires bash, git
 description: distill a completed plan into a perfect-world build manual, then validate it (saves manual to .construct/)
-argument-hint: "<plan>"
+argument-hint: "[--help] <plan>"
 disable-model-invocation: true
 metadata:
   kind: trigger
@@ -1058,6 +1089,7 @@ effort: max
 license: MIT
 compatibility: requires bash, git
 description: adversarial read-only code review grading documented claims against reality (saves scorecard to .construct/)
+argument-hint: "[--help]"
 disable-model-invocation: true
 disallowed-tools: Edit
 metadata:
@@ -1080,6 +1112,7 @@ name: log
 license: MIT
 compatibility: requires bash, git
 description: "the shape of a daily agent log: threads carrying their own notes and prompts (saves log to .construct/)"
+argument-hint: "[--help]"
 when_to_use: "Writing to .construct/retardify/log/, which the taskcompleted and stop hooks both demand before a turn closes. Also when asked to log, note or record what happened, or to recap the day's threads."
 metadata:
   kind: spec
@@ -1103,6 +1136,7 @@ effort: high
 license: MIT
 compatibility: requires bash, git
 description: scan repo, docs and agent logs for what to work on next, ranked urgent/important (saves list to .construct/)
+argument-hint: "[--help]"
 disable-model-invocation: true
 disallowed-tools: Edit
 metadata:
@@ -1139,8 +1173,8 @@ pretooluse.sh
 ```
 posttooluse.sh
 ```
-**lint that informs instead of interrupts:** findings come back as context, never failures
-- runs `eslint --fix` and `/retardify:file` after a successful Write or Edit
+**lint that informs instead of interrupting:** findings come back as context, never failures
+- runs `eslint --fix`, then `/retardify:file` and `/retardify:code`, after a successful Write or Edit
 - findings return as context, so the agent fixes them on its next turn
 - silent when nothing is wrong: a clean file costs one exit and no context
 
@@ -1191,7 +1225,7 @@ keep-coding-instructions: true
 
 ### Voice:
 - [V1] Replies: spoken into user's earpiece, mid-action
-  - `correct`: the operators block works, copy its shape into the adversaries block.
+  - `correct`: the operator's block works, copy its shape into the adversaries block.
   - `incorrect`: this is the biggest move you've made so far — you've merged the persona system and...
 
 - [V2] Outputs: 'path:line' file coordinates, telemetry, actions with runnable commands
@@ -1225,7 +1259,7 @@ keep-coding-instructions: true
   | start over, knowingly         | prices the reset and backs it up before you run it    |
 
 
-### Banned: 
+### Banned:
 - [B1] all markup NOT a list, table, fence, or `backtick`: no bold, italics, or emojis
 - [B2] all lines NOT beginning with a LABEL:, list item, table row, fenced, or blank
 - [B3] all prose NOT coordinates, telemetry, runnable commands, or actionable directives
@@ -1284,7 +1318,7 @@ LABEL:
 - Shorten long ideas to fit onto one line.
 - Break multiple ideas into multiple lines.
 
-LABEL: 
+LABEL:
 | Field name | Field name |
 |------------|------------|
 | Value      | Value      |
@@ -1294,7 +1328,7 @@ LABEL:
 ### Correct Output Example 1:
 CRITICAL: RCE vulnerability in route /api/hook (raw eval).
 DISPATCH: Patch --exec "sed -i '' 's/eval(req.body)/JSON.parse(req.body)/g' server.js".
-STATUS: 
+STATUS:
 - JSON schema validated.
 - IP rate-limiter engaged.
 SIGNAL: Patch applied, rerun the route test before deploying.
@@ -1351,15 +1385,15 @@ Same write, same literal path, no indirection — coverage depended entirely on 
 ## Settings
 > see [plugins/operator/settings](plugins/operator/settings)
 
-> claude docs: 
-> [hooks](https://code.claude.com/docs/en/hooks), 
-> [settings](https://code.claude.com/docs/en/settings), 
-> [permissions](https://code.claude.com/docs/en/permissions), 
+> claude docs:
+> [hooks](https://code.claude.com/docs/en/hooks),
+> [settings](https://code.claude.com/docs/en/settings),
+> [permissions](https://code.claude.com/docs/en/permissions),
 > [sandboxing](https://code.claude.com/docs/en/sandboxing)
 
-> inspired by: 
-> [hardening cheatsheet](https://dev.to/riotaro/hardening-cheatsheet-for-claude-codes-settingsjson-20lk), 
-> [settings reference](https://claudeguide.io/claude-code-settings-json-reference), 
+> inspired by:
+> [hardening cheatsheet](https://dev.to/riotaro/hardening-cheatsheet-for-claude-codes-settingsjson-20lk),
+> [settings reference](https://claudeguide.io/claude-code-settings-json-reference),
 > [permissions guide](https://www.claudedirectory.org/blog/claude-code-permissions-guide)
 
 ### Sandbox
@@ -1393,7 +1427,7 @@ false ○─● STRICT MODE: commands that fail are not retried at all
 - [settings.user.md](plugins/operator/settings/settings.user.md): every repo, just you
 - [settings.managed.md](plugins/operator/settings/settings.managed.md): this machine, sudo
 ```
-precedence: 
+precedence:
 managed → cli → local → project → user (scalars override, arrays merge)
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃ ┌────────────────────────────────────────────────────────────────────┐ ┃
@@ -1425,24 +1459,28 @@ managed → cli → local → project → user (scalars override, arrays merge)
 - `sandbox.filesystem`: disabled, allowManagedReadPathsOnly
 
 [settings.user.json](plugins/operator/settings/settings.user.json)
-- `sandbox`: failIfUnavailable, allowUnsandboxesCommands, enableWeakerNetworkIsolation
+- `sandbox`: enabled, failIfUnavailable, allowUnsandboxedCommands, enableWeakerNetworkIsolation
 - `sandbox.filesystem`: allowWrite, denyRead, denyWrite
 - `sandbox.credentials`: file denies, env unsets and the mask
 - `sandbox.network`: strictAllowlist, tlsTerminate, allowedDomains
 - `permissions`: allow, ask, deny
 
 [settings.project.json](plugins/operator/settings/settings.project.json)
-- `sandbox`: enabled, failIfUnavailable, allowUnsandboxesCommands, excludedCommands
+- `sandbox`: enabled, failIfUnavailable, allowUnsandboxedCommands, excludedCommands
 - `sandbox.network`: allowedDomains
 - `permissions`: allow, ask, deny
+- `extraKnownMarketplaces`: TheConstruct source, autoUpdate
+- `enabledPlugins`: operator@TheConstruct
 
 [settings.local.json](plugins/operator/settings/settings.local.json)
 - `sandbox`: enabled
 - `permissions`: ask
-- `hooks`: sessionStart, PreToolUse, PostToolUse, TaskCreated, TaskCompleted, Stop
 
 [settings.cli.md](plugins/operator/settings/settings.cli.md)
 - `claude --settings`
+
+[hooks.json](plugins/operator/hooks/hooks.json)
+- `hooks`: SessionStart, PreToolUse, PostToolUse, TaskCreated, TaskCompleted, Stop
 
 ### Rules
 > rules are string matches, not parsers; these habits keep a rule on its intended target
@@ -1453,7 +1491,7 @@ managed → cli → local → project → user (scalars override, arrays merge)
 - `any scope` adds a deny, none removes another's
 - `bare deny` drops the tool from context entirely
 - `path deny` needs `Read/Write/Edit` triplets
-- `macos seatbelt` applie deny rules to every process, enforced at kernel (e.g. blocks git)
+- `macos seatbelt` applies deny rules to every process, enforced at kernel (e.g. blocks git)
   - `sandbox deny` works best with untracked files (e.g. env, credentials, keys, etc)
   - `sandbox ask` fixes many `sandbox deny` issues (e.g. tracked files in git, etc)
 - `wildcard` every position a flag could occupy:
@@ -1489,6 +1527,7 @@ managed → cli → local → project → user (scalars override, arrays merge)
 ### Audits
 > `/sandbox`: claude command that prints the merged config (the 'source of truth')
 - `/fewer-permission-prompts`: claude skill that proposes new allow entries from real transcript usage
+- [/operator:audit](plugins/operator/skills/audit/SKILL.md): READ-ONLY; runs every lens below and merges them into one report (saved to file)
 - [/operator:credentials](plugins/operator/skills/credentials/SKILL.md): READ-ONLY; probes every masked and denied credential live (saved to file)
 - [/operator:permissions](plugins/operator/skills/permissions/SKILL.md): READ-ONLY; replays the corpus through the real hook, then audits the live rules
 - [/operator:scripts](plugins/operator/skills/scripts/SKILL.md): READ-ONLY; tests every command a sidecar runs against the merged rules
@@ -1519,12 +1558,12 @@ managed → cli → local → project → user (scalars override, arrays merge)
 ## Secrets
 > used by skill sidecars to check files for credential-shaped strings
 
-- when a skill is invoked, it automatically executes its ```!block, triggering bash sidecar
+- when a skill is invoked, it automatically executes its `!` block, triggering the bash sidecar
 - sidecars that source `secrets.sh` run `scan_secrets` on their target files
 - each credential-shaped hit calls the sidecar's defined `err` and `warn` functions
   - ERROR: unambiguous provider tokens (keys that reach a commit cannot be un-leaked)
   - WARN: credential-shaped strings (most are commit shas that are false positives)
-  - SKIP: credential-shaped strings with `$` or a backticks (prevents flagging `token=${VAR}`)
+  - SKIP: credential-shaped strings with `$` or a backtick (prevents flagging `token=${VAR}`)
 - after the loop, the sidecar prints its telemetry to the agent, exiting `1` if any errors
 - the SKILL.md failure branch routes the agent to stop and report
 

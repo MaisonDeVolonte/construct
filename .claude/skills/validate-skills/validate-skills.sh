@@ -26,6 +26,10 @@
 
 set -euo pipefail
 
+# the doc is read only after this has already run, so help is refused here or not at all; the doc's
+# own '## Help' section owns the output, which is why this prints a marker rather than a usage text
+case " $* " in *" --help "*|*" -h "*) echo "help: requested"; exit 0;; esac
+
 # ==============
 # PREFLIGHT
 # ==============
@@ -48,12 +52,68 @@ POSTURES='READ-ONLY|SAFE|GATED|DESTRUCTIVE|RELEASE'
 # the exact line every doc runs to inject its plugin's output style, frontmatter shed
 VOICE_CMD='awk '"'"'NR>1 && /^---$/ {p=1; next} p'"'"' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"'
 
+# what sits under the help heading in every doc. the fence holds PLACEHOLDERS rather than one
+# skill's filled values, so every copy stays byte identical and this is one comparison rather than
+# a shape per skill; the heading itself is found by grep, since a '#' here would read as a comment
+HELP_HEAD='## Help'
+HELP_BLOCK=$(cat <<'EOF'
+> IF the invocation carries `--help` or `-h`, this section is the whole turn:
+
+```text
+SKILL: /plugin:name
+DESCRIPTION: <the `description` frontmatter, verbatim>
+POSTURE: <the readme index's keyword for this skill>
+FLAGS:
+- --flag: <what it changes, in the telemetry bullet's own words>
+ARGUMENTS:
+- <arg>: <what it names>
+ARTIFACT: <the `metadata.artifact` path, or none>
+OUTPUT: <what lands in the turn: an audit entry, a handover block, an inline report>
+SPEC: <this doc's own path>
+```
+
+- every field prints, in this order; one with nothing to say prints `none`
+- every value is COPIED from the source named beside it, never composed fresh
+- ask what they are actually trying to do, and what they have already tried
+- name the flag or the sibling skill that fits their answer, then STOP
+- run no step, write no file, and never fall through to step 1
+EOF
+)
+
+# the sidecar half of the same contract, quoted with doubles throughout: a heredoc cannot carry it,
+# since $() scans the body for its closing paren and the case pattern's own ')' ends it early
+HELP_GUARD='case " $* " in *" --help "*|*" -h "*) echo "help: requested"; exit 0;; esac'
+
+# a skill named `audit` reads everything by design, so a bare invocation prices the run and stops.
+# the doc cannot gate it, since the doc is read only once the sidecar has already spent the time
+CONFIRM_HEAD='## Confirm'
+CONFIRM_BLOCK=$(cat <<'EOF'
+> IF the telemetry reads `confirm: required`, this section is the whole turn:
+
+```text
+SKILL: /plugin:name
+SCOPE: <what one run covers, from the preamble bullets>
+COST: <the `estimate` line, verbatim>
+ARTIFACT: <the `metadata.artifact` path>
+RERUN: /plugin:name --confirm
+```
+
+- state the cost BEFORE asking, then ask once and STOP
+- run no step, write no file, and never fall through to step 1
+- a fast estimate still asks, since the user decides what is worth a turn
+- on a yes, hand back the RERUN line and say the run holds the turn until it returns
+- when a confirmed run returns, lead with what happened, the seconds it took, and the artifact path
+- an earlier confirmation never covers a later run
+EOF
+)
+
+CONFIRM_GUARD='case " $* " in *" --confirm "*) ;; *) echo "confirm: required"; exit 0;; esac'
+
 PAIRS=()
 for arg in "$@"; do
   case "$arg" in
     --strict) STRICT=1;;
     --keep) KEEP=1;;
-    -h|--help) sed -n '2,11p' "$0"; exit 0;;
     -*) echo "fatal: unknown flag $arg" >&2; exit 1;;
     *) PAIRS+=("$arg");;
   esac
@@ -445,6 +505,90 @@ check_verify() {
   fi
 }
 
+# every skill answers --help the same way, so the block is compared whole rather than looked for:
+# a doc that customised a field is a doc whose help output no longer matches its siblings', and a
+# doc missing one is a paste that dropped it
+check_help() {
+  local doc=$1 head dupes style end got name sidecar
+
+  head=$({ grep -nxF "$HELP_HEAD" "$doc" || true; } | head -1 | cut -d: -f1)
+  if [ -z "$head" ]; then
+    err "$doc" 1 no_help "no '$HELP_HEAD' section, so --help has nothing to render"
+    return 0
+  fi
+  dupes=$({ grep -cxF "$HELP_HEAD" "$doc" || true; })
+  if [ "$dupes" -gt 1 ]; then
+    err "$doc" "$head" help_duplicate "'$HELP_HEAD' appears $dupes times; one section owns the flag"
+  fi
+
+  # the style block closes a doc, so help is the section directly above it. a doc carrying no style
+  # block is a maintainer pair outside the plugin contract, and there help closes the doc instead
+  style=$({ grep -nxF '## Output Style' "$doc" || true; } | head -1 | cut -d: -f1)
+  if [ -n "$style" ] && [ "$head" -gt "$style" ]; then
+    err "$doc" "$head" help_position "'$HELP_HEAD' sits below the style block, and it belongs above it"
+    return 0
+  fi
+  end=$((${style:-0} - 1))
+  if [ -z "$style" ]; then end=$(awk 'END { print NR }' "$doc"); fi
+
+  # $() drops trailing newlines, so the blank seaming help to the next section is not a diff
+  got=$(sed -n "$((head + 1)),${end}p" "$doc")
+  if [ "$got" != "$HELP_BLOCK" ]; then
+    err "$doc" "$head" help_drift "the help block is not the one every doc carries; copy it whole"
+  fi
+
+  # the doc is read only after the sidecar has already run, so prose alone refuses nothing
+  name=$(trigger_name "$doc")
+  sidecar="$(dirname "$doc")/$name.sh"
+  if [ -f "$sidecar" ] && ! grep -qxF -- "$HELP_GUARD" "$sidecar"; then
+    err "$sidecar" 1 no_help_guard "no help guard, so --help pays for the run before the doc is read"
+  fi
+}
+
+# the name is the contract: a skill called `audit` reads everything it can reach, so a bare run
+# prices the pass and stops. the block is compared whole for the same reason help's is
+check_confirm() {
+  local doc=$1 head dupes next end got name sidecar
+
+  name=$(trigger_name "$doc")
+  [ "$name" = audit ] || return 0
+
+  head=$({ grep -nxF "$CONFIRM_HEAD" "$doc" || true; } | head -1 | cut -d: -f1)
+  if [ -z "$head" ]; then
+    err "$doc" 1 no_confirm "no '$CONFIRM_HEAD' section, so a bare run has nothing to ask with"
+    return 0
+  fi
+  dupes=$({ grep -cxF "$CONFIRM_HEAD" "$doc" || true; })
+  if [ "$dupes" -gt 1 ]; then
+    err "$doc" "$head" confirm_duplicate "'$CONFIRM_HEAD' appears $dupes times; one section owns it"
+  fi
+
+  # confirm sits above help, which sits above the style block, so the next heading closes it
+  next=$({ grep -nxF "$HELP_HEAD" "$doc" || grep -nxF '## Output Style' "$doc" || true; } \
+    | head -1 | cut -d: -f1)
+  if [ -n "$next" ] && [ "$head" -gt "$next" ]; then
+    err "$doc" "$head" confirm_position "'$CONFIRM_HEAD' belongs above '$HELP_HEAD'"
+    return 0
+  fi
+  end=$((${next:-0} - 1))
+  if [ -z "$next" ]; then end=$(awk 'END { print NR }' "$doc"); fi
+
+  got=$(sed -n "$((head + 1)),${end}p" "$doc")
+  if [ "$got" != "$CONFIRM_BLOCK" ]; then
+    err "$doc" "$head" confirm_drift "the confirm block differs from the one every audit carries"
+  fi
+
+  # the doc asks, the sidecar refuses: prose alone would ask after the run had already finished
+  sidecar="$(dirname "$doc")/$name.sh"
+  [ -f "$sidecar" ] || return 0
+  if ! grep -qxF -- "$CONFIRM_GUARD" "$sidecar"; then
+    err "$sidecar" 1 no_confirm_guard "no confirm guard, so a bare run spends the whole audit"
+  fi
+  if ! grep -qE '^echo "estimate: ' "$sidecar"; then
+    err "$sidecar" 1 no_estimate "no 'estimate:' line, so the confirm block has no cost to quote"
+  fi
+}
+
 # a trigger the index never lists is a trigger nobody discovers, and one listed without its posture
 # is one nobody can judge the blast radius of before running it
 check_index() {
@@ -505,6 +649,8 @@ for pair in "${PAIRS[@]}"; do
   check_voice           "$pair"
   check_telemetry       "$pair"
   check_verify          "$pair"
+  check_help            "$pair"
+  check_confirm         "$pair"
   case "$(skill_kind "$pair")" in
     spec) ;;
     trigger)

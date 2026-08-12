@@ -5,7 +5,7 @@ effort: max
 license: MIT
 compatibility: requires bash, jq, git
 description: replay the corpus through the real PreToolUse hook, then audit the merged rules (saves report to .construct/)
-argument-hint: "[--strict]"
+argument-hint: "[--help] [--strict] [--keep]"
 disable-model-invocation: true
 disallowed-tools: Edit, Write
 metadata:
@@ -24,10 +24,11 @@ metadata:
 "${CLAUDE_PLUGIN_ROOT}"/skills/permissions/permissions.sh $ARGUMENTS
 echo "sidecar exit: $?"
 ```
+- `help: requested` → the run was refused before it started; `## Help` below is the whole turn
 - it already ran, so there is no command to issue
 - fail (`sidecar exit` > 0) → findings exist; report them and continue to step 1
 - success (`sidecar exit` = 0) → report the clean replay and continue to step 1
-- `--strict` promotes warnings to errors, and needs a tool call since the block takes no arguments
+- `--strict` promotes warnings to errors and `--keep` preserves scratch; the block passes both
 
 1. read the two tiers differently, because they carry different weight
   - a tier 1 failure is measured, not inferred: the hook was fed that exact string and answered
@@ -115,6 +116,28 @@ the sidecar's whole output, fenced and unedited, so every claim above can be che
 
 ## Permissions Audit #2: repeat the above format for each deliberate run on the same day
 never edit an earlier audit; a stale finding is signal about how long it went unresolved
+
+## Help
+> IF the invocation carries `--help` or `-h`, this section is the whole turn:
+
+```text
+SKILL: /plugin:name
+DESCRIPTION: <the `description` frontmatter, verbatim>
+POSTURE: <the readme index's keyword for this skill>
+FLAGS:
+- --flag: <what it changes, in the telemetry bullet's own words>
+ARGUMENTS:
+- <arg>: <what it names>
+ARTIFACT: <the `metadata.artifact` path, or none>
+OUTPUT: <what lands in the turn: an audit entry, a handover block, an inline report>
+SPEC: <this doc's own path>
+```
+
+- every field prints, in this order; one with nothing to say prints `none`
+- every value is COPIED from the source named beside it, never composed fresh
+- ask what they are actually trying to do, and what they have already tried
+- name the flag or the sibling skill that fits their answer, then STOP
+- run no step, write no file, and never fall through to step 1
 
 ## Output Style
 ```!
