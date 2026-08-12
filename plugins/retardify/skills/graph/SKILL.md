@@ -1,51 +1,46 @@
 ---
 name: graph
-description: Turn a goal into a fan-out spec prompt in .construct/retardify/graph/, then validate it against its spec.
-argument-hint: <goal>
+model: opus
+effort: max
+license: MIT
+compatibility: requires bash, git
+description: turn a goal into a fan-out spec prompt for a fresh session, then validate it (saves spec to .construct/)
+argument-hint: "<goal>"
 disable-model-invocation: true
 metadata:
   kind: trigger
+  artifact: .construct/retardify/graph/
 ---
-**/retardify:graph:** the frontmatter blocks every path except an explicit invocation
-- turns a goal into a fan-out spec: the prompt a fresh session executes to do the work
-- a spec states constraints, never plan steps; the checkboxes belong to whatever it produces
-- writes one file and stops; the fan-out itself begins only on your explicit go
+**a prompt built for a fresh session:** constraints written down, fan-out on your go
+- a spec states constraints, never plan steps
+- writes one file and stops; the fan-out begins only on your explicit go
+- the checkboxes belong to whatever it produces, never to the spec
 
-## voice
+# Instructions
 
-```!
-awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
-```
-
-- the block above already ran, and it is the output contract for this response
-- it holds for this turn even when the user's active output style is something else
-- an empty block means the plugin has no style file; continue, since voice never gates the work
-
-## telemetry
-
+## Telemetry
 ```!
 "${CLAUDE_PLUGIN_ROOT}"/skills/graph/graph.sh $ARGUMENTS
 echo "sidecar exit: $?"
 ```
+- it already ran, so there is no command to issue
+- fail (`sidecar exit` > 0) → abort and report the raw terminal error inside a markdown code block
+- `collision: yes` → STOP and name the file already holding that slug; never overwrite a spec
+- success (`sidecar exit` = 0) → take `target` from the telemetry and continue to step 1
 
-1. read the block above; it already ran, so there is no command to issue
-  - fail (`sidecar exit` > 0) → abort and report the raw terminal error inside a markdown code block
-  - `collision: yes` → STOP and name the file already holding that slug; never overwrite a spec
-  - success (`sidecar exit` = 0) → take `target` from the telemetry and continue to step 2
-
-2. gather what the spec cannot invent
+1. gather what the spec cannot invent
   - read the repo for every fact the goal depends on
   - ASK the user for whatever the repo cannot answer, in one round, then WAIT for the answers
   - a fact from neither the repo nor the user does not exist, and never reaches `context`
 
-3. write `[target]` in the shape defined under `## the shape` below
+2. write `[target]` in the shape defined under `## the shape` below
   - seven fields in order: goal, context, done when, fan out, rules, verify, output
   - the key sits at column 1 and its value at column 15, continuation lines indented to match
   - `fan out` names 2-5 agents, then closes with one unnumbered return shape they all share
   - `rules` bind every fanned agent, and name what stays out of scope
   - `output` names the artifact executing this spec must produce, which defaults to a plan
 
-4. validate what landed, then show it and STOP
+3. validate what landed, then show it and STOP
   ```bash
   plugins/retardify/skills/graph/graph.sh --check [target]
   ```
@@ -147,11 +142,14 @@ OUTPUT:       .construct/retardify/plan/2026-07-30-operation-monorepo.md, per th
 
 ```
 
-```
-VERIFY - not part of the artifact
+## Verify
 - RUN `plugins/retardify/skills/graph/graph.sh --check` once the spec is written; pass a path to scope the run
 - FIX every ERROR, since each one breaks a rule this spec states outright
 - STOP on a `secret` finding and ask the user before truncating it; the key needs rotating first
 - JUSTIFY or fix every WARN; the sidecar tolerates them, the next reader may not
 - ANSWER the checklist it prints, since those rules are the ones no script can judge
+
+## Output Style
+```!
+awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
 ```

@@ -1,38 +1,33 @@
 ---
 name: audit
-description: "Read-only whole-repo condition: composition, skill pairing, manifest agreement, artifact freshness."
+model: opus
+effort: high
+license: MIT
+compatibility: requires bash, jq, git
+description: read the whole repo for composition, pairing, manifest agreement and freshness (saves report to .construct/)
 disable-model-invocation: true
+disallowed-tools: Edit
 metadata:
   kind: trigger
+  artifact: .construct/gitgud/audit/
 ---
-**/gitgud:audit:** Run ONLY on explicit `/gitgud:audit` command
+**what a fresh clone would actually load:** drift you cannot see from inside your own tree
 - read-only: it counts and compares, and never mutates a tracked file
-- reports what a fresh clone would load, then where the tree has drifted from what the docs claim
-- branch, remote and team state belong to `triage.sh`, so this never re-walks a branch
-- outputs a numbered condition list, each finding with the command that shows the detail
+- checks composition, skill pairing, manifest agreement and artifact freshness
+- outputs a numbered list, each finding with the command that shows the detail
 
-## voice
+# Instructions
 
-```!
-awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
-```
-
-- the block above already ran, and it is the output contract for this response
-- it holds for this turn even when the user's active output style is something else
-- an empty block means the plugin has no style file; continue, since voice never gates the work
-
-## telemetry
-
+## Telemetry
 ```!
 "${CLAUDE_PLUGIN_ROOT}"/skills/audit/audit.sh
 echo "sidecar exit: $?"
 ```
+- it already ran, so there is no command to issue
+- fail (`sidecar exit` > 0) → abort and report: "<raw terminal error>"
+- success (`sidecar exit` = 0) → continue to step 1
 
-1. read the block above; it already ran, so there is no command to issue
-  - fail (`sidecar exit` > 0) → abort and report: "<raw terminal error>"
-  - success (`sidecar exit` = 0) → continue to step 2
-
-2. grade each section, and report ONLY what is off; a healthy section earns one line, not a table
+1. grade each section, and report ONLY what is off; a healthy section earns one line, not a table
   - `composition` → a plugin with 0 skills is a load failure, never an empty plugin
   - `pairing` → any non-zero orphan count is a broken trigger or dead code, never a style nit
   - `manifests` → a version of `unset` pins nothing, so every commit reads as a new release
@@ -41,12 +36,12 @@ echo "sidecar exit: $?"
   - `shared` → a copy count below the plugin count means a plugin cannot reach the library at all
   - `artifacts` → a directory whose latest file predates the last week means its writer stalled
 
-3. output a numbered condition list, worst first
+2. output a numbered condition list, worst first
   - each entry names the finding, why it matters, and the one command that shows the detail
   - say plainly when a section is clean rather than padding the list to look thorough
   - never propose a fix the telemetry does not support; an unread directory is not a stale one
 
-4. append one entry to `[audit_file]`, in the shape defined under `## the shape` below
+3. append one entry to `[audit_file]`, in the shape defined under `## the shape` below
   - the heading reads `## Git Audit #[next_audit]: [timestamp]`, both from the `archive` section
   - `state` is what the run measured, as hyphen bullets, one clause each
   - `findings` lead with the label this doc assigns, one bullet each, naming what it hit
@@ -54,9 +49,9 @@ echo "sidecar exit: $?"
   - `telemetry` is the sidecar's whole output, fenced and unedited, pasted last
   - CREATE the file first if it does not exist, with `# <audit_file>` as its only line
 
-5. close with the two reads this sidecar deliberately does not perform
+4. close with the two reads this sidecar deliberately does not perform
   - `bash plugins/gitgud/shared/triage.sh` for branch, remote and team state
-  - `bash .claude/skills/skills/skills.sh` for the graded shape errors behind `pairing`
+  - `bash .claude/skills/validate-skills/validate-skills.sh` for the graded shape errors behind `pairing`
 
 ## the shape
 > the artifact this skill appends to; the sidecar grades what landed on its next run
@@ -102,7 +97,7 @@ one bullet per issue, leading with the label this doc assigns
 one checkbox per finding, in the same order, naming the command that closes it
 
 *example:*
-> - [ ] `bash .claude/skills/secrets/secrets.sh --write` to repoint the copies at the canonical
+> - [ ] `bash .claude/skills/export-readme/export-readme.sh --apply secrets` to re-land the copies from the readme
 > - [ ] `/operator:credentials` to refresh the kind, or accept in writing that it is dormant
 > - [ ] set a real `version` in both manifests, then `claude plugin tag` each one
 
@@ -121,3 +116,8 @@ the sidecar's whole output, fenced and unedited, so every claim above can be che
 
 ## Git Audit #2: repeat the above format for each deliberate run on the same day
 never edit an earlier audit; a stale finding is signal about how long it went unresolved
+
+## Output Style
+```!
+awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
+```

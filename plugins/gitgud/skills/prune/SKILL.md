@@ -1,38 +1,31 @@
 ---
 name: prune
-description: Prune dead tracking refs and hand over the trunk sync and every branch delete.
+model: opus
+effort: high
+license: MIT
+compatibility: requires bash, git
+description: prune the dead tracking refs, report the trunk delta, then hand back every merged branch delete command
 disable-model-invocation: true
 metadata:
   kind: trigger
 ---
-**/gitgud:prune:** Run ONLY on explicit `/gitgud:prune` command
-- typically ran post-merge but safe to run anytime
-- prunes dead tracking refs, then reports the trunk delta and every branch that is spent
-- preserves unmerged branches and identifies the merged ones eligible for deletion
-- never deletes anything; every deletion is handed over as a command for you to run yourself
+**one sweep for every ref already spent:** merged branches named, unmerged left alone
+- prunes dead tracking refs, then reports the trunk delta
+- preserves unmerged branches and names only the merged ones
+- deletes nothing; every deletion is handed back as a command you run
 
-## voice
+# Instructions
 
-```!
-awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
-```
-
-- the block above already ran, and it is the output contract for this response
-- it holds for this turn even when the user's active output style is something else
-- an empty block means the plugin has no style file; continue, since voice never gates the work
-
-## telemetry
-
+## Telemetry
 ```!
 "${CLAUDE_PLUGIN_ROOT}"/skills/prune/prune.sh
 echo "sidecar exit: $?"
 ```
+- it already ran, so there is no command to issue
+- fail (`sidecar exit` > 0) → abort and report: "<raw terminal error>"
+- success (`sidecar exit` = 0) → report "/gitgud:prune telemetry" and continue to step 1
 
-1. read the block above; it already ran, so there is no command to issue
-  - fail (`sidecar exit` > 0) → abort and report: "<raw terminal error>"
-  - success (`sidecar exit` = 0) → report "/gitgud:prune telemetry" and continue to step 2
-
-2. run the native shell command exactly as specified
+1. run the native shell command exactly as specified
   ```bash
   plugins/gitgud/shared/triage.sh
   ```
@@ -76,3 +69,8 @@ echo "sidecar exit: $?"
     - close with one copy-paste bash block holding every command above, in that same order
     - the deny list and `pretooluse.sh` both refuse these commands, which is the design rather
       than an obstacle to work around: they are the user's to run, never the agent's
+
+## Output Style
+```!
+awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
+```

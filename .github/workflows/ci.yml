@@ -5,14 +5,14 @@
 # - the repo ships shell scripts that source each other, so ci gates exactly that and no more
 # - `shellcheck -x` lints every sidecar, hook, and validator at warning severity, sourced files too
 # - the shared files are linted directly as well, so a renamed variable fails the build (SC2034)
-# - `sync-secrets --check` gates the copies against their canonical, since nothing else compares them
+# - `export-readme` gates every managed region against the readme: skill tops, style and secrets copies
 # - `sidecars stay read-only` fails the build on an executed mutating git verb outside a handover
 # - it exists because `prune.sh` ran one for five deliveries and the sandbox half-applied each merge
 # - references are NOT gated here: `todo.sh` ranks opportunities, it never graded them
 # - a report shaped for judgement makes a poor required check, so its replacement is its own tool
 # - until that checker lands nothing gates references, and a broken `@see` reaches main unblocked
 # - this is the required check that lets `gh pr merge --auto` engage (see plugins/gitgud/skills/deliver/SKILL.md)
-# @see README.md, plugins/gitgud/skills/deliver/SKILL.md, plugins/retardify/skills/file/SKILL.md, .claude/skills/secrets/secrets.sh
+# @see README.md, plugins/gitgud/skills/deliver/SKILL.md, plugins/retardify/skills/file/SKILL.md, .claude/skills/export-readme/export-readme.sh
 
 name: ci
 
@@ -45,10 +45,10 @@ jobs:
         run: |
           find plugins .claude/skills -name '*.sh' -print0 | xargs -0 -n1 bash -n
 
-      # the shared files are copied per plugin rather than sourced across one, so nothing but this
+      # every managed region is one readme section exported per copy, and nothing but this
       # compares them; a detector with no gate is how three identical copies drift apart
-      - name: secrets drift
-        run: bash .claude/skills/secrets/secrets.sh --check
+      - name: readme drift
+        run: bash .claude/skills/export-readme/export-readme.sh
 
       # a sidecar measures and hands over; it never mutates the tree itself
       - name: sidecars stay read-only

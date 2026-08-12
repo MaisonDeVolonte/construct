@@ -1,51 +1,47 @@
 ---
 name: review
-description: Adversarial read-only code review producing a graded scorecard saved to file.
+model: opus
+effort: max
+license: MIT
+compatibility: requires bash, git
+description: adversarial read-only code review grading documented claims against reality (saves scorecard to .construct/)
 disable-model-invocation: true
+disallowed-tools: Edit
 metadata:
   kind: trigger
+  artifact: .construct/retardify/review/
 ---
-**/retardify:review:** Run ONLY on explicit `/retardify:review` command
-- runs an adversarial, strictly read-only audit of the codebase
-- purpose: to ruthlessly compare the project's documented claims against its technical reality
-- never flatters the user; punishes hand-wavy conventions and heavily penalizes "green ci" without actual test coverage
+**documented claims measured against reality:** a scorecard that never flatters you
+- strictly read-only, and it never flatters the user
+- punishes hand-wavy conventions and unearned "green ci" claims
+- produces a graded scorecard saved to file, not a chat reply
 
-## voice
+# Instructions
 
-```!
-awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
-```
-
-- the block above already ran, and it is the output contract for this response
-- it holds for this turn even when the user's active output style is something else
-- an empty block means the plugin has no style file; continue, since voice never gates the work
-
-## telemetry
-
+## Telemetry
 ```!
 "${CLAUDE_PLUGIN_ROOT}"/skills/review/review.sh
 echo "sidecar exit: $?"
 ```
+- it already ran, so there is no command to issue
+- fail (`sidecar exit` > 0) → abort and report: "<raw terminal error>"
+- success (`sidecar exit` = 0) → continue
 
-1. read the block above; it already ran, so there is no command to issue
-  - fail (`sidecar exit` > 0) → abort and report: "<raw terminal error>"
-  - success (`sidecar exit` = 0) → continue
-
-2. read the core foundational documents to learn the "claims":
+1. read the core foundational documents to learn the "claims":
   - read `README.md`, which always exists and always carries claims worth grading
   - read `AGENTS.md` IF it exists, for project rules and automation descriptions
     - host projects ship one, so there it is a required read and its rules are fair game
     - this repo does not, since `AGENTS.md` is generated and project agnostic here
     - absent → say so in the scorecard rather than grading claims it never made
 
-3. evaluate the shell telemetry against the documented claims using these dimensions:
+2. evaluate the shell telemetry against the documented claims using these dimensions:
   - **effort vs output:** does the sheer volume of commits/days justify the actual features shipped? does infrastructure/config LOC rival the actual application LOC?
   - **claim vs reality:** do the docs lie? if `AGENTS.md` claims strict commit types, does the git log reflect that? 
   - **test reality:** compare the number of test files to the overall complexity. identify the most complex, risky modules that have exactly zero coverage.
   - **risk hygiene:** are `.env` files tracked? is `.gitignore` sane? are generated files accidentally versioned?
   - **maintenance traps:** look for excessive `@mirror` usage, documented "exceptions" that mask bad design, and dead scaffolding/TODOs.
 
-4. generate the `/retardify:review` scorecard:
+3. generate the `/retardify:review` scorecard:
   ```markdown
   # 🩸 /retardify:review scorecard
   
@@ -66,7 +62,7 @@ echo "sidecar exit: $?"
   **verdict:** [one unapologetic, brutally honest sentence summarizing the actual state of the codebase]
   ```
 
-5. THEN append the same scorecard to the review file (see `plugins/retardify/skills/review/SKILL.md`)
+4. THEN append the same scorecard to the review file (see `plugins/retardify/skills/review/SKILL.md`)
   ```text
   - the sidecar reports the target but never creates it; take it from `--- REVIEW ARTIFACT ---`:
   - CREATE the file first if it does not exist, with `# <review_file>` as its only line
@@ -127,3 +123,8 @@ specific files, ignored rules, or architectural landmines
 
 ## Review #2: repeat the above format for each `/retardify:review` run on the same day
 never edit an earlier scorecard; a grade that has not moved in a week is the finding
+
+## Output Style
+```!
+awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
+```

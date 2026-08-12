@@ -1,38 +1,32 @@
 ---
 name: todo
-description: Scan repo, docs and logs for what to work on next, saved to file.
+model: opus
+effort: high
+license: MIT
+compatibility: requires bash, git
+description: scan repo, docs and agent logs for what to work on next, ranked urgent/important (saves list to .construct/)
 disable-model-invocation: true
+disallowed-tools: Edit
 metadata:
   kind: trigger
+  artifact: .construct/retardify/todo/
 ---
-**/retardify:todo:** Run ONLY on explicit `/retardify:todo` command
-- surfaces work opportunities from three streams: deterministic reference checks, doc-vs-reality reconciliation, and recent agent logs
+**where to start when you cannot tell:** everything ranked urgent against important
+- three streams: reference checks, doc-vs-reality, and recent agent logs
 - categorizes every opportunity on an urgent/important matrix
-- it is asked when the user has lost their bearings, so the deliverable is somewhere to start
-- broken references are one signal among many, never the point; a clean scan still owes leads
-- streams 2 and 3 carry the judgement, so a run reporting only sidecar counts has skipped the work
+- broken references are one signal among many, never the point
 
-## voice
+# Instructions
 
-```!
-awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
-```
-
-- the block above already ran, and it is the output contract for this response
-- it holds for this turn even when the user's active output style is something else
-- an empty block means the plugin has no style file; continue, since voice never gates the work
-
-## telemetry
-
+## Telemetry
 ```!
 "${CLAUDE_PLUGIN_ROOT}"/skills/todo/todo.sh
 echo "sidecar exit: $?"
 ```
+- it already ran, so there is no command to issue
+- report-only; it never fails the run — capture its telemetry (broken references + code markers)
 
-1. read the block above; it already ran, so there is no command to issue
-  - report-only; it never fails the run — capture its telemetry (broken references + code markers)
-
-2. reconcile docs against reality — run this block once per objective, one objective at a time:
+1. reconcile docs against reality — run this block once per objective, one objective at a time:
   - **read:** the source of truth (the code, dirs, or config the doc describes)
   - **search:** where the doc makes claims about it
   - **reconcile:** does every claim still match reality?
@@ -43,16 +37,16 @@ echo "sidecar exit: $?"
   - **AGENTS.md** — do its prose rules still hold (naming, css, imports, mirroring, etc.)?
   - **plugins/\*/** — does each skill's doc still match its own sidecar's flags and behavior?
 
-3. read the 5 most recent agent logs in `.construct/retardify/log/`, the shape `/retardify:log` defines
+2. read the 5 most recent agent logs in `.construct/retardify/log/`, the shape `/retardify:log` defines
   - extract observations, pain points, unfinished tasks, recurring bugs, or architectural ideas
 
-4. merge all three streams, dedupe, and evaluate against the urgent/important matrix:
+3. merge all three streams, dedupe, and evaluate against the urgent/important matrix:
   - **Q1 (urgent and important):** broken references, blockers, doc/code drift that misleads
   - **Q2 (urgent but not important):** code markers, minor configuration fixes, trivial tool warnings
   - **Q3 (not urgent but important):** refactoring, tech debt, architectural hygiene, core feature work
   - **Q4 (not urgent or important):** overly ambitious refactors, nice-to-haves, out-of-scope ideas
 
-5. generate the final report:
+4. generate the final report:
   ```markdown
   # /retardify:todo report
   *synthesized from sidecar findings, doc reconciliation, and the last 5 agent logs (YYYY-MM-DD to YYYY-MM-DD)*
@@ -74,7 +68,7 @@ echo "sidecar exit: $?"
   - hyphen-delimited list of bullets
   ```
 
-6. THEN append the same report to the todo file, in the shape defined under `## the shape` below
+5. THEN append the same report to the todo file, in the shape defined under `## the shape` below
   ```text
   - the sidecar reports the target but never creates it; take it from the telemetry header:
   - CREATE the file first if it does not exist, with `# <todo_file>` as its only line
@@ -138,3 +132,8 @@ opportunities restated from an earlier report, with how many reports they have s
 
 ## Todo #2: repeat the above format for each `/retardify:todo` run on the same day
 never edit an earlier report; a recurring opportunity is signal about what keeps getting skipped
+
+## Output Style
+```!
+awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
+```

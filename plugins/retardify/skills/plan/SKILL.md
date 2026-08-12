@@ -1,44 +1,39 @@
 ---
 name: plan
-description: Turn work into a staged plan in .construct/retardify/plan/, with readiness tables, then validate it.
-argument-hint: <goal>
+model: opus
+effort: max
+license: MIT
+compatibility: requires bash, curl, git
+description: turn work into a staged plan with per-stage readiness tables, then validate it (saves plan to .construct/)
+argument-hint: "<goal>"
 disable-model-invocation: true
 metadata:
   kind: trigger
+  artifact: .construct/retardify/plan/
 ---
-**/retardify:plan:** the frontmatter blocks every path except an explicit invocation
+**big work gets staged before it starts:** one PR per stage, ordered once instead of mid-build
 - written before complex or architectural work, never after it
-- the checklist is the deliverable: numbered stages, each shipping as its own pr
-- readiness is what gates it, since a stage nobody can run is a stage that does not start
+- the checklist is the deliverable, and readiness is what gates it
+- a stage nobody can run is a stage that does not start
 
-## voice
+# Instructions
 
-```!
-awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
-```
-
-- the block above already ran, and it is the output contract for this response
-- it holds for this turn even when the user's active output style is something else
-- an empty block means the plugin has no style file; continue, since voice never gates the work
-
-## telemetry
-
+## Telemetry
 ```!
 "${CLAUDE_PLUGIN_ROOT}"/skills/plan/plan.sh $ARGUMENTS
 echo "sidecar exit: $?"
 ```
+- it already ran, so there is no command to issue
+- fail (`sidecar exit` > 0) → abort and report the raw terminal error inside a markdown code block
+- `collision: yes` → STOP and name the file already holding that slug; never overwrite a plan
+- success (`sidecar exit` = 0) → take `target` from the telemetry and continue to step 1
 
-1. read the block above; it already ran, so there is no command to issue
-  - fail (`sidecar exit` > 0) → abort and report the raw terminal error inside a markdown code block
-  - `collision: yes` → STOP and name the file already holding that slug; never overwrite a plan
-  - success (`sidecar exit` = 0) → take `target` from the telemetry and continue to step 2
-
-2. gather what the plan rests on before drafting a line of it
+1. gather what the plan rests on before drafting a line of it
   - read the repo for the motivation, the obstacle, the constraint and the guardrails
   - ASK the user for whatever the repo cannot answer, in one round, then WAIT for the answers
   - verify any claim carrying a number before it lands, or leave the number out
 
-3. write `[target]` in the shape defined under `## the shape` below
+2. write `[target]` in the shape defined under `## the shape` below
   - sections in order: context, goal, solution, risks, checklist, readiness, notes
   - stages are numbered `### <n>. <name>`, run in sequence, and each ships as its own pr
   - risks sort by blast radius and irreversibility, never by likelihood
@@ -46,7 +41,7 @@ echo "sidecar exit: $?"
   - every permission row is quoted exactly from a settings file, or labelled a proposal
   - notes are numbered so every `(see #x)` resolves, and are the only place verbosity belongs
 
-4. validate what landed, then show it and STOP
+3. validate what landed, then show it and STOP
   ```bash
   plugins/retardify/skills/plan/plan.sh --check [target]
   ```
@@ -177,3 +172,8 @@ suggested rules to set in order for agents to work reliably:
 3. record what was ruled out and why, so a future reader does not relitigate it
 4. keep each note self-contained, since readers jump here from one line and jump straight back
 5. a note nothing points at is either dead weight or a missing `(see #x)` somewhere
+
+## Output Style
+```!
+awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
+```

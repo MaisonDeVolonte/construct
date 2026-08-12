@@ -34,7 +34,7 @@ TABLE OF CONTENTS
 | /operator                    | /gitgud                | /retardify         | hooks                           |
 |------------------------------|------------------------|--------------------|---------------------------------|
 | [:credentials](#credentials) | [:audit](#audit)       | [:file](#file)     | [sessionstart](#sessionstart)   |
-| [:permissions](#permissions) | [:backup](#backup)     | :code              | [pretooluse](#pretooluse)       |
+| [:permissions](#permissions) | [:backup](#backup)     | [:code](#code)     | [pretooluse](#pretooluse)       |
 | [:scripts](#scripts)         | [:continue](#continue) | [:graph](#graph)   | [posttooluse](#posttooluse)     |
 | [:settings](#settings)       | [:deliver](#deliver)   | [:plan](#plan)     | [taskcreated](#taskcreated)     |
 | [:issues](#issues)           | [:prune](#prune)       | [:manual](#manual) | [taskcompleted](#taskcompleted) |
@@ -467,7 +467,7 @@ metadata:
   artifact: .construct/operator/credentials/
 ---
 ```
-**agents use tokens, but can't see them:** blind authentication
+**blind authentication:** allows agents to use your credentials without seeing them
 - probes the live sandbox: the token still works, the value hides, exfiltration fails
 - grades every credential masked, unset or unruled, and only unruled holds work
 - writes a dated report naming the variable and the vector, never the value
@@ -492,7 +492,7 @@ metadata:
   artifact: .construct/operator/permissions/
 ---
 ```
-**agents audit permissions, but can't change them:** the deny floor is proven by replay
+**provable deny rules:** ensure every command in your corpus is tested against your actual merged rules
 - answers one question: does the gate refuse what the corpus says it must refuse
 - a config can read perfectly and still have a dead hook, which only a replay catches
 - audits the merged rules for drift, dead entries and wildcards that auto-approve
@@ -517,10 +517,10 @@ metadata:
   artifact: .construct/operator/scripts/
 ---
 ```
-**audit scripts for commands your settings never see:** every sub-command, verdict by verdict
-- a permission rule judges `bash nuke.sh` and never the commands inside it
-- extracts each internal command, then tests it against the merged settings
-- reports allowed, denied, asked or matched by no rule, one line each
+**test agent sub-commands:** against your sandboxes actual merged settings
+- a permission rule judges `bash nuke.sh` but not the commands inside it
+- tests each internal command your agents are allowed to run
+- reports allowed, denied, asked or no-match, one line each
 
 #### Settings
 ```
@@ -542,10 +542,31 @@ metadata:
   artifact: .construct/operator/settings/
 ---
 ```
-**agents find the faults, but you run the fixes:** grades every scope, then probes the live gate
-- static checks read the files; live probes exercise what the files only describe
-- a scope flag emits that scope's setup, resolved for either install method
-- never edits a settings file; every command it finds is yours to run
+**built-in settings hygiene:** checks dozens of failure points, preventing silent faults
+- ERRORS
+  - when a settings file is not valid json, so every rule inside it is silently ignored
+  - when the plugin's `settings/` folder is missing or empty, so nothing can be compared
+  - when a path is denied for reads but not matching writes
+  - when a credentials block sits in a scope that cannot honor it
+  - when a settings template will not parse, so pasting it breaks the file
+  - when a scope has no `.md`, or carries rules with no explanation written down
+  - when a doc claims to mirror another scope but the two have quietly diverged
+  - when your `.env` or your ssh key can still be read
+  - when the hook stays silent on a force-push command fed straight to it
+  - when your token reads as the real value inside the sandbox
+  - when the permissions or scripts audit comes back with errors of its own
+- WARNS
+  - when installed settings differ from the template they were copied from
+  - when project settings carry machine-specific paths that break on the next clone
+  - when duplicate rules are found, in a settings file or in a template
+  - when a documented rule no longer exists in the json
+  - when nothing stops an agent editing the settings and hooks this audit depends on
+  - when your token is unset here, so the mask cannot be observed at all
+  - when one of the wrapped audit scripts is missing from its folder
+- runs the permissions and scripts audits too, and reports how many errors each returned
+- walks you through masked-credential setup, and names the steps you already finished
+- prints the copy commands for whichever settings scope you name
+- never changes a settings file, it only hands back commands for you to run
 
 #### Issues
 ```
@@ -554,9 +575,11 @@ metadata:
 ```yaml
 ---
 name: issues
+model: opus
+effort: high
 license: MIT
 compatibility: requires bash, jq, curl
-description: search claude-code for issues on this surface and refresh every one cited here (saves report to .construct/)
+description: search claude-code repo for relevant issues and update status in readme (saves report to .construct/)
 argument-hint: "[--tracked] [--sandbox] [--hooks] [--plugins] [--permissions] [--since <days>]"
 disable-model-invocation: true
 disallowed-tools: WebFetch, WebSearch
@@ -565,7 +588,7 @@ metadata:
   artifact: .construct/operator/issues/
 ---
 ```
-**agents reread the threads, but you read one report:** upstream movement since you last looked
+**upstream movement since you last looked:** one report instead of a dozen open tabs
 - fetches every cited claude-code issue with plain curl, since the sandbox breaks `gh` itself
 - topical searches (`--sandbox`, `--hooks`, `--plugins`, `--permissions`) surface new candidates
 - ends by drafting the known-issues banner update, applied only when you confirm it
@@ -596,7 +619,7 @@ metadata:
   artifact: .construct/gitgud/audit/
 ---
 ```
-**agents report the drift, but never touch the tree:** what a fresh clone would actually load
+**what a fresh clone would actually load:** drift you cannot see from inside your own tree
 - read-only: it counts and compares, and never mutates a tracked file
 - checks composition, skill pairing, manifest agreement and artifact freshness
 - outputs a numbered list, each finding with the command that shows the detail
@@ -608,6 +631,8 @@ metadata:
 ```yaml
 ---
 name: backup
+model: opus
+effort: high
 license: MIT
 compatibility: requires bash, git
 description: snapshot the history and the working tree, verify that snapshot, then hand back every restore command
@@ -616,7 +641,7 @@ metadata:
   kind: trigger
 ---
 ```
-**agents take the snapshot, but you run the restore:** saved, then proven
+**a snapshot verified, not assumed:** worth typing before anything destructive
 - worth typing before any reset, rebase, history rewrite or bulk delete
 - takes no arguments; the destination is fixed and it overwrites nothing
 - never restores anything; the restore commands are handed back to you
@@ -628,6 +653,8 @@ metadata:
 ```yaml
 ---
 name: continue
+model: opus
+effort: high
 license: MIT
 compatibility: requires bash, git
 description: measure the trunk delta, then run the sync it planned against four narrow allows, ending on the trunk
@@ -636,7 +663,7 @@ metadata:
   kind: trigger
 ---
 ```
-**leave anytime, come back synced:** pause and resume on the trunk
+**leave anytime, come back synced:** every pause and resume lands on the trunk
 - enforces trunk-based development: the sync always ends on the trunk
 - the sidecar measures and plans, then the trigger runs what it planned
 - a diverged trunk is never resolved for you; it is handed over instead
@@ -659,7 +686,7 @@ metadata:
   kind: trigger
 ---
 ```
-**agents plan the PRs, but you push them:** a messy tree becomes ordered, single-purpose PRs
+**a messy tree becomes single-purpose PRs:** bucketed, ordered and written, ready to paste
 - bucketing, ordering and message drafting are the reasoning it does for you
 - each bucket: branch, commit, push, PR, auto-merge, then back to the trunk
 - runs none of it; every bucket is a block you paste into your own terminal
@@ -671,6 +698,8 @@ metadata:
 ```yaml
 ---
 name: prune
+model: opus
+effort: high
 license: MIT
 compatibility: requires bash, git
 description: prune the dead tracking refs, report the trunk delta, then hand back every merged branch delete command
@@ -679,7 +708,7 @@ metadata:
   kind: trigger
 ---
 ```
-**agents find dead branches, but you delete them:** a sweep for every ref already spent
+**one sweep for every ref already spent:** merged branches named, unmerged left alone
 - prunes dead tracking refs, then reports the trunk delta
 - preserves unmerged branches and names only the merged ones
 - deletes nothing; every deletion is handed back as a command you run
@@ -701,7 +730,7 @@ metadata:
   kind: trigger
 ---
 ```
-**agents price the damage, but you run the reset:** start over, knowingly
+**start over, knowingly:** the cost is counted and backed up before the reset
 - reports every commit, file and branch the reset would take
 - takes the backup itself, which is what makes the reset survivable
 - never resets, cleans or deletes; each of those is yours to run
@@ -713,6 +742,8 @@ metadata:
 ```yaml
 ---
 name: rerun
+model: opus
+effort: high
 license: MIT
 compatibility: requires bash, jq, curl, git
 description: merge the current default branch into a stale PR so its CI re-runs against a trunk that has since moved
@@ -722,7 +753,7 @@ metadata:
   kind: trigger
 ---
 ```
-**stale PRs catch up to the trunk:** the PR was computed too early, so CI re-runs
+**stale PRs catch up to the trunk:** merge in what moved and CI runs again
 - merges the current default branch into the stale branch PR
 - typically after `/gitgud:deliver` leaves a PR computed against old trunk
 - `--watch` follows the run instead of returning immediately
@@ -744,7 +775,7 @@ metadata:
   kind: trigger
 ---
 ```
-**agents check every precondition, but you cut the release:** abort beats a bad bump
+**abort beats a bad bump:** every release precondition checked before the version moves
 - aborts on a dirty tree, detached HEAD, stale trunk or missing production
 - computes the next version rather than applying it, since `npm version` commits
 - releases nothing; the bump, push and promote are handed over
@@ -755,303 +786,48 @@ metadata:
 
 #### File
 ```
-/retardify:file
+/retardify:file <path>
 ```
 ```yaml
 ---
 name: file
 license: MIT
 compatibility: requires bash, git
-description: the name, wayfinding header, module order and inline comments on any source file, all four validated
-when_to_use: "Creating or editing any source file, since all four conventions apply to every one. Also when asked to wayfind, comment, rename or reorder imports, when a header has drifted from the file it describes, or when the posttooluse lint reports a finding."
+description: file-shape linter run by PostToolUse or via <path> argument (saves audits to .construct/)
+argument-hint: "<path>"
+when_to_use: "editing files, PostToolUse warnings, or when asked to review files"
 paths: "**/*.ts, **/*.tsx, **/*.js, **/*.jsx, **/*.mjs, **/*.cjs, **/*.sh, **/*.py, **/*.rb, **/*.go, **/*.rs"
 metadata:
   kind: spec
   artifact: .construct/retardify/file/
 ---
 ```
-**agents write the files, but can't skip the conventions:** four source file rules, validated not described
-- auto-loads on a matching source file rather than waiting to be asked
-- covers the name, the wayfinding header, the module order and the comments
-- one spec for all four, since all four apply to every file you touch
 
-#### Plan
-```
-/retardify:plan
-```
-```yaml
----
-name: plan
-model: opus
-effort: max
-license: MIT
-compatibility: requires bash, curl, git
-description: turn work into a staged plan with per-stage readiness tables, then validate it (saves plan to .construct/)
-argument-hint: "<goal>"
-disable-model-invocation: true
-metadata:
-  kind: trigger
-  artifact: .construct/retardify/plan/
----
-```
-**big work gets staged before it starts:** one PR per stage, in an order decided once
-- written before complex or architectural work, never after it
-- the checklist is the deliverable, and readiness is what gates it
-- a stage nobody can run is a stage that does not start
+**validated file shapes:** keep tokens aimed at logic instead of conventions
+- `shape-only` refactors since `/retardify:code` already owns the logic inside it
+- `file name` casing is configured and enforced mechanistically
+- `wayfinders` improve code orientation and help keep inline comments to a minimum
+- `module` organization is standardized for maximum scannability
+- `inline comments` are continually synthesized to ensure they're accurate and legible
+- `configured` in the skill doc and enforced by the bash sidecar
 
-#### Graph
-```
-/retardify:graph
-```
-```yaml
----
-name: graph
-model: opus
-effort: max
-license: MIT
-compatibility: requires bash, git
-description: turn a goal into a fan-out spec prompt for a fresh session, then validate it (saves spec to .construct/)
-argument-hint: "<goal>"
-disable-model-invocation: true
-metadata:
-  kind: trigger
-  artifact: .construct/retardify/graph/
----
-```
-**agents write the spec, but you launch the fan-out:** a prompt built for a fresh session
-- a spec states constraints, never plan steps
-- writes one file and stops; the fan-out begins only on your explicit go
-- the checkboxes belong to whatever it produces, never to the spec
+<details>
+<summary>example:</summary>
 
-#### Quiz
-```
-/retardify:quiz
-```
-```yaml
----
-name: quiz
-model: fable
-effort: max
-license: MIT
-compatibility: requires bash, git
-description: turn a shipped feature into a study map and an ungraded 20-question quiz (saves quiz to .construct/)
-argument-hint: "<feature>"
-disable-model-invocation: true
-metadata:
-  kind: trigger
-  artifact: .construct/retardify/quiz/
----
-```
-**agents write the code, but you still learn it:** a graded quiz on a shipped feature
-- a study map in build order, then 20 questions written against the code
-- generation ships NO answers, and a second run grades what you ticked
-- every miss names the transferable concept underneath it, not just the letter
-
-#### Manual
-```
-/retardify:manual
-```
-```yaml
----
-name: manual
-model: fable
-effort: max
-license: MIT
-compatibility: requires bash, git
-description: distill a completed plan into a perfect-world build manual, then validate it (saves manual to .construct/)
-argument-hint: "<plan>"
-disable-model-invocation: true
-metadata:
-  kind: trigger
-  artifact: .construct/retardify/manual/
----
-```
-**the messy build becomes a clean manual:** the ideal path, start to finish
-- distills a closed plan into the build as it goes when every step lands clean
-- imperative, sorted, maximally concise; the dead ends stay in the plan
-- assumes the likeliest case at every fork, so edge cases never make the page
-
-#### Review
-```
-/retardify:review
-```
-```yaml
----
-name: review
-model: opus
-effort: max
-license: MIT
-compatibility: requires bash, git
-description: adversarial read-only code review grading documented claims against reality (saves scorecard to .construct/)
-disable-model-invocation: true
-disallowed-tools: Edit
-metadata:
-  kind: trigger
-  artifact: .construct/retardify/review/
----
-```
-**agents grade the work, but can't fix it:** documented claims measured against technical reality
-- strictly read-only, and it never flatters the user
-- punishes hand-wavy conventions and unearned "green ci" claims
-- produces a graded scorecard saved to file, not a chat reply
-
-#### Log
-```
-/retardify:log
-```
-```yaml
----
-name: log
-license: MIT
-compatibility: requires bash, git
-description: "the shape of a daily agent log: threads carrying their own notes and prompts (saves log to .construct/)"
-when_to_use: "Writing to .construct/retardify/log/, which the taskcompleted and stop hooks both demand before a turn closes. Also when asked to log, note or record what happened, or to recap the day's threads."
-metadata:
-  kind: spec
-  artifact: .construct/retardify/log/
----
-```
-**agents forget, the log remembers:** today's work, shaped so the next session reads it
-- threads group work by topic, carrying their own notes and prompts
-- `sessionstart` carries the four most recent threads forward across days
-- the stop hook demands it, so a turn cannot close on an unwritten day
-
-#### Todo
-```
-/retardify:todo
-```
-```yaml
----
-name: todo
-model: opus
-effort: high
-license: MIT
-compatibility: requires bash, git
-description: scan repo, docs and agent logs for what to work on next, ranked urgent/important (saves list to .construct/)
-disable-model-invocation: true
-disallowed-tools: Edit
-metadata:
-  kind: trigger
-  artifact: .construct/retardify/todo/
----
-```
-**agents rank the work, but you pick what's next:** where to start, when you cannot tell
-- three streams: reference checks, doc-vs-reality, and recent agent logs
-- categorizes every opportunity on an urgent/important matrix
-- broken references are one signal among many, never the point
-
-## Hooks
-
-### SessionStart
-```
-sessionstart.sh
-```
-**sessions start briefed, never blank:** no re-explaining yesterday
-- injects the README and the recent logs before you type anything
-- stubs today's log when none exists yet, always at the project root, never at your cwd
-- the four most recent threads carry forward, taken across days rather than per file
-
-### PreToolUse
-```
-pretooluse.sh
-```
-**agents run bash, but can't dodge the rules:** reads the command, not its prefix
-- a trailing `--evil` flag cannot slip past a rule anchored to the front of the string
-- blocks bash writes into policy directories, which Edit and Write rules never see
-- silent for everything else, so ordinary work never pays for the check
-
-### PostToolUse
-```
-posttooluse.sh
-```
-**lint tells the agent, but never blocks it:** findings, not failures
-- runs `eslint --fix` and `/retardify:file` after a successful Write or Edit
-- findings return as context, so the agent fixes them on its next turn
-- silent when nothing is wrong: a clean file costs one exit and no context
-
-### TaskCreated
-```
-taskcreated.sh
-```
-**off-topic tasks get a nudge, not a block:** so threads stay on topic
-- fires when a TaskCreate call registers a new task, before any work starts
-- advisory only: it never blocks the creation, it asks for a thread check
-- creates today's log at the project root first, so the new thread has somewhere to go
-
-### TaskCompleted
-```
-taskcompleted.sh
-```
-**agents finish work, but can't skip the log:** the note is a precondition, not a chore
-- blocks the turn until the agent has noted the day's log
-- the note follows the `/retardify:log` template rather than inventing a shape
-- works with any harness that can read a file and follow instructions
-
-### Stop
-```
-stop.sh
-```
-**agents append all day, but the log ends synthesized:** state decides, never a clock
-- asks for synthesis whenever the log carries work the next session would pay for
-- pending notes and oversized threads are both greppable, so the check is cheap
-- the ask stops on its own once the work is done, and a debounce keeps it from nagging
-
-## Conventions
-> `@retardify` applies all conventions in this section to target files or code:
-- rename the file if its casing/extension violates `Naming`
-- resync the `Wayfinders` @description/@see with the file as it now stands
-- reorder imports/exports per `Modules` order
-- rewrite or prune `Comments` that explain how instead of why
-- apply mechanical `Code` rewrites (e.g. ternaries → named-boolean guards)
-- user gate logic changes that would trade away real information
-- verify live before/after via tsc, tests, builds etc
-- stop once further changes are diminishing returns
-
-### Naming
-- `PascalCase.tsx` — ui-rendering components
-- `camelCase.tsx` — logic and behavior components
-- `camelCase.ts` — utilities and helpers
-- `MatchCase.css` — co-located css matches its counterpart
-- `kebab-case.css` — general/global css
-
-### Wayfinders
-```javascript
-/**
- * ====================================================
- * @file widget.ts - jsdoc wayfinding header guidelines
- * ====================================================
- * @description
- * - automatically add this block to js (js, jsx, ts, tsx, mjs, cjs) and shell (sh, bash, zsh)
- * - shell carries the same block in the hash style, opening on line 2 under the shebang
- * - continuously update tags to reflect the file's contents, purpose, and dependencies
- *   - @file: the filename - short, specific title
- *   - @description: - hyphen delimited list of single clause descriptions, avoid wrapping text
- *   - @see: comma, separated, list, of, ALL, related, internal, files
- * - write maximally concise, shorthand, lowercase english, favoring legibility over completeness
- * - read this block to understand the file's context and boundaries before modifying it
- * @see README.md
- */
-```
-
-### Modules
-- `external` packages (ordered alphabetically)
-- `webflow` components (ordered by appearance)
-- `internal` @/always/aliased/first-party/code
-  - `data/files`
-  - `config/schemas`
-  - `ui/components`
-  - `css` (ordered by cascade specificity)
-- `reexported` module bindings
-- `exported` bindings
-  - `exported values`
-  - `internal values`
-  - `types`
-  - `functions`
-
-*example:*
 ```typescript
-import { fetchFooCache } from "some-lib";
-import type { FooConfig } from "some-lib";
+/**
+ * =================================================
+ * @file widget.ts - generic stateful execution unit
+ * =================================================
+ * @description
+ * - wraps arbitrary payloads into standard lifecycle hooks (init, tick, dispose)
+ * - NOTES:
+ *   - #1: mutations funnel through internal queue to ensure deterministic ticks
+ * @see core/runner.ts
+ */
+
+import { fetchFooCache } from "some-library";
+import type { FooConfig } from "some-library";
 
 import { getFoo } from "@/utilities/foo";
 import type { FooBarShape } from "@/utilities/foobar";
@@ -1069,26 +845,45 @@ const FOO_TIMER = 3600;
 export type FooNode = { path: string; type: string };
 
 export async function getFoo(): Promise<FooNode[]> { return []; }
+
+// full-line comments only, closed with a type hint when helpful – boolean
+// comments that span more than 2 consecutive lines belong in the wayfinder
 ```
 
-### Comments
-- write comments sparingly and with intention, focusing on `why` code exists vs `how` it works
-- refactoring code to be more intuitively legible is favorable over superfluous commenting
-- use primarily inline comments written in maximally concise, clear, shorthand lowercase english
-- including type hints at the end of `// comments — boolean` is helpful
-- if a file is really long, consider adding header comments to break it up into sections:
-  `// SECTION TITLE `
+</details>
 
-### Code
-- `retard-maxx` like a jr-engineer who does everything the long, extremely boring way
-- `simplify` logic over advanced, deeply nested, or overly efficient abstractions
-- `separate` files or functions that do more than one thing, where practical
-- `sequence` logic from top to bottom in order of state, definitions, guards, then execution
-- `name` things using clear, concise, intuitively understood language
-- `linebreaks` are to separate distinct conceptual blocks, not for single-line statements
+#### Code
+```
+/retardify:code <path>
+```
+```yaml
+---
+name: code
+license: MIT
+compatibility: requires bash, git
+description: code-legibility linter run by PostToolUse or via <path> argument (saves audits to .construct/)
+argument-hint: "<path>"
+when_to_use: "editing code, PostToolUse warnings, or when asked to review code"
+paths: "**/*.ts, **/*.tsx, **/*.js, **/*.jsx, **/*.mjs, **/*.cjs, **/*.sh, **/*.py, **/*.rb, **/*.go, **/*.rs"
+metadata:
+  kind: spec
+  artifact: .construct/retardify/code/
+---
+```
+
+**maximally legible code:** ensures you're able to keep up with the codebase
+- `logic-only` refactors since `/retardify:file` already owns the frame around it
+- `retard-maxxes` like a jr-engineer who does everything the long, extremely boring way
+- `simplifies` logic instead of advanced, deeply nested, or overly efficient abstractions
+- `separates` files or functions that do more than one thing, where practical
+- `sequences` logic from top to bottom in order of state, definitions, guards, then execution
+- `names` things using clear, concise, intuitively understood language
+- `linebreaks` separate distinct conceptual blocks, not single-line statements
 - `first principles` such as DRY, SoC, POLA, etc are a vibe; RDD, WTF, WET, etc are not a vibe
 
-*example:*
+<details>
+<summary>example:</summary>
+
 ```typescript
 // 1. global constants
 const IS_AGENT = true;
@@ -1153,13 +948,228 @@ export function writeCode(requirements: Requirement[], request: string) {
 }
 ```
 
-### Verifying
-- `test what you deploy`: a passing local run is not a shipped artifact
-- `run the build first`: a dev build ships debug data that the production build strips
-- `kill the port`: a process still bound to it serves the build it started with
-- `assert on a file the change wrote`: an unchanged hash proves nothing
-- `print the value`: when the result contradicts the code, see what the code actually got
-- `look at the bytes`: encrypted stores, binary files, and truncated reads all grep as empty
+</details>
+
+#### Plan
+```
+/retardify:plan
+```
+```yaml
+---
+name: plan
+model: opus
+effort: max
+license: MIT
+compatibility: requires bash, curl, git
+description: turn work into a staged plan with per-stage readiness tables, then validate it (saves plan to .construct/)
+argument-hint: "<goal>"
+disable-model-invocation: true
+metadata:
+  kind: trigger
+  artifact: .construct/retardify/plan/
+---
+```
+**big work gets staged before it starts:** one PR per stage, ordered once instead of mid-build
+- written before complex or architectural work, never after it
+- the checklist is the deliverable, and readiness is what gates it
+- a stage nobody can run is a stage that does not start
+
+#### Graph
+```
+/retardify:graph
+```
+```yaml
+---
+name: graph
+model: opus
+effort: max
+license: MIT
+compatibility: requires bash, git
+description: turn a goal into a fan-out spec prompt for a fresh session, then validate it (saves spec to .construct/)
+argument-hint: "<goal>"
+disable-model-invocation: true
+metadata:
+  kind: trigger
+  artifact: .construct/retardify/graph/
+---
+```
+**a prompt built for a fresh session:** constraints written down, fan-out on your go
+- a spec states constraints, never plan steps
+- writes one file and stops; the fan-out begins only on your explicit go
+- the checkboxes belong to whatever it produces, never to the spec
+
+#### Quiz
+```
+/retardify:quiz
+```
+```yaml
+---
+name: quiz
+model: fable
+effort: max
+license: MIT
+compatibility: requires bash, git
+description: turn a shipped feature into a study map and an ungraded 20-question quiz (saves quiz to .construct/)
+argument-hint: "<feature>"
+disable-model-invocation: true
+metadata:
+  kind: trigger
+  artifact: .construct/retardify/quiz/
+---
+```
+**a graded quiz on your own shipped code:** you still learn what the agent wrote
+- a study map in build order, then 20 questions written against the code
+- generation ships NO answers, and a second run grades what you ticked
+- every miss names the transferable concept underneath it, not just the letter
+
+#### Manual
+```
+/retardify:manual
+```
+```yaml
+---
+name: manual
+model: fable
+effort: max
+license: MIT
+compatibility: requires bash, git
+description: distill a completed plan into a perfect-world build manual, then validate it (saves manual to .construct/)
+argument-hint: "<plan>"
+disable-model-invocation: true
+metadata:
+  kind: trigger
+  artifact: .construct/retardify/manual/
+---
+```
+**the messy build rewritten as the ideal path:** every dead end stays back in the plan
+- distills a closed plan into the build as it goes when every step lands clean
+- imperative, sorted, maximally concise; the dead ends stay in the plan
+- assumes the likeliest case at every fork, so edge cases never make the page
+
+#### Review
+```
+/retardify:review
+```
+```yaml
+---
+name: review
+model: opus
+effort: max
+license: MIT
+compatibility: requires bash, git
+description: adversarial read-only code review grading documented claims against reality (saves scorecard to .construct/)
+disable-model-invocation: true
+disallowed-tools: Edit
+metadata:
+  kind: trigger
+  artifact: .construct/retardify/review/
+---
+```
+**documented claims measured against reality:** a scorecard that never flatters you
+- strictly read-only, and it never flatters the user
+- punishes hand-wavy conventions and unearned "green ci" claims
+- produces a graded scorecard saved to file, not a chat reply
+
+#### Log
+```
+/retardify:log
+```
+```yaml
+---
+name: log
+license: MIT
+compatibility: requires bash, git
+description: "the shape of a daily agent log: threads carrying their own notes and prompts (saves log to .construct/)"
+when_to_use: "Writing to .construct/retardify/log/, which the taskcompleted and stop hooks both demand before a turn closes. Also when asked to log, note or record what happened, or to recap the day's threads."
+metadata:
+  kind: spec
+  artifact: .construct/retardify/log/
+---
+```
+**today's work, shaped for tomorrow's session:** the next agent reads it instead of asking you
+- threads group work by topic, carrying their own notes and prompts
+- `sessionstart` carries the four most recent threads forward across days
+- the stop hook demands it, so a turn cannot close on an unwritten day
+
+#### Todo
+```
+/retardify:todo
+```
+```yaml
+---
+name: todo
+model: opus
+effort: high
+license: MIT
+compatibility: requires bash, git
+description: scan repo, docs and agent logs for what to work on next, ranked urgent/important (saves list to .construct/)
+disable-model-invocation: true
+disallowed-tools: Edit
+metadata:
+  kind: trigger
+  artifact: .construct/retardify/todo/
+---
+```
+**where to start when you cannot tell:** everything ranked urgent against important
+- three streams: reference checks, doc-vs-reality, and recent agent logs
+- categorizes every opportunity on an urgent/important matrix
+- broken references are one signal among many, never the point
+
+## Hooks
+
+### SessionStart
+```
+sessionstart.sh
+```
+**sessions start briefed, never blank:** yesterday never needs re-explaining
+- injects the README and the recent logs before you type anything
+- stubs today's log when none exists yet, always at the project root, never at your cwd
+- the four most recent threads carry forward, taken across days rather than per file
+
+### PreToolUse
+```
+pretooluse.sh
+```
+**no dodging a rule with a trailing flag:** the whole command is read, not its prefix
+- a trailing `--evil` flag cannot slip past a rule anchored to the front of the string
+- blocks bash writes into policy directories, which Edit and Write rules never see
+- silent for everything else, so ordinary work never pays for the check
+
+### PostToolUse
+```
+posttooluse.sh
+```
+**lint that informs instead of interrupts:** findings come back as context, never failures
+- runs `eslint --fix` and `/retardify:file` after a successful Write or Edit
+- findings return as context, so the agent fixes them on its next turn
+- silent when nothing is wrong: a clean file costs one exit and no context
+
+### TaskCreated
+```
+taskcreated.sh
+```
+**a nudge when a task drifts off-thread:** advisory only, the task still gets created
+- fires when a TaskCreate call registers a new task, before any work starts
+- advisory only: it never blocks the creation, it asks for a thread check
+- creates today's log at the project root first, so the new thread has somewhere to go
+
+### TaskCompleted
+```
+taskcompleted.sh
+```
+**the log is a precondition, not a chore:** no turn closes on unwritten work
+- blocks the turn until the agent has noted the day's log
+- the note follows the `/retardify:log` template rather than inventing a shape
+- works with any harness that can read a file and follow instructions
+
+### Stop
+```
+stop.sh
+```
+**a day of notes ends synthesized:** the log's state decides when, never a clock
+- asks for synthesis whenever the log carries work the next session would pay for
+- pending notes and oversized threads are both greppable, so the check is cheap
+- the ask stops on its own once the work is done, and a debounce keeps it from nagging
 
 ## Output Style
 
@@ -1181,7 +1191,7 @@ keep-coding-instructions: true
 
 ### Voice:
 - [V1] Replies: spoken into user's earpiece, mid-action
-  - `correct`: the operators block works, do it. then mirror for adversaries.
+  - `correct`: the operators block works, copy its shape into the adversaries block.
   - `incorrect`: this is the biggest move you've made so far — you've merged the persona system and...
 
 - [V2] Outputs: 'path:line' file coordinates, telemetry, actions with runnable commands
@@ -1202,10 +1212,33 @@ keep-coding-instructions: true
   - `correct`: wait, that shouldn't work, debugging now
   - `incorrect`: great question, this is actually a really interesting edge case...
 
+- [V5] Register: plainly spoken and literal; name what a thing does before why it matters
+  - a reader who has never opened this repo should be able to read and understand it
+
+  | epigram                       | plain                                                 |
+  |-------------------------------|-------------------------------------------------------|
+  | abort beats a bad bump        | stops the release when any precondition fails         |
+  | findings, not failures        | reports problems without blocking the turn            |
+  | state decides, never a clock  | synthesizes when notes are pending instead of a timer |
+  | the note is a precondition    | refuses to end the turn until the log is written      |
+  | what a fresh clone would load | reads the repo the way a new checkout sees it         |
+  | start over, knowingly         | prices the reset and backs it up before you run it    |
+
+
 ### Banned: 
 - [B1] all markup NOT a list, table, fence, or `backtick`: no bold, italics, or emojis
 - [B2] all lines NOT beginning with a LABEL:, list item, table row, fenced, or blank
 - [B3] all prose NOT coordinates, telemetry, runnable commands, or actionable directives
+- [B4] aphorisms, inversions and clever contrasts standing in for a plain statement
+- [B5] these sentence shapes, each one is a rewrite:
+  - "X is not Y, it is Z"
+  - "A beats B"
+  - "no X without Y"
+  - "X, never Y"
+  - "the X is the Y"
+  - "what X would actually Y"
+  - any closing line that comments on the work instead of naming the next action
+
 
 ### Structure:
 - [S1] order: answer, evidence, actions
@@ -1241,7 +1274,6 @@ keep-coding-instructions: true
 | [E10] the user's premise is wrong | say so in the first line | answering the question as asked |
 
 ### Correct Output Template:
-```
 LABEL: Description, one complete idea.
 LABEL: Description, one complete idea.
 LABEL: Description, one complete idea.
@@ -1258,20 +1290,16 @@ LABEL:
 | Value      | Value      |
 | Value      | Value      |
 | Value      | Value      |
-```
 
 ### Correct Output Example 1:
-```
 CRITICAL: RCE vulnerability in route /api/hook (raw eval).
 DISPATCH: Patch --exec "sed -i '' 's/eval(req.body)/JSON.parse(req.body)/g' server.js".
 STATUS: 
 - JSON schema validated.
 - IP rate-limiter engaged.
-SIGNAL: Pipe clear, stand by for routing.
-```
+SIGNAL: Patch applied, rerun the route test before deploying.
 
 ### Correct Output Example 2:
-```
 INQUIRY: Code inspection on shared library secrets.sh.
 DISPATCH: Analyze --source "secrets.sh" --mode security-guardrail.
 FUNCTION:
@@ -1282,11 +1310,9 @@ MECHANICS:
 - Hard provider matches (e.g., AWS `AKIA`) trigger fatal `err` to halt agent.
 - Suspect strings (hex SHAs) trigger `warn` for manual safety checks.
 - Truncates exposed token previews to prevent leaking secrets into logs.
-SIGNAL: Critical pre-commit security fence, do not execute directly.
-```
+SIGNAL: Other scripts source this file, so never run it on its own.
 
 ### Correct Output Example 3:
-```
 INQUIRY: Optimization and hardened contract for secrets.sh.
 INTERCEPT: secrets.sh:37 — bash while-read loop bottleneck under heavy file scanning.
 
@@ -1308,11 +1334,10 @@ TACTICS:
 
 EVAL: Scan speed 12x faster | 0 subshell forks | Multi-token detection active.
 RISK: Legacy AWK variants on BSD/macOS require POSIX flags.
-SIGNAL: Patch ready for staging, proceed with test suite execution.
-```
+SIGNAL: Patch is staged, run the test suite next.
 
 ### Incorrect Output Example:
-Yes — fixed now, and measuring first found a second hole that was worse than the one I reported.
+Yes — fixed now, and measuring *first* found a second hole that was worse than the one I reported.
 
 **The sharper bug had nothing to do with variables.** The hook split compound commands with `tr '&|;' '\n'`, which cuts inside quotes. So a pipe-delimited sed tore its own command in half:
 
@@ -1522,9 +1547,13 @@ if [ "${BASH_SOURCE[0]}" = "$0" ]; then
   echo "fatal: source this file from a sidecar, do not run it" >&2; exit 1
 fi
 
-SECRET_PATTERNS='AKIA[0-9A-Z]{16}|…'
+# unambiguous credentials: a provider prefix, a private key block, or a url carrying its own
+# password — these stop the run, because a key that reaches a commit cannot be un-leaked
+SECRET_PATTERNS='AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|glpat-[A-Za-z0-9_-]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}|sk-[A-Za-z0-9]{20,}|[sr]k_(live|test)_[A-Za-z0-9]{20,}|AIza[0-9A-Za-z_-]{35}|ya29\.[A-Za-z0-9_-]{20,}|npm_[A-Za-z0-9]{36}|eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|[a-z][a-z0-9+.-]*://[^/[:space:]:@]+:[^/[:space:]@]+@'
 
-SUSPECT_PATTERNS='[0-9a-f]{32,}|…'
+# shapes that are a commit sha or a digest nine times out of ten here, and a secret the tenth,
+# so they only ever warn; a value opening with `$` or a backtick is a variable and never matches
+SUSPECT_PATTERNS='[0-9a-f]{32,}|(api[_-]?key|secret|token|password|passwd|credential)[[:space:]]*[:=][[:space:]]*[^$`[:space:]][^[:space:]]{7,}'
 
 # a finding names what it matched, so it truncates first: this report gets pasted into logs and prs
 preview() {
