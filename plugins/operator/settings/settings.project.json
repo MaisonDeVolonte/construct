@@ -1,4 +1,7 @@
 {
+  "extraKnownMarketplaces": { "TheConstruct": { "source": { "source": "github", "repo": "MaisonDeVolonte/construct" }, "autoUpdate": true } },
+  "enabledPlugins": { "operator@TheConstruct": true },
+
   "sandbox": {
     "enabled": true,
     "failIfUnavailable": true,
