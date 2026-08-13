@@ -140,7 +140,7 @@ every token inherits the same layers; the axis is the layer, never the token
 | `~/.operator` at 700 | every other account on the machine  |
 | `Read(//**/.env*)`   | the Read tool, and sandboxed bash   |
 | `credentials.files`  | sandboxed bash reading the file     |
-| `pretooluse.sh`      | bash writes naming a protected path |
+| `block-policy-edits` | bash writes naming a protected path |
 | `mask`               | the real value entering the sandbox |
 
 ### github
@@ -201,7 +201,7 @@ every token inherits the same layers; the axis is the layer, never the token
 - `xargs` and `tee` are absent for the same reason, and both take their payload from elsewhere
 - `curl` and `wget` are absent because `-o` writes files, though the pipe-to-shell forms are denied
 - `mkdir`, `touch` and `cp` are here because the sandbox already confines writes to cwd, and
-  `pretooluse.sh` refuses any of them that names a protected path
+  the `block-policy-edits` hook refuses any of them that names a protected path
 
 ### toolchain — build, typecheck, test
 ```json
@@ -291,13 +291,13 @@ every token inherits the same layers; the axis is the layer, never the token
   and `templates/git.md` is where the read-only contract for every sidecar is written
 - rewriting one never beats the deny floor, but it does mislead the next session
 - `AGENTS.md` and `README.md` joined on 2026-08-06: the symlink makes them one file, and it is
-  the file `sessionstart.sh` injects, so an edit there rewrites what every future session believes
+  the file `inject-readme.sh` injects, so an edit there rewrites what every future session believes
 - both names are listed because the target is `README.md` here and `AGENTS.md` in a host repo
 - `Bash(plugins/**/*.sh*)` stays on allow, so gating the edit never gates the run
 - the settings and the code enforcing them together; gating one leaves the rules protected and the enforcement editable
 - deny until 2026-08-04, and deny broke git rather than the agent: the projected deny refused the unlink a checkout needs
 - ask is the honest trade: the threat is an agent rewriting policy on its own initiative, and a prompt stops exactly that
-- `pretooluse.sh` refuses bash writes into all three, so the prompt is the second layer rather than the only one
+- the `block-policy-edits` hook refuses bash writes into all three, so the prompt is the second layer rather than the only one
 - it had covered `.claude/` alone until 2026-08-04, leaving the AGENTS paths on the prompt by itself
 
 ### runners — one-shot remote execution
@@ -352,12 +352,12 @@ grouped most-destructive-first; any scope may add a deny, none may remove anothe
   long before any diff gets read, so recoverability is the wrong test here
 - settings is both halves of the gate — it holds the deny list AND registers the hooks by path
 - a hook is protected as a folder because `hooks.json` is the pointer: leave the registration
-  writable and an agent aims `PreToolUse` at its own script without touching `pretooluse.sh`
+  writable and an agent aims `PreToolUse` at its own script without touching any blocker
 - what a hook currently does is irrelevant; every one of them is a slot the harness executes,
-  and `pretooluse.sh` says it plainly — neither the deny list nor the hook sees inside a `.sh`
+  and `block-policy-edits.sh` says it plainly — neither the deny list nor the hook sees inside a `.sh`
 - `.mcp.json` earns the same rule for the same reason: a server definition is a command
 - `plugins/*/hooks/**` covers the cloned-repo install; the marketplace install sits under `~/.claude/`
-- the last four are other agents' policy directories, and they are here because `pretooluse.sh`
+- the last four are other agents' policy directories, and they are here because `block-policy-edits.sh`
   already named them: the two gates are one policy, so a path in either belongs in both
 - anchored on the dot-directory, never on `hooks`: `**/hooks/**` reads as a source folder in most
   repos, and a deny cannot be waived for a session, so it would make `src/hooks/` hand-edit only

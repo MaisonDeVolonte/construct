@@ -70,7 +70,7 @@ echo "sidecar exit: $?"
 
     - the paste is the confirmation, so no typed phrase gates a step the user runs themselves
     - `git stash pop` restores the backup, and the floor allows it, but only on request
-    - the deny list and `pretooluse.sh` both refuse the destructive commands, which is the design
+    - the deny list and `block-destructive-git.sh` both refuse the destructive commands, which is the design
       rather than an obstacle to work around: they are the user's to run, never the agent's
 
 ## Help

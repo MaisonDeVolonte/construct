@@ -142,7 +142,7 @@ one checkbox per finding, in the same order, naming the rule and the scope file 
 
 *example:*
 > - [ ] document the 12 undocumented rules in `settings.user.md`, or drop them from the json
-> - [ ] restore the force-push deny in `hooks/pretooluse.sh`, then rerun `/operator:settings`
+> - [ ] restore the force-push deny in `hooks/pretooluse/block-destructive-git.sh`, then rerun `/operator:settings`
 > - [ ] reconcile the project copy against `settings.project.json`, deciding which is stale
 
 ### telemetry

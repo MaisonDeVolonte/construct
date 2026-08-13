@@ -70,7 +70,7 @@ is_absorbed() {
   if [ "$merged_tree" = "$trunk_tree" ]; then echo yes; else echo no; fi
 }
 
-# incoming policy paths, mirroring pretooluse.sh's PROTECTED list; it over-approximates the write
+# incoming policy paths, mirroring block-policy-edits.sh's PROTECTED list; it over-approximates the write
 # deny on purpose, since a needless handover costs a paste and a missed one costs a half-synced tree
 protected_incoming() {
   local range="$1" boundary protected

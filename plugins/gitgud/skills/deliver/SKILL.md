@@ -115,7 +115,7 @@ git switch -c "$ATOMIC_BRANCH" "$DEFAULT_BRANCH"
   landed — say so, and re-run `/gitgud:deliver` rather than pasting on
 - recover a failed `git switch -c` with `git switch "$DEFAULT_BRANCH"`, then
   `git branch -D "$ATOMIC_BRANCH"` (add `git push origin --delete "$ATOMIC_BRANCH"` if pushed)
-- a commit message naming a destructive command trips `pretooluse.sh`, so reword rather than quote
+- a commit message naming a destructive command trips the pretooluse hooks, so reword rather than quote
 
 5. check conditions before continuing:
 - IF `--debug` → emit only bucket 1's block and report what the remaining plan holds
