@@ -1,10 +1,24 @@
 {
   "hooks": {
-    "SessionStart": [{ "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/sessionstart.sh" }] }],
-    "PreToolUse": [{ "matcher": "Bash", "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pretooluse.sh" }] }],
-    "PostToolUse": [{ "matcher": "Write|Edit", "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/posttooluse.sh", "timeout": 120 }] }],
-    "TaskCreated": [{ "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/taskcreated.sh" }] }],
-    "TaskCompleted": [{ "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/taskcompleted.sh" }] }],
-    "Stop": [{ "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/stop.sh" }] }]
+    "SessionStart": [{ "hooks": [
+      { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/sessionstart/inject-readme.sh" },
+      { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/sessionstart/inject-logs.sh" },
+      { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/sessionstart/inject-changes.sh" }
+    ] }],
+    "PreToolUse": [{ "matcher": "Bash", "hooks": [
+      { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pretooluse/block-destructive-git.sh" },
+      { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pretooluse/block-policy-edits.sh" },
+      { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pretooluse/block-outside-moves.sh" }
+    ] }],
+    "PostToolUse": [{ "matcher": "Write|Edit", "hooks": [
+      { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/posttooluse/eslint.sh", "timeout": 120 },
+      { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/posttooluse/retardify-file.sh", "timeout": 120 },
+      { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/posttooluse/retardify-code.sh", "timeout": 120 }
+    ] }],
+    "TaskCompleted": [{ "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/taskcompleted/demand-log-note.sh" }] }],
+    "Stop": [{ "hooks": [
+      { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/stop/retardify-output.sh" },
+      { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/stop/demand-log-synthesis.sh" }
+    ] }]
   }
 }

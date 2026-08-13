@@ -1,13 +1,17 @@
 #!/bin/bash
 # ==================================================
-# @file style.sh - output style conformance linter
+# @file output.sh - output style conformance linter
 # ==================================================
 # @description
-# SCOPE
-# - grades one reply against the mechanically checkable rules of the Output Style spec
+# PAIR
+# - sidecar for `/retardify:output` — grades one reply against the Output Style spec
 # - findings carry the spec's own addresses, so a report reads B1, B2, L2 or L8 rather than prose
 # - B3, S1 to S4, L1, L4 to L7 and every Evidence row stay the agent's job; no grep can judge them
 # - reads a file holding the reply text, or stdin when the path is `-`
+# - the stop action `retardify-output.sh` calls it the same way a user does
+# NUMBERS
+# - the width and the ceiling are read from the style copy beside this skill, never restated
+# - the hardcoded constants only hold when that copy is absent, so the spec stays the one source
 # TIERS
 # - HARD findings block a turn: B1 markup, L2 width, L8 ceiling, and B2 once prose mode has won
 # - SOFT findings only ride along with a hard one, since one stray prose line is a nit
@@ -20,17 +24,25 @@
 # - a bare fence is left alone, since quoting a draft has no language to name
 # COST
 # - every test is a bash builtin; a fork per line would put 3 subprocesses per line in a stop hook
-# @see README.md, plugins/operator/hooks/stop.sh, plugins/operator/output-styles/operator.md
+# @see plugins/retardify/skills/output/SKILL.md, plugins/retardify/output-styles/operator.md, plugins/operator/hooks/stop/retardify-output.sh
 
 set -uo pipefail
 
-MAX_WIDTH=100
-MAX_LINES=30
+# the doc is read only after this has already run, so help is refused here or not at all; the doc's
+# own '## Help' section owns the output, which is why this prints a marker rather than a usage text
+case " $* " in *" --help "*|*" -h "*) echo "help: requested"; exit 0;; esac
+
+# the style copy beside this skill owns the numbers; the constants only hold when it is absent
+STYLE_COPY="$(dirname "${BASH_SOURCE[0]}")/../../output-styles/operator.md"
+MAX_WIDTH=$(sed -n 's/.*\[L2\] lines: max \([0-9]\{1,\}\).*/\1/p' "$STYLE_COPY" 2>/dev/null | head -n 1)
+MAX_WIDTH=${MAX_WIDTH:-100}
+MAX_LINES=$(sed -n 's/.*\[L8\] reply ceiling: \([0-9]\{1,\}\).*/\1/p' "$STYLE_COPY" 2>/dev/null | head -n 1)
+MAX_LINES=${MAX_LINES:-30}
 # a stray prose line is a nit; four of them is a paragraph, which is the failure worth blocking
 WRAP_TOLERANCE=3
 
 SOURCE=${1:-}
-if [ -z "$SOURCE" ]; then echo "usage: style.sh <file>|-" >&2; exit 2; fi
+if [ -z "$SOURCE" ]; then echo "usage: output.sh <file>|-" >&2; exit 2; fi
 
 BODY=$(if [ "$SOURCE" = "-" ]; then cat; else cat "$SOURCE" 2>/dev/null; fi)
 if [ -z "$BODY" ]; then exit 0; fi

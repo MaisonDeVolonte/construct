@@ -472,7 +472,7 @@ check_guard() {
     | select(test("plugins/(operator/(settings|hooks)|\\*\\*)"))] | length' "$project")
   # the hook is the layer a settings edit cannot switch off, so report it as its own finding
   hooked=0
-  if grep -q 'plugins/operator/settings\|plugins/operator/hooks' "$ROOT/plugins/operator/hooks/pretooluse.sh" 2>/dev/null; then
+  if grep -q 'plugins/operator/settings\|/hooks' "$ROOT/plugins/operator/hooks/pretooluse/block-policy-edits.sh" 2>/dev/null; then
     hooked=1
   fi
   if [ "$guarded" -eq 0 ] && [ "$hooked" -eq 0 ]; then
@@ -494,7 +494,7 @@ check_probes() {
   local verdict
   # the hook is the failover the deny list leans on, so replay one string it has to refuse
   verdict=$(jq -n --arg c "git push --force origin main" '{tool_input:{command:$c}}' \
-    | bash "$ROOT/plugins/operator/hooks/pretooluse.sh" 2>/dev/null || true)
+    | bash "$ROOT/plugins/operator/hooks/pretooluse/block-destructive-git.sh" 2>/dev/null || true)
   if printf '%s' "$verdict" | grep -q '"permissionDecision"'; then
     pass probe force-push "the hook denies it, as the failover intends"
   else
