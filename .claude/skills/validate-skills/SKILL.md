@@ -6,7 +6,7 @@ when_to_use: "Authoring or editing any SKILL.md or its sidecar, adding a skill t
 metadata:
   kind: spec
 ---
-# validate-skills
+# Instructions
 
 ## the pair
 a skill is one folder, named for its trigger, holding exactly two files:
@@ -137,15 +137,15 @@ git command two
 - `plugins/gitgud/shared/handover.sh` carries the shared preflights, queries, and block emitters
 - default branch resolution goes through `git_default_branch`, since `symbolic-ref` is denied
 
-```text
-VERIFY - not part of the trigger
+## Verify
+> not part of the trigger; these run after a doc or a sidecar changes
+
 - RUN `.claude/skills/validate-skills/validate-skills.sh` after touching a trigger doc or its sidecar; pass a path to scope it
 - RUN `.claude/skills/export-readme/export-readme.sh` after touching frontmatter or a preamble; the readme is their source
 - FIX every ERROR, since each one breaks a rule this spec states outright
 - STOP on a `secret` finding and ask the user before truncating it; the key needs rotating first
 - JUSTIFY or fix every WARN; the sidecar tolerates them, the next reader may not
 - ANSWER the checklist it prints, since those rules are the ones no script can judge
-```
 
 ## Help
 > IF the invocation carries `--help` or `-h`, this section is the whole turn:

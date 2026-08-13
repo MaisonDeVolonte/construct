@@ -448,6 +448,10 @@ check_sidecar_lint() {
 # choose it; a paraphrased command cats nothing, so this compares byte for byte rather than by shape
 check_voice() {
   local doc=$1 plugin head last
+  # a maintainer skill under .claude/skills belongs to no plugin, so CLAUDE_PLUGIN_ROOT resolves to
+  # nothing and the cat would land an empty style; the contract block is a plugin doc's rule alone
+  plugin=$(plugin_of "$doc")
+  [ -n "$plugin" ] || return 0
   if ! grep -qFx -- "$VOICE_CMD" "$doc"; then
     err "$doc" 1 no_style "no contract block; the plugin style reaches a turn only when a doc cats it"
     return 0
@@ -467,8 +471,6 @@ check_voice() {
         "the style block closes a doc; a '## ' section follows it at line $last"
     fi
   fi
-  plugin=$(plugin_of "$doc")
-  [ -n "$plugin" ] || return 0
   if [ ! -f "plugins/$plugin/output-styles/operator.md" ]; then
     err "$doc" 1 voice_missing_style \
       "the block cats plugins/$plugin/output-styles/operator.md and the file is not there"
