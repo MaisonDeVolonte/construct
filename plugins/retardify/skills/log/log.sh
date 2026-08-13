@@ -9,7 +9,7 @@
 # ARTIFACT
 # - `.construct/retardify/log/YYYY-MM-DD.md`, one file per day, holding the work and the prompts that drove it
 # - gitignored in this repo; host projects decide for themselves whether to track it
-# - `sessionstart.sh` creates the day's file and `stop.sh` gates the session on it being written
+# - `inject-logs.sh` creates the day's file and `demand-log-synthesis.sh` gates the session on it
 # - no trigger wraps it: a thread, a note or a synthesis is asked for in plain words
 # - a thread groups work by task or topic; notes and prompts append under the thread they belong to
 # - notes get absorbed into the thread's prose on synthesis; prompts stay a list and get pruned
@@ -66,7 +66,7 @@ MAX_NOTE_BULLETS=5
 # stops being one clause and starts being a list that should have been written as one
 MAX_COMMAS=3
 
-# asked by sessionstart and stop on every run, so it answers before any file is opened
+# asked by the sessionstart and stop actions on every run, so it answers before any file is opened
 if [ "${1:-}" = "--budget" ]; then
   echo "thread_max_bytes: $THREAD_MAX_BYTES"
   echo "inject_threads: $INJECT_THREADS"
@@ -95,7 +95,7 @@ if [ ${#LOGS[@]} -eq 0 ]; then
 fi
 
 # a directory argument expands to the logs inside it; the *.md glob is what keeps any
-# non-log file stop.sh may leave beside them out
+# non-log file a stop action may leave beside them out
 EXPANDED=()
 for path in "${LOGS[@]}"; do
   if [ -d "$path" ]; then
@@ -170,7 +170,7 @@ check_filename() {
   esac
 }
 
-# `sessionstart.sh` seeds the file with its own path as the h1, so a mismatch means yesterday's log
+# `inject-logs.sh` seeds the file with its own path as the h1, so a mismatch means yesterday's log
 # was copied forward, which is how one day's threads end up filed under another day
 check_header() {
   local file=$1 expected actual

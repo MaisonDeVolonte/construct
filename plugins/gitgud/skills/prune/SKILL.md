@@ -70,7 +70,7 @@ echo "sidecar exit: $?"
       that got it wrong
     - close with one copy-paste bash block holding every command above, in that same order
     - keep the trailing `git diff --stat` line, since it is what proves the handed-over merge landed
-    - the deny list and `pretooluse.sh` both refuse these commands, which is the design rather
+    - the deny list and `block-destructive-git.sh` both refuse these commands, which is the design rather
       than an obstacle to work around: they are the user's to run, never the agent's
 
 ## Help
