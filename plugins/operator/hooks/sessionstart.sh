@@ -52,6 +52,37 @@ collect_threads() {
 THREADS=$(collect_threads "$INJECT_THREADS")
 if [ -z "$THREADS" ]; then THREADS="(no logged threads yet)"; fi
 
+TREE_MAX_ROWS=20
+
+# a coarse age is enough: the reader needs live work separated from abandoned work, not a clock
+ago() {
+  local secs=$(( $(date +%s) - $1 ))
+  if [ "$secs" -lt 90 ]; then echo "now"
+  elif [ "$secs" -lt 5400 ]; then echo "$((secs / 60))m ago"
+  elif [ "$secs" -lt 172800 ]; then echo "$((secs / 3600))h ago"
+  else echo "$((secs / 86400))d ago"; fi
+}
+
+# a session that has written nothing owns none of these paths, so each one is another agent's work
+# by definition; that is what keeps the block cheap and free of any per-session write ledger
+working_tree() {
+  local total mtime
+  total=$(git status --porcelain 2>/dev/null | wc -l | tr -d ' ')
+  if [ "$total" -eq 0 ]; then echo "working tree clean; no other agent has work in flight here"; return 0; fi
+  echo "branch: $(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
+  git status --porcelain 2>/dev/null | head -n "$TREE_MAX_ROWS" | while read -r code path; do
+    [ -n "$path" ] || continue
+    mtime=$(stat -f %m "$path" 2>/dev/null || stat -c %Y "$path" 2>/dev/null || echo 0)
+    printf '%-3s %-52s %s\n' "$code" "$path" "$(ago "$mtime")"
+  done
+  if [ "$total" -gt "$TREE_MAX_ROWS" ]; then echo "+$((total - TREE_MAX_ROWS)) more"; fi
+  echo "stashes: $(git stash list 2>/dev/null | wc -l | tr -d ' ') | worktrees: $(git worktree list 2>/dev/null | wc -l | tr -d ' ')"
+  echo "every path above changed before this session started, so another agent owns it"
+  echo "do not stage, revert, reformat or commit one; if your work needs it, say so and stop"
+}
+
+TREE=$(working_tree)
+
 if [ -f "$READ_ME" ];
 then README_FULL=$(cat "$READ_ME")
 else README_FULL="(README.md not found)"; fi
@@ -60,9 +91,10 @@ else README_FULL="(README.md not found)"; fi
 jq -n \
   --arg readMe "$README_FULL" \
   --arg threads "$THREADS" \
+  --arg tree "$TREE" \
   '{
     hookSpecificOutput: {
       hookEventName: "SessionStart",
-      additionalContext: ($readMe + "\n\n## recent threads\n\n" + $threads)
+      additionalContext: ($readMe + "\n\n## working tree\n\n" + $tree + "\n\n## recent threads\n\n" + $threads)
     }
   }'
