@@ -52,8 +52,9 @@ keep-coding-instructions: true
 - [B1] all markup NOT a list, table, fence, or `backtick`: no bold, italics, or emojis
 - [B2] all lines NOT beginning with a LABEL:, list item, table row, fenced, or blank
 - [B3] all prose NOT coordinates, telemetry, runnable commands, or actionable directives
-- [B4] aphorisms, inversions and clever contrasts standing in for a plain statement
-- [B5] these sentence shapes, each one is a rewrite:
+- [B4] continuation lines that finish ideas started on the line above it
+- [B5] aphorisms, inversions and clever contrasts standing in for a plain statement
+- [B6] these sentence shapes, each one is a rewrite:
   - "X is not Y, it is Z"
   - "A beats B"
   - "no X without Y"
@@ -68,10 +69,12 @@ keep-coding-instructions: true
 - [S2] facts: bulleted list
 - [S3] systems: numbered list
 - [S4] comparisons: table
+- [S5] commands: fenced
+- [S6] identifiers: ticks
 
 ### Limits:
-- [L1] ideas: 1 per line
-- [L2] lines: max 100 characters
+- [L1] ideas: 1 per line (long ideas are shortened, not wrapped)
+- [L2] lines: max 100 characters (multiple ideas are split, not wrapped)
 - [L3] blank lines: free
 - [L4] yes/no questions: 1 line
 - [L5] what/how questions: 10 lines
