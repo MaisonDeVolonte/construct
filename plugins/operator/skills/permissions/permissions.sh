@@ -4,10 +4,11 @@
 # ================================================================
 # @description
 # PAIR
-# - sidecar for `/operator:permissions` — replays `corpus.tsv` against the hook, then audits rules
+# - sidecar for `/operator:permissions` — replays `corpus.tsv` against the hooks, then audits rules
 # - it answers one question: does the gate actually refuse what the corpus says it must refuse
 # - a config can read perfectly and still have a dead hook, which only a replay catches
-# - NEVER executes a corpus line; every one is passed to the hook as a string and nothing more
+# - every pretooluse action replays per case, since the harness runs them in parallel and any denies
+# - NEVER executes a corpus line; every one is passed to each action as a string and nothing more
 # TIERS
 # - tier 1 is ground truth, since the hook it feeds is the artifact under test
 # - tier 2 is structural fact: drift, dead rules, and which allow rule covers an unnamed command
@@ -16,7 +17,7 @@
 # - read-only: it replays and reports, and every repair is the user's to apply
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
 # - `/operator:settings` wraps this one, so run it directly for the detail rather than the count
-# @see plugins/operator/skills/permissions/SKILL.md, plugins/operator/shared/corpus.tsv, plugins/operator/hooks/pretooluse.sh, plugins/operator/skills/settings/SKILL.md, .claude/settings.json
+# @see plugins/operator/skills/permissions/SKILL.md, plugins/operator/shared/corpus.tsv, plugins/operator/hooks/pretooluse/, plugins/operator/skills/settings/SKILL.md, .claude/settings.json
 
 set -euo pipefail
 
@@ -31,9 +32,9 @@ case " $* " in *" --help "*|*" -h "*) echo "help: requested"; exit 0;; esac
 # before anything cds to a repo root, since BASH_SOURCE arrives relative and would follow that cd
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || true)
 CORPUS="$HERE/../../shared/corpus.tsv"
-HOOK="$HERE/../../hooks/pretooluse.sh"
+HOOKS="$HERE/../../hooks/pretooluse"
 if [ ! -f "$CORPUS" ]; then echo "fatal: no audit/shared/corpus.tsv reachable" >&2; exit 1; fi
-if [ ! -f "$HOOK" ]; then echo "fatal: no plugins/operator/hooks/pretooluse.sh reachable" >&2; exit 1; fi
+if [ ! -d "$HOOKS" ]; then echo "fatal: no plugins/operator/hooks/pretooluse/ reachable" >&2; exit 1; fi
 
 STRICT=0
 KEEP=0
@@ -79,13 +80,15 @@ rules_of deny  > "$SCRATCH/deny"
 rules_of allow > "$SCRATCH/allow"
 rules_of ask   > "$SCRATCH/ask"
 
-# the hook answers in json or says nothing at all, and silence is the allow case
-# a blocked call and a prompted one are different verdicts, so read the decision rather than infer
+# an action answers in json or says nothing at all, and silence from every one is the allow case
+# the harness runs the event's actions in parallel and one deny blocks the call; this mirrors that
 hook_verdict() {
-  local cmd=$1 out
-  out=$(jq -n --arg c "$cmd" '{tool_input:{command:$c}}' | bash "$HOOK" 2>/dev/null || true)
-  if [ -z "$out" ]; then printf 'silent'; return; fi
-  printf '%s' "$out" | jq -r '.hookSpecificOutput.permissionDecision // "deny"' 2>/dev/null || printf 'deny'
+  local cmd=$1 action out
+  for action in "$HOOKS"/*.sh; do
+    out=$(jq -n --arg c "$cmd" '{tool_input:{command:$c}}' | bash "$action" 2>/dev/null || true)
+    if [ -n "$out" ]; then printf 'deny'; return; fi
+  done
+  printf 'silent'
 }
 
 # two tokens for a tool that takes a subcommand, one token for everything else
@@ -113,15 +116,12 @@ tier1() {
   while IFS=$'\t' read -r effect gate cmd; do
     case "$effect" in ''|'#'*) continue;; esac
     if [ -z "${cmd:-}" ]; then continue; fi
-    case "$gate" in hook|ask|none) ;; *) continue;; esac
+    # the actions deny or stay silent, and nothing asks any more, so those are the two gates left
+    case "$gate" in hook|none) ;; *) continue;; esac
     verdict=$(hook_verdict "$cmd")
     if [ "$gate" = "hook" ]; then
       if [ "$verdict" = "deny" ]; then T1_PASS=$((T1_PASS + 1))
       else T1_FAIL=$((T1_FAIL + 1)); err "$effect" "$cmd" "the hook lets this through; it is meant to block it"; fi
-    elif [ "$gate" = "ask" ]; then
-      # a deny here is as wrong as silence: the point of the rule is that the user gets the call
-      if [ "$verdict" = "ask" ]; then T1_PASS=$((T1_PASS + 1))
-      else T1_FAIL=$((T1_FAIL + 1)); err "$effect" "$cmd" "the hook answered '$verdict'; this one is meant to prompt"; fi
     else
       if [ "$verdict" = "silent" ]; then T1_PASS=$((T1_PASS + 1))
       else T1_FAIL=$((T1_FAIL + 1)); err "$effect" "$cmd" "the hook blocks legitimate work; over-blocking"; fi
@@ -178,9 +178,10 @@ check_named() {
 }
 
 # the hook keeps its own copy of the protected paths, and nothing keeps the two lists in step
+# the paths live in one action, block-policy-edits.sh, so drift reads that file and no sibling
 check_drift() {
   local path
-  grep -E '^PROTECTED=' "$HOOK" \
+  grep -E '^PROTECTED=' "$HOOKS/block-policy-edits.sh" \
     | sed -E "s/^PROTECTED=[\"']?//; s/[\"']$//; s/\\\$PROTECTED//" \
     | tr '|' '\n' \
     | sed -E 's/\\//g; s/[()^$]//g; s/\[.*\]//g; s#/$##' \
@@ -429,8 +430,6 @@ then AUDIT_COUNT=$(grep -c '^## Permissions Audit #' "$AUDIT_ROOT/$TODAYS_AUDIT"
 else AUDIT_COUNT=0; fi
 AUDIT_COUNT=${AUDIT_COUNT:-0}
 
-
-
 cat <<EOF
 
 === permissions.sh audit ===
@@ -440,7 +439,7 @@ next_audit: $((AUDIT_COUNT + 1))
 timestamp: $(date '+%Y-%m-%d %H:%M')
 corpus: $CORPUS
 settings: ${SETTINGS[*]:-none found}
-hook: $HOOK
+hooks: $HOOKS
 cases: $CASES
 tier1 replayed: $((T1_PASS + T1_FAIL)) — $T1_PASS held, $T1_FAIL failed
 errors: $ERRORS

@@ -17,7 +17,7 @@
 # - `--repo <name>` resolves a bare name under ~/Developer to that repo's own settings stack
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
 # - the slowest trigger in the family, since it spawns the hook once per extracted command
-# @see plugins/operator/skills/scripts/SKILL.md, plugins/operator/hooks/pretooluse.sh, plugins/operator/shared/corpus.tsv, plugins/operator/settings/settings.user.md, plugins/operator/skills/settings/SKILL.md
+# @see plugins/operator/skills/scripts/SKILL.md, plugins/operator/hooks/pretooluse/, plugins/operator/shared/corpus.tsv, plugins/operator/settings/settings.user.md, plugins/operator/skills/settings/SKILL.md
 
 set -euo pipefail
 
@@ -31,8 +31,8 @@ case " $* " in *" --help "*|*" -h "*) echo "help: requested"; exit 0;; esac
 # the hook sits beside this file, not beside the repo under test: resolve it before any cd, since
 # BASH_SOURCE arrives relative and would follow that cd to somewhere it does not exist
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || true)
-HOOK="$HERE/../../hooks/pretooluse.sh"
-if [ ! -f "$HOOK" ]; then echo "fatal: no plugins/operator/hooks/pretooluse.sh reachable" >&2; exit 1; fi
+HOOKS="$HERE/../../hooks/pretooluse"
+if [ ! -d "$HOOKS" ]; then echo "fatal: no plugins/operator/hooks/pretooluse/ reachable" >&2; exit 1; fi
 if ! command -v jq >/dev/null 2>&1; then echo "fatal: jq is required and not installed" >&2; exit 1; fi
 
 STRICT=0
@@ -131,11 +131,14 @@ if [ -z "$ORIGIN_HOST" ]; then ORIGIN_HOST="the origin host"; fi
 # ==============
 T1_PASS=0; T1_ASK=0; T1_FAIL=0
 
-# the hook answers in json or says nothing at all, and silence is the allow case
+# an action answers in json or says nothing at all, and silence from every one is the allow case
 hook_verdict() {
-  local cmd=$1 out
-  out=$(jq -n --arg c "$cmd" '{tool_input:{command:$c}}' | bash "$HOOK" 2>/dev/null || true)
-  if [ -z "$out" ]; then printf 'silent'; else printf 'deny'; fi
+  local cmd=$1 action out
+  for action in "$HOOKS"/*.sh; do
+    out=$(jq -n --arg c "$cmd" '{tool_input:{command:$c}}' | bash "$action" 2>/dev/null || true)
+    if [ -n "$out" ]; then printf 'deny'; return; fi
+  done
+  printf 'silent'
 }
 
 # every internal is tested against every rule, so the lists load once rather than per call

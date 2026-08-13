@@ -33,22 +33,37 @@
 > the real payload, and the only thing that genuinely belongs in this scope
 ```json
 "hooks": {
-  "SessionStart": [{ "hooks": [{ "type": "command", "command": "plugins/operator/hooks/sessionstart.sh" }] }],
-  "PreToolUse": [{ "matcher": "Bash", "hooks": [{ "type": "command", "command": "plugins/operator/hooks/pretooluse.sh" }] }],
-  "PostToolUse": [{ "matcher": "Write|Edit", "hooks": [{ "type": "command", "command": "plugins/operator/hooks/posttooluse.sh", "timeout": 120 }] }],
-  "TaskCreated": [{ "hooks": [{ "type": "command", "command": "plugins/operator/hooks/taskcreated.sh" }] }],
-  "TaskCompleted": [{ "hooks": [{ "type": "command", "command": "plugins/operator/hooks/taskcompleted.sh" }] }],
-  "Stop": [{ "hooks": [{ "type": "command", "command": "plugins/operator/hooks/stop.sh" }] }]
+  "SessionStart": [{ "hooks": [
+    { "type": "command", "command": "plugins/operator/hooks/sessionstart/inject-readme.sh" },
+    { "type": "command", "command": "plugins/operator/hooks/sessionstart/inject-logs.sh" },
+    { "type": "command", "command": "plugins/operator/hooks/sessionstart/inject-changes.sh" }
+  ] }],
+  "PreToolUse": [{ "matcher": "Bash", "hooks": [
+    { "type": "command", "command": "plugins/operator/hooks/pretooluse/block-destructive-git.sh" },
+    { "type": "command", "command": "plugins/operator/hooks/pretooluse/block-policy-edits.sh" },
+    { "type": "command", "command": "plugins/operator/hooks/pretooluse/block-outside-moves.sh" }
+  ] }],
+  "PostToolUse": [{ "matcher": "Write|Edit", "hooks": [
+    { "type": "command", "command": "plugins/operator/hooks/posttooluse/eslint.sh", "timeout": 120 },
+    { "type": "command", "command": "plugins/operator/hooks/posttooluse/retardify-file.sh", "timeout": 120 },
+    { "type": "command", "command": "plugins/operator/hooks/posttooluse/retardify-code.sh", "timeout": 120 }
+  ] }],
+  "TaskCompleted": [{ "hooks": [{ "type": "command", "command": "plugins/operator/hooks/taskcompleted/demand-log-note.sh" }] }],
+  "Stop": [{ "hooks": [
+    { "type": "command", "command": "plugins/operator/hooks/stop/retardify-output.sh" },
+    { "type": "command", "command": "plugins/operator/hooks/stop/demand-log-synthesis.sh" }
+  ] }]
 }
 ```
-- `SessionStart`: injects the readme and the two most recent logs, so a session opens briefed
+- one entry per action, so registering a subset is deleting lines rather than editing a script
+- `SessionStart`: the readme, the newest log threads, then the dirty tree, one payload each
 - `PreToolUse`: the failover for the committed deny list, reading the whole command string
 - it runs before every rule; no allow can override its block
 - it blocks by exit 2, or by printing permissionDecision deny on exit 0; exit 1 lets the call through
-- `PostToolUse`: lints, then reports comment and wayfinder findings, never blocking
-- `TaskCreated`: nudges a new thread when a task is unrelated to the last, advisory only
+- `PostToolUse`: eslint fixes, then file-shape and code-legibility findings, never blocking
 - `TaskCompleted`: blocks the turn until the day's log is noted
-- `Stop`: hourly, saves notes and prompts, then synthesizes the day's log
+- `Stop`: grades the reply's style, then demands a synthesis while the log carries pending work
+- handler identity is the command string: one string in two scopes runs once, two spellings run twice
 
 ## the always-allow drawer
 - every 'Always Allow' click lands here as an ordinary allow rule
