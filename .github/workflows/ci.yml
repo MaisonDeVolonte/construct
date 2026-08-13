@@ -49,7 +49,7 @@ jobs:
       # every managed region is one readme section exported per copy, and nothing but this
       # compares them; a detector with no gate is how three identical copies drift apart
       - name: readme drift
-        run: bash .claude/skills/export-readme/export-readme.sh
+        run: bash .claude/skills/export-readme/export-readme.sh --check
 
       # a sidecar measures and hands over; it never mutates the tree itself
       - name: sidecars stay read-only

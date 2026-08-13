@@ -102,7 +102,7 @@ one bullet per issue, leading with the label this doc assigns
 one checkbox per finding, in the same order, naming the command that closes it
 
 *example:*
-> - [ ] `bash .claude/skills/export-readme/export-readme.sh --apply secrets` to re-land the copies from the readme
+> - [ ] `bash .claude/skills/export-readme/export-readme.sh secrets` to re-land the copies from the readme
 > - [ ] `/operator:credentials` to refresh the kind, or accept in writing that it is dormant
 > - [ ] set a real `version` in both manifests, then `claude plugin tag` each one
 

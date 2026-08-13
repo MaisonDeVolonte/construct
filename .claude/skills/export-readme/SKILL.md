@@ -1,12 +1,13 @@
 ---
 name: export-readme
 description: "The readme is the source of truth: sections land on skill tops, styles and scripts, the file on plugin roots."
-argument-hint: "[--help] [--apply] [--diff] [--strict] [--yes] [--keep] [--map <path>] [--source <path>]"
+argument-hint: "[--help] [--check] [<skill>...]"
 when_to_use: "Editing any skill's frontmatter or preamble, a style or secrets.sh copy, or wiring a new section into the export map. Also after ANY README.md edit, since each plugin root carries a byte-identical copy, or when a managed region and its readme section disagree."
+disable-model-invocation: true
 metadata:
   kind: spec
 ---
-# export-readme
+# Instructions
 
 ## the shape
 the readme's mapped sections are the source of truth for every managed region:
@@ -42,7 +43,7 @@ install copies one plugin's directory and never a sibling, so the file cannot be
 - the whole file is the managed region and a stale copy is replaced whole; there is no merge,
   since two edited copies is a mistake not a branch
 - full runs sweep `plugins/*/shared/secrets.sh` too, so a new plugin's copy cannot drift unmapped
-- `/gitgud:audit` reports copy drift and stays read-only; `--apply secrets` is the repair
+- `/gitgud:audit` reports copy drift and stays read-only; a bare run scoped to `secrets` is the repair
 - never edit a copy: fix the readme fence, then re-export all three
 
 ## the readme copies
@@ -61,13 +62,13 @@ itself is what lands, byte for byte, since an install takes one plugin's directo
 - never edit a copy: fix the readme, then re-export all three
 
 ## the two modes
-- check is the default, mutates nothing, and exits 1 on any drift or ERROR; this is the ci mode
-- the drift table names each skill, which half moved (frontmatter, preamble, or both), and the
-  line delta; `--diff` appends the unified diff per skill for reconciliation
-- `--apply` rewrites every unblocked drifted region; `--strict` promotes WARNs to the exit code
+- a bare run exports: every unblocked drifted region is rewritten from its readme section
+- `--check` writes nothing and exits 1 on any drift or ERROR; this is the one mode ci runs
+- the drift table names each skill, which half moved (frontmatter, preamble, or both), the line
+  delta, and which side moved last
 - scope either mode with skill names (`credentials` or `operator:credentials`; `secrets` and
   `readme` each scope their fan-out)
-- `--map` and `--source` swap the config and the readme, which is how the fixture tests run
+- the map and the source are fixed paths, edited by hand; no flag swaps either one
 
 ## the checks
 this tool owns every frontmatter and preamble rule, judged at the readme source before anything
@@ -92,28 +93,28 @@ lands; validate-skills owns the body, the sidecar, the pairing, and the index, a
   entry is an ERROR, and a catalog `####` heading the map never names is a WARN; scoped runs skip it
 - an ERROR blocks only its own skill; every other drifted section still exports
 
-## the confirm contract
-drift can be legitimate in either direction, so nothing is written without a human decision:
+## the refusal
+drift can be legitimate in either direction, so the fresher copy is never written over:
 
-- the agent runs the check, pastes the drift table in chat, and waits for the user to confirm
-- a skill-side edit worth keeping is moved INTO its readme section first, then the export re-lands it
-- the NEWER column names which side moved last, so a row is read before it is written over
-- `copy` means the skill side is the fresher one, and applying over it would discard that edit
-- it reads file mtimes, since the edit that caused the drift is usually still uncommitted
+- the NEWER column names which side moved last, read from file mtimes, since the edit that caused
+  the drift is usually still uncommitted
+- `copy` means the skill side is the fresher one, and exporting over it would discard that edit
+- a `copy` row is an ERROR that blocks its own section, prints its diff inline, and lets every
+  other section export
+- the fix is always the same: move that edit INTO its readme section, then re-run
 - the source mtime is file-level, so any readme edit marks every row `readme`; it bounds the
   question rather than answering it, and `copy` is the row that actually needs a human
-- on a tty, `--apply` prompts before writing; headless, `--apply` refuses without `--yes`
-- after an apply, the same check must report `drift: 0`; the export is idempotent by contract
+- after an export, `--check` must report `drift: 0`; the export is idempotent by contract
 
-```text
-VERIFY - not part of the tool
+## Verify
+> not part of the tool; these run after the readme or a copy changes
+
 - RUN `.claude/skills/export-readme/export-readme.sh` after ANY README.md edit, since the plugin copies track the whole file, not just the mapped sections
-- RECONCILE every drift row deliberately; source of truth means the readme wins by default, not always
+- RECONCILE every copy_newer refusal deliberately; source of truth means the readme wins by default, not always
 - FIX every ERROR in the readme section the finding points at, then re-run
-- RUN `.claude/skills/validate-skills/validate-skills.sh` after an apply, since the skill docs just changed
+- RUN `.claude/skills/validate-skills/validate-skills.sh` after an export, since the skill docs just changed
 - RE-RUN every sidecar sourcing secrets.sh after its fence changes, since a pattern change moves their findings
 - COMMIT the readme and every exported copy together; a partial commit reintroduces the drift
-```
 
 ## Help
 > IF the invocation carries `--help` or `-h`, this section is the whole turn:
