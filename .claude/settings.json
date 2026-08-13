@@ -99,8 +99,8 @@
 
       "Write(.claude/settings.json)", "Edit(.claude/settings.json)",
       "Write(.claude/settings.local.json)", "Edit(.claude/settings.local.json)",
-      "Write(.claude/hooks/**)", "Edit(.claude/hooks/**)",
 
+      "Write(.claude/hooks/**)", "Edit(.claude/hooks/**)",
       "Write(plugins/*/hooks/**)", "Edit(plugins/*/hooks/**)",
 
       "Write(.mcp.json)", "Edit(.mcp.json)",
