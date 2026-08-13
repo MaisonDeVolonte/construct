@@ -22,6 +22,8 @@
 # - `metadata.kind` is declared; a trigger sets disable-model-invocation: true, a spec must not
 # - `description` stays at or under 110 chars; description + when_to_use stays under the 1536 cap
 # - `name` must match the skill's folder, and every SKILL.md on disk must appear in the map
+# - a hook doc under plugins/*/hooks/ is style-shaped: name and description, no kind, no cap
+# - every hook action script must carry a mapped doc beside it, so an undocumented action errors
 # - a style target earns name and description only; a script earns a fence opening #!/bin/bash
 # - a readme copy carries no yaml, so drift is its only finding and an absent copy is drift too
 # - any ERROR on a section blocks that one skill's export and never the others
@@ -198,6 +200,12 @@ is_style() {
   case "$1" in */output-styles/*.md) return 0;; *) return 1;; esac
 }
 
+# a hook action's doc is style-shaped for the same reason: nothing invokes it by name, so it earns
+# name and description only, and the drift compare is the reason it is mapped at all
+is_hookdoc() {
+  case "$1" in */hooks/*/*.md) return 0;; *) return 1;; esac
+}
+
 # a script target is a shell file exported whole from its section's bash fence; it has no yaml
 # at all, so it earns even fewer checks than a style and exactly the same drift compare
 is_script() {
@@ -256,7 +264,7 @@ while IFS=$'\t' read -r heading skill; do
   # a skill owns a folder and every doc is called SKILL.md; a style or a script is one file each,
   # and a readme copy takes the scope word rather than its shouted basename, like every sibling
   if is_readme "$skill"; then name=readme
-  elif is_style "$skill"; then name=$(basename "$skill" .md)
+  elif is_style "$skill" || is_hookdoc "$skill"; then name=$(basename "$skill" .md)
   elif is_script "$skill"; then name=$(basename "$skill" .sh)
   else name=$(basename "$(dirname "$skill")"); fi
   plugin=$(plugin_of "$skill")
@@ -344,7 +352,7 @@ while IFS=$'\t' read -r heading skill; do
     blocked=1
   fi
   required=$REQUIRED
-  if is_style "$skill"; then required=$REQUIRED_STYLE; fi
+  if is_style "$skill" || is_hookdoc "$skill"; then required=$REQUIRED_STYLE; fi
   for key in $required; do
     if ! grep -qE "^$key:[[:space:]]*\S" "$newtop"; then
       err "$SOURCE" "$hline" missing_field "'$heading' yaml has no '$key:'; the field is required"
@@ -352,9 +360,9 @@ while IFS=$'\t' read -r heading skill; do
     fi
   done
 
-  # a style is not listed, not invoked and has no kind, so the rules below judge fields it would
-  # never carry; everything after them is the drift compare, which is why a style is mapped at all
-  if is_style "$skill"; then
+  # a style or a hook doc is not listed, not invoked and has no kind, so the rules below judge
+  # fields it would never carry; everything after them is the drift compare it is mapped for
+  if is_style "$skill" || is_hookdoc "$skill"; then
     desc=''
     wtu=''
   else
@@ -506,6 +514,19 @@ if [ ${#ONLY[@]} -eq 0 ]; then
     [ -f "$copy" ] || continue
     if ! grep -qFx "$copy" "$SCRATCH/mapped"; then
       err "$copy" 1 unmapped_readme "no map entry, so this copy can drift from the readme unseen"
+    fi
+  done
+  # a hook action with no doc, or a doc the map misses, escapes every rule above; pairing each
+  # action script to a mapped doc is what makes an undocumented action an error rather than drift
+  for action in plugins/*/hooks/*/*.sh; do
+    [ -f "$action" ] || continue
+    doc="${action%.sh}.md"
+    if [ ! -f "$doc" ]; then
+      err "$action" 1 undocumented_action "no $(basename "$doc") beside it; every action carries its doc"
+      continue
+    fi
+    if ! grep -qFx "$doc" "$SCRATCH/mapped"; then
+      err "$doc" 1 unmapped_hookdoc "no map entry, so this doc can drift from the readme unseen"
     fi
   done
   # catalog headings live between '## Plugins & Skills' and the next h2; one heading, one entry

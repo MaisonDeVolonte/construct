@@ -11,7 +11,7 @@ metadata:
 ---
 **today's work, shaped for tomorrow's session:** the next agent reads it instead of asking you
 - threads group work by topic, carrying their own notes and prompts
-- `sessionstart` carries the four most recent threads forward across days
+- `inject-logs` carries the four most recent threads forward across days
 - the stop hook demands it, so a turn cannot close on an unwritten day
 
 # .construct/retardify/log/YYYY-MM-DD.md
