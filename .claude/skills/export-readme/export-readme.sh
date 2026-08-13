@@ -26,11 +26,11 @@
 # - a readme copy carries no yaml, so drift is its only finding and an absent copy is drift too
 # - any ERROR on a section blocks that one skill's export and never the others
 # RUN
-# - check is the default: prints the drift table, writes nothing, exits 1 on drift or ERROR
-# - the NEWER column reads file mtimes: `copy` means the skill side moved last, so read it first
-# - `--diff` appends a unified diff per drifted skill; `--apply` rewrites the managed regions
-# - `--apply` prompts on a tty; an agent confirms in chat first, then re-runs with `--yes`
-# - pass skill names to scope either mode; `--map`/`--source` swap the config for tests
+# - a bare run exports: every unblocked drifted region is rewritten from its readme section
+# - `--check` writes nothing and exits 1 on any drift, which is the one mode ci runs
+# - the NEWER column reads file mtimes, and a copy that moved after the readme refuses to export
+# - a refused row prints its own diff, since the edit it protects is the one about to be lost
+# - pass skill names to scope either mode; the map and the source are fixed, and edited by hand
 # @see .claude/skills/export-readme/map.json, .claude/skills/export-readme/SKILL.md, .claude/skills/validate-skills/validate-skills.sh, README.md, .github/workflows/ci.yml
 set -euo pipefail
 
@@ -38,11 +38,7 @@ set -euo pipefail
 # own '## Help' section owns the output, which is why this prints a marker rather than a usage text
 case " $* " in *" --help "*|*" -h "*) echo "help: requested"; exit 0;; esac
 
-STRICT=0
-APPLY=0
-DIFF=0
-YES=0
-KEEP=0
+CHECK=0
 MAP=".claude/skills/export-readme/map.json"
 SOURCE="README.md"
 REQUIRED="name license compatibility description"
@@ -60,13 +56,7 @@ LISTING_WARN=1228
 ONLY=()
 while [ $# -gt 0 ]; do
   case "$1" in
-    --apply) APPLY=1;;
-    --diff) DIFF=1;;
-    --strict) STRICT=1;;
-    --yes) YES=1;;
-    --keep) KEEP=1;;
-    --map) MAP=${2:?fatal: --map needs a path}; shift;;
-    --source) SOURCE=${2:?fatal: --source needs a path}; shift;;
+    --check) CHECK=1;;
     -*) echo "fatal: unknown flag $1" >&2; exit 1;;
     *) ONLY+=("$1");;
   esac
@@ -88,20 +78,30 @@ jq -e 'type == "object"' "$MAP" >/dev/null 2>&1 \
 TMPROOT="$(git rev-parse --show-toplevel)/tmp"
 mkdir -p "$TMPROOT"
 SCRATCH=$(mktemp -d "$TMPROOT/readme.XXXXXX")
-cleanup() { st=$?; if [ "$KEEP" -eq 0 ]; then rm -rf "$SCRATCH"; fi; exit "$st"; }
+cleanup() { st=$?; rm -rf "$SCRATCH"; exit "$st"; }
 trap cleanup EXIT
 
 # findings collect as "SEV|file|line|category|detail"; drift rows as "label|path|region|delta"
 FINDINGS="$SCRATCH/findings"
 ROWS="$SCRATCH/rows"
 QUEUE="$SCRATCH/queue"
+# the rows a copy-side edit refused, so the run can show each one the diff it is protecting
+REFUSED="$SCRATCH/refused"
 # the left side of a compare when the target is not there yet; a real file rather than /dev/null,
 # since the sandbox denies that too and a failed diff reports a delta of zero
 EMPTY="$SCRATCH/absent"
-: > "$FINDINGS"; : > "$ROWS"; : > "$QUEUE"; : > "$EMPTY"
+: > "$FINDINGS"; : > "$ROWS"; : > "$QUEUE"; : > "$EMPTY"; : > "$REFUSED"
 
 err()  { printf 'ERROR|%s|%s|%s|%s\n' "$1" "$2" "$3" "$4" >> "$FINDINGS"; }
 warn() { printf 'WARN|%s|%s|%s|%s\n' "$1" "$2" "$3" "$4" >> "$FINDINGS"; }
+
+# a copy whose mtime is newer than the readme's holds an edit nobody moved into the source yet, so
+# the export refuses that one section; the alternative is a silent overwrite of the fresher side
+refuse() {
+  err "$2" 1 copy_newer "this copy moved after $SOURCE, so exporting would discard that edit"
+  printf '%s|%s|%s\n' "$1" "$2" "$3" >> "$REFUSED"
+  BLOCKED=$((BLOCKED + 1))
+}
 
 # the exact heading line in the source, so a finding points at the readme rather than line 1
 heading_line() {
@@ -286,10 +286,14 @@ while IFS=$'\t' read -r heading skill; do
     region='file (verbatim)'
     if [ "$have" = "$EMPTY" ]; then region='file (absent)'; fi
     delta=$(diff "$have" "$SOURCE" | grep -c '^[<>]' || true)
-    printf '%s|%s|%s|%s|%s|%s\n' \
-      "$label" "$skill" "$region" "$delta" "$(newer_side "$skill")" "$pair" >> "$ROWS"
-    # boundary 0 marks the whole-file copy the apply pass lands with cp, since a render that
-    # rewrote a single byte would break the one contract this target has
+    newer=$(newer_side "$skill")
+    printf '%s|%s|%s|%s|%s|%s\n' "$label" "$skill" "$region" "$delta" "$newer" "$pair" >> "$ROWS"
+    if [ "$newer" = copy ]; then
+      refuse "$label" "$skill" "$pair"
+      continue
+    fi
+    # boundary 0 marks the whole-file copy the export lands with cp, since a render that rewrote
+    # a single byte would break the one contract this target has
     printf '%s|%s|%s|%s\n' "$label" "$skill" 0 "$SOURCE" >> "$QUEUE"
     continue
   fi
@@ -454,10 +458,12 @@ while IFS=$'\t' read -r heading skill; do
   fi
   delta=$(diff "$curtop" "$newtop" | grep -c '^[<>]' || true)
 
-  printf '%s|%s|%s|%s|%s|%s\n' \
-    "$label" "$skill" "$region" "$delta" "$(newer_side "$skill")" "$pair" >> "$ROWS"
+  newer=$(newer_side "$skill")
+  printf '%s|%s|%s|%s|%s|%s\n' "$label" "$skill" "$region" "$delta" "$newer" "$pair" >> "$ROWS"
   if [ "$blocked" -eq 1 ]; then
     BLOCKED=$((BLOCKED + 1))
+  elif [ "$newer" = copy ]; then
+    refuse "$label" "$skill" "$pair"
   else
     printf '%s|%s|%s|%s\n' "$label" "$skill" "$boundary" "$newtop" >> "$QUEUE"
   fi
@@ -520,8 +526,8 @@ fi
 # ==============
 ERRORS=$(grep -c '^ERROR|' "$FINDINGS" || true)
 WARNINGS=$(grep -c '^WARN|' "$FINDINGS" || true)
-MODE='check (nothing written)'
-if [ "$APPLY" -eq 1 ]; then MODE='apply'; fi
+MODE='export'
+if [ "$CHECK" -eq 1 ]; then MODE='check (nothing written)'; fi
 
 cat <<EOF
 
@@ -552,10 +558,12 @@ if [ "$ERRORS" -gt 0 ] || [ "$WARNINGS" -gt 0 ]; then
     | awk -F'|' '{ printf "%-5s %-14s %-19s %s\n", $1, $2 ":" $3, $4, $5 }'
 fi
 
-if [ "$DIFF" -eq 1 ] && [ "$DRIFTED" -gt 0 ]; then
-  while IFS='|' read -r label skill region delta newer pair; do
+# only the refused rows print a diff: that edit is the one about to be lost, and every other row
+# is the readme doing exactly what it is meant to do
+if [ -s "$REFUSED" ]; then
+  while IFS='|' read -r label skill pair; do
     [ -n "$pair" ] || continue
-    echo "--- diff: $label ($newer moved last) ---"
+    echo "--- refused: $label (the copy moved after $SOURCE) ---"
     # a readme copy rendered nothing into scratch, and an absent one has no left side at all
     if is_readme "$skill"; then
       have=$skill
@@ -565,58 +573,47 @@ if [ "$DIFF" -eq 1 ] && [ "$DRIFTED" -gt 0 ]; then
       diff -u -L "$skill (managed region)" -L "$SOURCE (rendered)" \
         "$SCRATCH/$pair.curtop" "$SCRATCH/$pair.newtop" || true
     fi
-  done < "$ROWS"
+  done < "$REFUSED"
 fi
 
 # ==============
-# APPLY
-#   pass two rewrites each unblocked drifted region, only after an explicit confirmation
+# EXPORT
+#   pass two rewrites each unblocked drifted region; a blocked one was already reported above
 # ==============
-if [ "$APPLY" -eq 1 ]; then
-  TODO=$(grep -c . "$QUEUE" || true)
-  if [ "$TODO" -eq 0 ]; then
-    echo "--- apply ---"
+EXPORTED=0
+if [ "$CHECK" -eq 0 ]; then
+  EXPORTED=$(grep -c . "$QUEUE" || true)
+  echo "--- export ---"
+  if [ "$EXPORTED" -eq 0 ]; then
     echo "nothing to write: no unblocked drift"
-  else
-    if [ "$YES" -ne 1 ]; then
-      if [ -t 0 ]; then
-        printf 'rewrite %s managed region(s) from %s? [y/N] ' "$TODO" "$SOURCE"
-        read -r reply
-        case "$reply" in y|Y|yes|YES) ;; *) echo "aborted: nothing written"; exit 1;; esac
-      else
-        echo "fatal: --apply with no tty needs --yes; confirm the drift table first" >&2
-        exit 1
-      fi
+  fi
+  while IFS='|' read -r label skill boundary newtop; do
+    [ -n "$label" ] || continue
+    # boundary 0 is the whole-file copy: cp, because the render below strips trailing blanks
+    # and would land a file that is one byte off the source it claims to be identical to
+    if [ "$boundary" -eq 0 ]; then
+      cp "$newtop" "$skill"
+    else
+      out="$SCRATCH/out"
+      { cat "$newtop"; echo; sed -n "${boundary},\$p" "$skill"; } > "$out"
+      strip_trailing "$out" > "$skill"
     fi
-    echo "--- apply ---"
-    while IFS='|' read -r label skill boundary newtop; do
-      [ -n "$label" ] || continue
-      # boundary 0 is the whole-file copy: cp, because the render below strips trailing blanks
-      # and would land a file that is one byte off the source it claims to be identical to
-      if [ "$boundary" -eq 0 ]; then
-        cp "$newtop" "$skill"
-      else
-        out="$SCRATCH/out"
-        { cat "$newtop"; echo; sed -n "${boundary},\$p" "$skill"; } > "$out"
-        strip_trailing "$out" > "$skill"
-      fi
-      printf 'wrote %s (%s)\n' "$skill" "$label"
-    done < "$QUEUE"
-    echo "applied: $TODO file(s); re-run without --apply to confirm in_sync"
+    printf 'wrote %s (%s)\n' "$skill" "$label"
+  done < "$QUEUE"
+  if [ "$EXPORTED" -gt 0 ]; then
+    echo "exported: $EXPORTED file(s); re-run with --check to confirm in_sync"
   fi
 fi
 
 cat <<'EOF'
---- needs a human (before --apply) ---
-- the readme is the source of truth: reconcile INTO the readme, never by hand-editing a skill top
-- a skill-side edit worth keeping moves into its readme section first, then the export re-lands it
-- an ERROR names a section that will not export; fix the readme line the finding points at
-- confirm the drift table in chat, then re-run with --apply (add skill names for a partial sync)
+--- needs a human ---
+- the readme is the source of truth: reconcile INTO the readme, never by hand-editing a copy
+- an ERROR names a section that did not export; fix the readme line the finding points at
+- a copy_newer refusal is a skill-side edit: move it into its readme section, then re-run
+- --check writes nothing, which is the mode ci runs and the one to read a drift table from
 ========================
 EOF
 
 if [ "$ERRORS" -gt 0 ]; then exit 1; fi
-if [ "$STRICT" -eq 1 ] && [ "$WARNINGS" -gt 0 ]; then exit 1; fi
-if [ "$APPLY" -eq 0 ] && [ "$DRIFTED" -gt 0 ]; then exit 1; fi
-if [ "$APPLY" -eq 1 ] && [ "$BLOCKED" -gt 0 ]; then exit 1; fi
+if [ "$CHECK" -eq 1 ] && [ "$DRIFTED" -gt 0 ]; then exit 1; fi
 exit 0
