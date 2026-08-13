@@ -9,6 +9,7 @@
 # SIDECAR
 # - read-only apart from `fetch --prune`, which deletes no local branch and writes no tracked file
 # - the trunk sync is handed over, never run: a sandboxed merge half-applies on a denied path
+# - the block ends on a diff against origin, which is what proves the handed-over merge landed
 # - classifies each local branch as gone, merged, or live, so the handover deletes only the spent
 # - emits `-d` or `-D` to match, since `-d` consults the same patch-id read a rebase already fooled
 # - a gone branch that is neither merged nor absorbed is kept, never offered for deletion
@@ -124,7 +125,7 @@ else
     handover_cmd "git merge --ff-only origin/$DEFAULT_BRANCH"
     if [ -n "$PROTECTED_PATHS" ]; then
       handover_note "the sync writes paths no sandboxed command can: $PROTECTED_PATHS"
-      handover_note "run it in your own terminal, then confirm with: git diff origin/$DEFAULT_BRANCH"
+      handover_note "run it in your own terminal; the last line of this block confirms it landed"
     fi
   fi
   # -d refuses a branch trunk does not already contain, which is the safety this list relies on
@@ -137,6 +138,12 @@ else
   done
   if [ -n "$KEEP_BRANCHES" ]; then
     handover_note "kept as real work:${KEEP_BRANCHES} — neither merged nor absorbed, so not offered"
+  fi
+  # the merge above is the only command here that writes a tracked file, and a sandboxed run of it
+  # half-applies on a denied path; this reads the result while the trunk is still checked out
+  if [ "$BEHIND" -gt 0 ]; then
+    handover_note "empty output means the sync landed; the rest is your own uncommitted work"
+    handover_cmd "git diff --stat origin/$DEFAULT_BRANCH"
   fi
   if [ "$BEHIND" -gt 0 ] && [ "$STARTING_BRANCH" != "$DEFAULT_BRANCH" ]; then
     handover_cmd "git switch $STARTING_BRANCH"
