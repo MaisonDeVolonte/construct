@@ -69,6 +69,7 @@ echo "sidecar exit: $?"
     - `-D` is required for any absorbed branch, since `-d` consults the same patch-id check
       that got it wrong
     - close with one copy-paste bash block holding every command above, in that same order
+    - keep the trailing `git diff --stat` line, since it is what proves the handed-over merge landed
     - the deny list and `pretooluse.sh` both refuse these commands, which is the design rather
       than an obstacle to work around: they are the user's to run, never the agent's
 
