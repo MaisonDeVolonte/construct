@@ -28,7 +28,7 @@ metadata:
   - when duplicate rules are found, in a settings file or in a template
   - when a documented rule no longer exists in the json
   - when nothing stops an agent editing the settings and hooks this audit depends on
-- answers for the settings stack alone; `/operator:audit` runs every lens together
+- answers for the settings stack alone; `/operator:setup --audit` runs every lens together
 - leaves file denies and token masks to `/operator:credentials`, which probes every vector
 - walks you through masked-credential setup, and names the steps you already finished
 - prints the copy commands for whichever settings scope you name

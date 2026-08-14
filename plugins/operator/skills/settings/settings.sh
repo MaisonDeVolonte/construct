@@ -11,7 +11,7 @@
 # - STATIC checks read the files: parse, drift, verb symmetry, scope placement, hygiene, coverage
 # - `guard` is the check that watches this auditor, since an editable auditor can be made to pass
 # - the LIVE probe exercises the hook, because a config can be perfect while the gate is dead
-# - it answers for the settings stack alone; `/operator:audit` is what runs every lens together
+# - it answers for the settings stack alone; `/operator:setup --audit` runs every lens together
 # - a tracked path reads as guarded at `ask`, since `deny` reaches the sandbox and blocks git itself
 # - templates resolve from the plugin, so drift and hygiene run the same under either install method
 # RUN
@@ -24,7 +24,7 @@
 # - the env file is deny-listed, so not seeing it is the pass rather than a finding
 # - an emit run never appends to the artifact, since these lines carry absolute home paths
 # - it emits and never applies, because the deny floor stops this sidecar writing a settings file
-# @see plugins/operator/skills/settings/SKILL.md, plugins/operator/skills/audit/audit.sh, .construct/operator/settings/
+# @see plugins/operator/skills/settings/SKILL.md, plugins/operator/lib/suite.sh, .construct/operator/settings/
 
 set -euo pipefail
 

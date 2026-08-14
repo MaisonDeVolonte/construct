@@ -14,7 +14,7 @@
     "plugins/gitgud/subagent-styles/operator.md",
     "plugins/retardify/subagent-styles/operator.md"
   ],
-  "#### Suite Audit": "plugins/operator/skills/audit/SKILL.md",
+  "#### Setup": "plugins/operator/skills/setup/SKILL.md",
   "#### Credentials": "plugins/operator/skills/credentials/SKILL.md",
   "#### Permissions": "plugins/operator/skills/permissions/SKILL.md",
   "#### Scripts": "plugins/operator/skills/scripts/SKILL.md",
