@@ -4,5 +4,9 @@
 # scratch
 tmp/
 
+# credentials: a recreated template must never reach a public commit
+.env
+.env.*
+
 # artifacts: one namespaced root, so a host project's own docs/ is never touched
 .construct/
