@@ -50,7 +50,7 @@ TRIGGERS="plugins"
 POSTURES='READ-ONLY|SAFE|GATED|DESTRUCTIVE|RELEASE'
 
 # the exact line every doc runs to inject its plugin's output style, frontmatter shed
-VOICE_CMD='awk '"'"'NR>1 && /^---$/ {p=1; next} p'"'"' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"'
+VOICE_CMD='awk '"'"'NR>1 && /^---$/ {p=1; next} p'"'"' "${CLAUDE_PLUGIN_ROOT}/subagent-styles/operator.md"'
 
 # what sits under the help heading in every doc. the fence holds PLACEHOLDERS rather than one
 # skill's filled values, so every copy stays byte identical and this is one comparison rather than
@@ -458,10 +458,10 @@ check_voice() {
   fi
   # a bare grep that finds nothing returns 1, and set -e would kill the run on the one doc this
   # check exists to catch, so the miss is absorbed here rather than ending the scan silently
-  head=$({ grep -nxF '## Output Style' "$doc" || true; } | head -n 1 | cut -d: -f1)
+  head=$({ grep -nxF '## Subagent Style' "$doc" || true; } | head -n 1 | cut -d: -f1)
   if [ -z "$head" ]; then
-    err "$doc" "$(where "$doc" 'output-styles/operator\.md')" style_heading \
-      "the cat runs under no '## Output Style' heading, so nothing names the block"
+    err "$doc" "$(where "$doc" 'subagent-styles/operator\.md')" style_heading \
+      "the cat runs under no '## Subagent Style' heading, so nothing names the block"
   else
     # the block closes every doc, so its heading is the last `## ` outside a fence; a section
     # after it would read as the doc's conclusion while the style is what actually is
@@ -471,9 +471,9 @@ check_voice() {
         "the style block closes a doc; a '## ' section follows it at line $last"
     fi
   fi
-  if [ ! -f "plugins/$plugin/output-styles/operator.md" ]; then
+  if [ ! -f "plugins/$plugin/subagent-styles/operator.md" ]; then
     err "$doc" 1 voice_missing_style \
-      "the block cats plugins/$plugin/output-styles/operator.md and the file is not there"
+      "the block cats plugins/$plugin/subagent-styles/operator.md and the file is not there"
   fi
 }
 
@@ -525,7 +525,7 @@ check_help() {
 
   # the style block closes a doc, so help is the section directly above it. a doc carrying no style
   # block is a maintainer pair outside the plugin contract, and there help closes the doc instead
-  style=$({ grep -nxF '## Output Style' "$doc" || true; } | head -1 | cut -d: -f1)
+  style=$({ grep -nxF '## Subagent Style' "$doc" || true; } | head -1 | cut -d: -f1)
   if [ -n "$style" ] && [ "$head" -gt "$style" ]; then
     err "$doc" "$head" help_position "'$HELP_HEAD' sits below the style block, and it belongs above it"
     return 0
@@ -566,7 +566,7 @@ check_confirm() {
   fi
 
   # confirm sits above help, which sits above the style block, so the next heading closes it
-  next=$({ grep -nxF "$HELP_HEAD" "$doc" || grep -nxF '## Output Style' "$doc" || true; } \
+  next=$({ grep -nxF "$HELP_HEAD" "$doc" || grep -nxF '## Subagent Style' "$doc" || true; } \
     | head -1 | cut -d: -f1)
   if [ -n "$next" ] && [ "$head" -gt "$next" ]; then
     err "$doc" "$head" confirm_position "'$CONFIRM_HEAD' belongs above '$HELP_HEAD'"

@@ -152,7 +152,7 @@ SPEC: <this doc's own path>
 - name the flag or the sibling skill that fits their answer, then STOP
 - run no step, write no file, and never fall through to step 1
 
-## Output Style
+## Subagent Style
 ```!
-awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
+awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/subagent-styles/operator.md"
 ```
