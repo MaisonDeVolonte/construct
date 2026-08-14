@@ -20,7 +20,7 @@ metadata:
 
 ## Telemetry
 ```!
-"${CLAUDE_PLUGIN_ROOT}"/skills/plan/plan.sh $ARGUMENTS
+"${CLAUDE_PLUGIN_ROOT}"/skills/plan/plan.sh "$ARGUMENTS"
 echo "sidecar exit: $?"
 ```
 - `help: requested` → the run was refused before it started; `## Help` below is the whole turn
@@ -59,6 +59,7 @@ echo "sidecar exit: $?"
 - written before complex or architectural work, never after it
 - sections run in this order: context, goal, solution, risks, checklist, readiness, notes
 - a completed plan closes with a summary in `notes`; a `## Summary` section breaks that order
+- an unticked box is live work, or an abandoned `~~SKIPPED: <why>~~` that says so outright
 - scrub client names, tokens, and other sensitive detail before it lands in a commit
 
 **the style:** maximally clear, concise, action-oriented language
@@ -106,6 +107,8 @@ sorted by blast radius and irreversibility, never by likelihood
 - [ ] short directives, verb first, one line each (see #4)
 - [ ] point at a note for context rather than explaining inline
 - [ ] no prose, no rationale, no sub-bullets that are really notes
+- [ ] HUMAN: tasks blocking fully agentic work are labelled clearly
+- [ ] ~~SKIPPED: abandoned items are wrapped in tildes, never deleted~~
 
 ### 2. Next stage
 - [ ] stages run in sequence and each ships as its own pr
@@ -134,6 +137,9 @@ how each stage's checklist items are split by who can run them:
 - `agentic` matches an allow rule with no deny
 - `human-only` matches a deny, or needs judgment, credentials, or a decision
 - `gated` matches neither, so it prompts
+- every `human-only` item carries the `HUMAN:` label, so the column and the labels agree
+- a skipped item keeps its label and its count, since the three still sum to the stage
+- a closed plan is exempt, since an abandoned item stays unticked and is not work
 
 | stage | agentic | human-only | gated | note # |
 |---|---|---|---|---|

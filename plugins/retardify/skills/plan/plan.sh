@@ -220,6 +220,39 @@ stage_items() {
   printf '%s' "$count"
 }
 
+# a plan closes with a numbered note opening on CLOSED, and a closed checklist is a record
+# an abandoned item stays unticked forever, so tick state alone cannot say whether work is live
+plan_closed() {
+  grep -qE '^[0-9]{1,}\. CLOSED ' "$1"
+}
+
+# a stage's HUMAN labels, and how many of its items still read as live work; both from one walk
+# a struck item is abandoned and a moved one records where it went, so neither is work to do
+stage_humans() {
+  local file=$1 want=$2 lineno text stage body current=0 skipped labels=0 live=0
+  while IFS=$'\t' read -r lineno text; do
+    case "$text" in
+      "### "*)
+        stage=$(printf '%s' "$text" | sed -n 's/^### \([0-9]\{1,\}\)\..*/\1/p')
+        current=${stage:-0}
+        continue;;
+      "- [ ] "*|"- [x] "*) ;;
+      *) continue;;
+    esac
+    if [ "$current" != "$want" ]; then continue; fi
+    body=${text#*] }
+    skipped=0
+    # the label sits inside the tildes on a skipped item, so the row still sums after a skip
+    case "$body" in '~~SKIPPED: '*) body=${body#'~~SKIPPED: '}; skipped=1;; esac
+    case "$body" in "HUMAN: "*) labels=$((labels + 1));; esac
+    case "$text" in "- [x] "*) continue;; esac
+    if [ "$skipped" -eq 1 ]; then continue; fi
+    case "$body" in MOVED*|SUPERSEDED*|DROPPED*|CLOSED*) continue;; esac
+    live=$((live + 1))
+  done < <(section "$file" Checklist)
+  printf '%s\t%s' "$labels" "$live"
+}
+
 # ==============
 # CHECKS
 #   each takes a plan path and appends findings; to add one, write a function and list it below
@@ -369,10 +402,49 @@ check_checklist() {
   done < <(section "$file" Checklist)
 }
 
+# "abandoned items are wrapped in tildes, never deleted", so an open box is live work or a skip
+# a closed plan is exempt, since its checklist froze at close under whatever rules it shipped with
+check_skips() {
+  local file=$1 lineno text body
+  if plan_closed "$file"; then return; fi
+  while IFS=$'\t' read -r lineno text; do
+    case "$text" in
+      "- [ ] "*|"- [x] "*) ;;
+      *) continue;;
+    esac
+    body=${text#*] }
+    check_skip_item "$file" "$lineno" "$text" "$body"
+  done < <(section "$file" Checklist)
+}
+
+# one item, judged three ways; split out so the walk above stays a walk
+check_skip_item() {
+  local file=$1 lineno=$2 text=$3 body=$4
+  # a tick says the work happened, which is the one thing a skip says it never did
+  case "$text" in
+    "- [x] "*)
+      case "$body" in
+        *SKIPPED*) err "$file" "$lineno" skip_ticked "a skipped item stays unticked";;
+      esac
+      return;;
+  esac
+  # struck through, so it has to name itself a skip rather than leave the reader guessing
+  case "$body" in
+    '~~'*)
+      printf '%s' "$body" | grep -qE '^~~SKIPPED: .+~~$' \
+        || err "$file" "$lineno" skip_shape 'a struck item reads "~~SKIPPED: <why>~~"'
+      return;;
+  esac
+  # bare, so it reads as live work; a disposition word here is an abandonment nobody struck
+  if printf '%s' "$body" | grep -qE '^(SKIPPED|MOVED|SUPERSEDED|DROPPED|ABANDONED)\b'; then
+    err "$file" "$lineno" skip_tildes 'an abandoned item is wrapped in tildes, never left bare'
+  fi
+}
+
 # "agents count every item in a stage as agentic, gated, or human-only, and the three sum"
-# a row that does not sum is provably wrong, which is the whole reason the counts are counts
+# a row that does not sum is wrong, and its HUMAN labels say the human count a second time
 check_agents_row() {
-  local file=$1 lineno=$2 text=$3 header=$4 stage agentic gated human total items
+  local file=$1 lineno=$2 text=$3 header=$4 stage agentic gated human total items humans labels live
   stage=$(row_cell "$text" "$(col_index "$header" stage)" | sed -n 's/^\([0-9]\{1,\}\)\..*/\1/p')
   if [ -z "$stage" ]; then
     err "$file" "$lineno" agents_row "each row leads with a numbered stage from the checklist"
@@ -391,6 +463,13 @@ check_agents_row() {
     err "$file" "$lineno" agents_stage "stage $stage has no checklist items to classify"
   elif [ "$total" -ne "$items" ]; then
     err "$file" "$lineno" agents_sum "counts sum to $total; stage $stage holds $items items"
+  fi
+  # a closed plan, or a stage holding no live work, is a record; its labels go ungraded
+  humans=$(stage_humans "$file" "$stage")
+  labels=${humans%%$'\t'*}
+  live=${humans##*$'\t'}
+  if [ "$live" -gt 0 ] && [ "$labels" -ne "$human" ] && ! plan_closed "$file"; then
+    err "$file" "$lineno" human_labels "stage $stage labels $labels HUMAN; the row counts $human"
   fi
 }
 
@@ -528,6 +607,7 @@ for plan in "${PLANS[@]}"; do
   check_goal     "$plan"
   check_risks    "$plan"
   check_checklist "$plan"
+  check_skips    "$plan"
   check_readiness "$plan"
   check_notes    "$plan"
   scan_secrets   "$plan"
