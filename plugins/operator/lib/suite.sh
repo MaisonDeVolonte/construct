@@ -1,10 +1,11 @@
 #!/bin/bash
 # =====================================================
-# @file audit.sh - the operator suite, run as one pass
+# @file suite.sh - the operator suite, run as one pass
 # =====================================================
 # @description
 # PAIR
-# - sidecar for `/operator:audit` — runs every operator lens and merges them into one report
+# - library for `/operator:setup --audit` — runs every lens and merges them into one report
+# - it sits in lib/ because a skill folder holds its own doc and its own sidecar, and nothing else
 # - safe anytime: read-only by contract, since every lens it runs is read-only by contract
 # - the question it answers is coverage: whether every lens ran, and what each one came back with
 # CONTRACT
@@ -20,7 +21,7 @@
 # - the suite costs minutes, and `scripts` owns most of it by replaying every extracted command
 # - each lens reports the seconds it spent, so a long stage reads as work rather than a hang
 # - the doc appends one entry to the day's suite audit, never editing an earlier one
-# @see plugins/operator/skills/audit/SKILL.md, plugins/operator/skills/settings/settings.sh, .construct/operator/audit/
+# @see plugins/operator/skills/setup/SKILL.md, plugins/operator/skills/setup/setup.sh, .construct/operator/setup/audit/
 
 set -euo pipefail
 
@@ -38,10 +39,10 @@ case " $* " in *" --confirm "*) ;; *) echo "confirm: required"; exit 0;; esac
 # ==============
 # PREFLIGHT
 # ==============
-# the lenses sit in sibling skill folders: resolve from this file before any cd, since BASH_SOURCE
+# the lenses sit one level over in skills/: resolve from this file before any cd, since BASH_SOURCE
 # arrives relative and cwd holds no plugins/operator/ once installed from a marketplace
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || true)
-SHARED=$(cd "$HERE/../../shared" 2>/dev/null && pwd || true)
+SHARED=$(cd "$HERE/../shared" 2>/dev/null && pwd || true)
 if [ ! -f "$SHARED/secrets.sh" ]; then
   echo "fatal: no shared/secrets.sh reachable from this sidecar" >&2; exit 1; fi
 # shellcheck source=../../shared/secrets.sh
@@ -93,9 +94,9 @@ count_of() {
 
 run_lens() {
   local lens=$1 script output code started elapsed errors warnings
-  script="$HERE/../$lens/$lens.sh"
+  script="$HERE/../skills/$lens/$lens.sh"
   if [ ! -f "$script" ]; then
-    err suite "$lens" "no $lens.sh in its sibling skill folder, so this lens never ran"
+    err suite "$lens" "no $lens.sh in skills/$lens, so this lens never ran"
     LENS_STATUS+=("$lens|missing|-|-")
     LENS_SECONDS+=("$lens|0")
     return
@@ -139,8 +140,8 @@ SUITE_ELAPSED=$((SECONDS - SUITE_START))
 
 # ==============
 # ARTIFACT
-#   this skill's own dated artifact, graded here so nothing outside this file decides its shape
-#   the shape lives in this skill's SKILL.md and the labels below are what this sidecar emits
+#   the suite's own dated artifact, graded here so nothing outside this file decides its shape
+#   it keeps a tree of its own, since the roadmap beside it grades by a different set of rules
 # ==============
 ARTIFACT_KIND="suite"
 ARTIFACT_SECTIONS=$'state\nfindings\nresolutions\ntelemetry'
@@ -315,7 +316,7 @@ check_artifact() {
   done
 }
 
-check_artifact ".construct/operator/audit"
+check_artifact ".construct/operator/setup/audit"
 
 # ==============
 # TELEMETRY
@@ -327,7 +328,7 @@ ERRORS=${ERRORS:-0}
 WARNINGS=${WARNINGS:-0}
 PASSES=${PASSES:-0}
 
-TODAYS_AUDIT=".construct/operator/audit/$(date +%Y-%m-%d).md"
+TODAYS_AUDIT=".construct/operator/setup/audit/$(date +%Y-%m-%d).md"
 if [ -f "$ROOT/$TODAYS_AUDIT" ];
 then AUDIT_COUNT=$(grep -c '^## Suite Audit #' "$ROOT/$TODAYS_AUDIT" || true)
 else AUDIT_COUNT=0; fi
@@ -335,7 +336,7 @@ AUDIT_COUNT=${AUDIT_COUNT:-0}
 
 cat <<EOF
 
-=== audit.sh sidecar ===
+=== suite.sh sidecar ===
 audit_file: $TODAYS_AUDIT
 audit_count: $AUDIT_COUNT
 next_audit: $((AUDIT_COUNT + 1))

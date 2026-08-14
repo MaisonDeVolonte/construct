@@ -17,10 +17,11 @@
 TABLE OF CONTENTS
 ├─ Features ─────── operator · gitgud · retardify · hooks
 ├─ Examples ─────── operator:credentials · gitgud:deliver · retardify:graph
+├─ Setup & Config
 ├─ Installation ─── individual · team · clone
 ├─ Sandbox ──────── basic · repo · personal · managed · advanced
 ├─ Plugins & Skills
-├─ /operator ────── audit · settings · permissions · scripts · credentials · issues
+├─ /operator ────── setup · settings · permissions · scripts · credentials · issues
 ├─ /gitgud ──────── audit · backup · continue · deliver · prune · nuke · rerun · ship
 ├─ /retardify ───── file · code · output · plan · graph · quiz · manual · review · log · todo
 ├─ Hooks & Actions
@@ -38,7 +39,7 @@ TABLE OF CONTENTS
 
 | /operator                    | /gitgud                | /retardify         | hooks                           |
 |------------------------------|------------------------|--------------------|---------------------------------|
-| [:audit](#suite-audit)       | [:audit](#audit)       | [:file](#file)     | [pretooluse](#pretooluse)       |
+| [:setup](#setup)             | [:audit](#audit)       | [:file](#file)     | [pretooluse](#pretooluse)       |
 | [:credentials](#credentials) | [:backup](#backup)     | [:code](#code)     | [posttooluse](#posttooluse)     |
 | [:permissions](#permissions) | [:continue](#continue) | [:output](#output) | [sessionstart](#sessionstart)   |
 | [:scripts](#scripts)         | [:deliver](#deliver)   | [:plan](#plan)     | [taskcompleted](#taskcompleted) |
@@ -183,7 +184,9 @@ OUTPUT:       .construct/retardify/plan/2026-07-31-operation-monorepo.md
 
 </details>
 
-## Installation
+## Setup & Config
+
+### Installation
 > see claude plugin
 > [security](https://code.claude.com/docs/en/discover-plugins#security),
 > [scopes](https://code.claude.com/docs/en/settings#configuration-scopes),
@@ -287,7 +290,7 @@ rm -rf ~/Developer/construct
 
 </details>
 
-## Sandbox
+### Sandbox
 > see claude sandbox
 > [security & isolation](https://code.claude.com/docs/en/sandboxing#how-sandboxing-works),
 > [scopes & settings](https://code.claude.com/docs/en/sandboxing#configure-sandboxing),
@@ -311,7 +314,7 @@ claude
 ```
 ```
 # run operator's full audit (could take a few minutes)
-/operator:audit
+/operator:setup --audit
 ```
 
 </details>
@@ -333,7 +336,7 @@ claude
 ```
 ```
 # run operator's full audit (could take a few minutes)
-/operator:audit
+/operator:setup --audit
 ```
 
 </details>
@@ -358,7 +361,7 @@ claude
 ```
 ```
 # run operator's full audit (could take a few minutes)
-/operator:audit
+/operator:setup --audit
 ```
 
 </details>
@@ -380,7 +383,7 @@ claude
 ```
 ```
 # run operator's full audit (could take a few minutes)
-/operator:audit
+/operator:setup --audit
 ```
 
 </details>
@@ -419,7 +422,7 @@ claude
 ```
 ```
 # run operator's full audit, the credentials probe included (could take a few minutes)
-/operator:audit
+/operator:setup --audit
 ```
 
 </details>
@@ -431,33 +434,36 @@ claude
 claude plugin details operator@TheConstruct
 ```
 
-#### Suite Audit
+#### Setup
 ```
-/operator:audit
+/operator:setup
 ```
 ```yaml
 ---
-name: audit
+name: setup
 model: opus
 effort: max
 license: MIT
 compatibility: requires bash, jq, git, curl
-description: run every operator lens and merge them into one report (saves report to .construct/)
-argument-hint: "[--help] [--confirm]"
+description: step by step setup wizard that takes you from install to fully configured (saves roadmap to .construct/)
+argument-hint: "[--help] [--roadmap] [--audit] [--confirm]"
 disable-model-invocation: true
 disallowed-tools: Edit, Write
 metadata:
   kind: trigger
-  artifact: .construct/operator/audit/
+  artifact: .construct/operator/setup/
 ---
 ```
-**built-in security suite:** lets you reach for a comprehensive audit of your entire claude code setup
-- runs settings, permissions, scripts, credentials and issues, then keeps each output whole
-- recomputes no verdict; each lens grades itself and this collects what they returned
-- correlates across lenses, which no single lens can do from inside itself
-- takes no lens flag, since one lens belongs to its own skill and its own artifact
-- prices the run against the sidecars it would replay, and asks before spending any of it
-- costs minutes, and names the seconds each lens spent so a long stage reads as work
+**end-to-end install wizard:** takes the guesswork out of securing your agentic workspace
+- probes your machine's state and maps out a detailed roadmap all the way through
+- interactive questionnaire helps you decide which sandbox config is right for you
+- ends with a clean `--audit` handoff that makes sure everything is fully secure
+  - runs settings, permissions, scripts, credentials and issues, then keeps each output whole
+  - recomputes no verdict; each lens grades itself and this collects what they returned
+  - correlates across lenses, which no single lens can do from inside itself
+  - takes no lens flag, since one lens belongs to its own skill and its own artifact
+  - prices the run against the sidecars it would replay, and asks before spending any of it
+  - costs minutes, and names the seconds each lens spent so a long stage reads as work
 
 #### Credentials
 ```
@@ -570,7 +576,7 @@ metadata:
   - when duplicate rules are found, in a settings file or in a template
   - when a documented rule no longer exists in the json
   - when nothing stops an agent editing the settings and hooks this audit depends on
-- answers for the settings stack alone; `/operator:audit` runs every lens together
+- answers for the settings stack alone; `/operator:setup --audit` runs every lens together
 - leaves file denies and token masks to `/operator:credentials`, which probes every vector
 - walks you through masked-credential setup, and names the steps you already finished
 - prints the copy commands for whichever settings scope you name
@@ -2018,7 +2024,8 @@ managed → cli → local → project → user (scalars override, arrays merge)
 ### Audits
 > `/sandbox`: claude command that prints the merged config (the 'source of truth')
 - `/fewer-permission-prompts`: claude skill that proposes new allow entries from real transcript usage
-- [/operator:audit](plugins/operator/skills/audit/SKILL.md): READ-ONLY; runs every lens below and merges them into one report (saved to file)
+- [/operator:setup --audit](plugins/operator/skills/setup/SKILL.md): READ-ONLY; runs every lens below and merges them into one report (saved to file)
+- [suite.sh](plugins/operator/lib/suite.sh): the lens fan-out itself, driven only by that flag
 - [/operator:credentials](plugins/operator/skills/credentials/SKILL.md): READ-ONLY; probes every masked and denied credential live (saved to file)
 - [/operator:permissions](plugins/operator/skills/permissions/SKILL.md): READ-ONLY; replays the corpus through the real hook, then audits the live rules
 - [/operator:scripts](plugins/operator/skills/scripts/SKILL.md): READ-ONLY; tests every command a sidecar runs against the merged rules
