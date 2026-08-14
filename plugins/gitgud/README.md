@@ -194,40 +194,29 @@ OUTPUT:       .construct/retardify/plan/2026-07-31-operation-monorepo.md
 <summary>Option A: Individual (testing/cross-project use, mix-n-match plugins, ~5 mins)</summary>
 
 ```bash
-# install TheConstruct plugin marketplace
+# 1. install TheConstruct plugin marketplace
 claude plugin marketplace add MaisonDeVolonte/construct --scope user
-```
-```bash
-# install /operator bundle (all plugins)
+# 2. install /operator bundle (all plugins)
 claude plugin install operator@TheConstruct --scope user
 # OR install individual plugins only (skip the bundle)
 claude plugin install gitgud@TheConstruct --scope user
 claude plugin install retardify@TheConstruct --scope user
-```
-```bash
-# confirm install
+# 3. confirm install
 claude plugin list
-# show inventory and token costs
+# 4. show inventory and token costs
 claude plugin details operator@TheConstruct
 ```
 ```bash
-# start claude tui
+# 5. start claude tui
 claude
-```
-```
-# reload, if needed (use --force if you get a prompt cache warning)
+# 6. reload (use --force if you get a prompt cache warning)
 /reload-plugins
-```
-```
-# update manually
+# 7. update manually
 /plugin marketplace update TheConstruct
 # OR update automatically
 /plugin # > marketplaces > TheConstruct > enable auto-update
-```
-```bash
-# promote to a repo
-claude plugin marketplace add MaisonDeVolonte/construct --scope project
-
+# 8. set output style ()
+/config # > Output style > operator
 ```
 ```bash
 # disable plugins
@@ -243,12 +232,13 @@ claude plugin marketplace remove TheConstruct
 <details>
 <summary>Option B: Team (automated onboarding, repo-wide config, ~5 mins)</summary>
 
-> add marketplace and plugin bundle to your project's .claude/settings.json file
+> add marketplace, plugin bundle, and output style to your project's .claude/settings.json file
 
 ```json
 {
   "extraKnownMarketplaces": { "TheConstruct": { "source": { "source": "github", "repo": "MaisonDeVolonte/construct" }, "autoUpdate": true } },
   "enabledPlugins": { "operator@TheConstruct": true },
+  "outputStyle": "operator",
   "permissions": {}
 }
 ```
@@ -263,37 +253,27 @@ claude
 <summary>Option C: Clone (editable source, manual-updates only, ~5 mins)</summary>
 
 ```bash
-# clone
+# 1. clone the construct repo
 git clone https://github.com/MaisonDeVolonte/construct.git ~/Developer/construct
-```
-```bash
-# symlinks (required for all plugins)
+# 2. symlink each plugin into your home .claude/skills/ directory
 mkdir -p ~/.claude/skills
 ln -sfn ~/Developer/construct/plugins/operator ~/.claude/skills/operator
 ln -sfn ~/Developer/construct/plugins/gitgud ~/.claude/skills/gitgud
 ln -sfn ~/Developer/construct/plugins/retardify ~/.claude/skills/retardify
-```
-```bash
-# confirm install (symlinks formatted as `operator@skills-dir`)
+# 3. confirm install (symlinks formatted as `operator@skills-dir`)
 claude plugin list
-# show inventory and token costs
+# 4. show inventory and token costs
 claude plugin details operator@skills-dir
-```
-```bash
-# start claude tui
-claude
-```
-```
-# reload, if needed (use --force if you get a prompt cache warning)
-/reload-plugins
-```
-```bash
-# update manually (requires reloading session)
+# 5. validate customizations
+claude plugin validate ~/Developer/construct/plugins/operator --strict
+# 6. update manually (requires reloading session)
 git -C ~/Developer/construct pull
 ```
 ```bash
-# validate customizations
-claude plugin validate ~/Developer/construct/plugins/operator --strict
+# 7. start claude tui
+claude
+# 8. reload (use --force if you get a prompt cache warning)
+/reload-plugins
 ```
 ```bash
 # disable plugins
