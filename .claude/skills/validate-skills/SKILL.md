@@ -68,12 +68,12 @@ directly above `## Output Style`, and this doc's own `## Help` below is the cano
 - that marker earns a telemetry bullet, since a bare exit 0 otherwise reads as a clean run
 - a doc that runs no sidecar carries the section anyway, and `log` is the one example
 
-## the output style
-the output style is opt-in, so a user may be on Default while a plugin skill runs. the LAST body
-heading of every doc is `## Output Style`, and it cats that plugin's style into the turn:
+## the subagent style
+the output style is opt-in and a subagent never inherits one, so the LAST body heading of every
+doc is `## Subagent Style`, and it cats that plugin's compressed brief into the turn:
 
 ```text
-awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
+awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/subagent-styles/operator.md"
 ```
 
 - it closes the doc, so the task instructions lead and the format rule lands last
@@ -83,7 +83,7 @@ awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operato
 - the awk sheds frontmatter, which is config for the picker and instruction to nobody
 - the block carries no numbered step, since step numbers climb once across a whole doc
 - it carries no bullet either; the missing-file case is already an ERROR two layers up
-- a plugin that ships skills ships `output-styles/operator.md`, or the block cats an empty file
+- a plugin that ships skills ships `subagent-styles/operator.md`, or the block cats an empty file
 - the copies are one readme section exported three ways, never three files edited three times
 
 ## the body
