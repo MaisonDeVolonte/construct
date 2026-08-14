@@ -6,6 +6,7 @@
 # PAIR
 # - sidecar for `/retardify:output` — grades one reply against the Output Style spec
 # - findings carry the spec's own addresses, so a report reads B1, B2, C2 or C8 rather than prose
+# - a line finding also quotes its line, since the reader of a report no longer holds the reply
 # - B3, F1 to F7, C1, C4 to C7 and every Grounding row stay the agent's job; no grep can judge them
 # - reads a file holding the reply text, or stdin when the path is `-`
 # - the stop action `retardify-output.sh` calls it the same way a user does
@@ -26,7 +27,7 @@
 # - every test is a bash builtin; a fork per line would put 3 subprocesses per line in a stop hook
 # @see plugins/retardify/skills/output/SKILL.md, plugins/retardify/output-styles/operator.md, plugins/operator/hooks/stop/retardify-output.sh
 
-set -uo pipefail
+set -euo pipefail
 
 # the doc is read only after this has already run, so help is refused here or not at all; the doc's
 # own '## Help' section owns the output, which is why this prints a marker rather than a usage text
@@ -44,7 +45,9 @@ WRAP_TOLERANCE=3
 SOURCE=${1:-}
 if [ -z "$SOURCE" ]; then echo "usage: output.sh <file>|-" >&2; exit 2; fi
 
-BODY=$(if [ "$SOURCE" = "-" ]; then cat; else cat "$SOURCE" 2>/dev/null; fi)
+# an unreadable path grades as an empty reply, since strict mode would otherwise exit 1 here and
+# a bare exit 1 reads as hard findings to the stop action that calls this
+BODY=$(if [ "$SOURCE" = "-" ]; then cat; else cat "$SOURCE" 2>/dev/null || true; fi)
 if [ -z "$BODY" ]; then exit 0; fi
 
 HARD=0
@@ -52,11 +55,27 @@ SOFT=0
 FINDINGS=''
 WRAPPED=0
 
-# a finding names the rule, the line, and what a fix looks like; HARD ones decide the exit code
-hard() { HARD=$((HARD + 1)); FINDINGS="$FINDINGS
-HARD $1:$2 $3"; }
-soft() { SOFT=$((SOFT + 1)); FINDINGS="$FINDINGS
-SOFT $1:$2 $3"; }
+# the offending line itself, carried so a finding quotes the text rather than only addressing it
+# the reader of a finding no longer holds the reply, so an address alone cannot be repaired
+CITE=''
+CITE_CAP=120
+
+# a finding names the rule and the line, then quotes the text; HARD ones decide the exit code
+cite_onto() {
+  if [ "$1" != 0 ] && [ -n "$CITE" ]; then FINDINGS="$FINDINGS | ${CITE:0:$CITE_CAP}"; fi
+}
+hard() {
+  HARD=$((HARD + 1))
+  FINDINGS="$FINDINGS
+HARD $1:$2 $3"
+  cite_onto "$2"
+}
+soft() {
+  SOFT=$((SOFT + 1))
+  FINDINGS="$FINDINGS
+SOFT $1:$2 $3"
+  cite_onto "$2"
+}
 
 # emoji as bytes rather than characters: the spec allows … and — which are non-ascii too, so a
 # blanket non-ascii test would fire on the punctuation the style uses in its own examples
@@ -70,6 +89,7 @@ COUNTED=0
 LINE=0
 while IFS= read -r raw; do
   LINE=$((LINE + 1))
+  CITE=$raw
 
   # an indented fence, table or quote is still one; shed the indent before deciding what it is
   text=${raw#"${raw%%[![:space:]]*}"}
@@ -126,6 +146,9 @@ fi
     soft B2 "$LINE" "prose line; every line is a LABEL:, a list item, a table row, or fenced"
   fi
 done <<< "$BODY"
+
+# the findings below address the whole reply, so there is no single line left to quote
+CITE=''
 
 if [ "$FENCE_LEN" -ne 0 ]; then
   soft B1 0 "a fence opened and never closed; everything after it went ungraded"
