@@ -20,7 +20,7 @@ metadata:
 
 ## Telemetry
 ```!
-"${CLAUDE_PLUGIN_ROOT}"/skills/quiz/quiz.sh $ARGUMENTS
+"${CLAUDE_PLUGIN_ROOT}"/skills/quiz/quiz.sh "$ARGUMENTS"
 echo "sidecar exit: $?"
 ```
 - `help: requested` → the run was refused before it started; `## Help` below is the whole turn
