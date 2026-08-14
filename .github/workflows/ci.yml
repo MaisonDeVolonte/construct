@@ -46,6 +46,10 @@ jobs:
         run: |
           find plugins .claude/skills -name '*.sh' -print0 | xargs -0 -n1 bash -n
 
+      # an unquoted $ARGUMENTS dies on the apostrophe in "don't", so the quote is a gate
+      - name: free-text arguments survive a quote
+        run: bash .claude/skills/validate-skills/probe-arguments.sh
+
       # every managed region is one readme section exported per copy, and nothing but this
       # compares them; a detector with no gate is how three identical copies drift apart
       - name: readme drift

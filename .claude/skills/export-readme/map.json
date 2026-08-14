@@ -47,6 +47,7 @@
   "#### sessionstart/inject-readme": "plugins/operator/hooks/sessionstart/inject-readme.md",
   "#### sessionstart/inject-log": "plugins/operator/hooks/sessionstart/inject-log.md",
   "#### sessionstart/inject-changes": "plugins/operator/hooks/sessionstart/inject-changes.md",
+  "#### sessionstart/inject-support": "plugins/operator/hooks/sessionstart/inject-support.md",
   "#### taskcompleted/append-log": "plugins/operator/hooks/taskcompleted/append-log.md",
   "#### stop/retardify-output": "plugins/operator/hooks/stop/retardify-output.md",
   "#### stop/synthesize-log": "plugins/operator/hooks/stop/synthesize-log.md"
