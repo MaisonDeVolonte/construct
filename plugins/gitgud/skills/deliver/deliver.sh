@@ -26,6 +26,19 @@ set -euo pipefail
 # own '## Help' section owns the output, which is why this prints a marker rather than a usage text
 case " $* " in *" --help "*|*" -h "*) echo "help: requested"; exit 0;; esac
 
+# free text left after the flags is the user's bucketing guidance, echoed rather than acted on
+# here; the trigger reads it out of the telemetry, since only the model does the bucketing
+GUIDANCE=''
+ARGV=()
+if [ -n "$*" ]; then read -ra ARGV <<< "$*"; fi
+for word in ${ARGV[@]+"${ARGV[@]}"}; do
+  case "$word" in
+    --debug|--finished|--help|-h) continue;;
+    *) GUIDANCE="${GUIDANCE:+$GUIDANCE }$word";;
+  esac
+done
+GUIDANCE=${GUIDANCE//\"/}
+
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || true)
 SHARED=$(cd "$HERE/../../shared" 2>/dev/null && pwd || true)
 if [ ! -f "$SHARED/handover.sh" ]; then
@@ -88,6 +101,7 @@ telemetry_line "staged files" "$STAGED_FILES"
 telemetry_line "trunk behind origin" "$BEHIND"
 telemetry_line "trunk ahead of origin" "$AHEAD"
 telemetry_line "touches .claude/settings.json" "$TOUCHES_SETTINGS"
+telemetry_line "guidance" "${GUIDANCE:-none}"
 
 handover_open gitgud:deliver
 if [ "$AHEAD" -gt 0 ]; then

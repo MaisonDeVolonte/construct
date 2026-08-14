@@ -4,19 +4,16 @@ model: opus
 effort: high
 license: MIT
 compatibility: requires bash, git
-description: output style linter run by the stop hook, or on a reply file or stdin via <path> argument
+description: output style linter run by the stop hook or via <path> argument
 argument-hint: "[--help] <path>|-"
 disable-model-invocation: true
 metadata:
   kind: trigger
 ---
-
-**the reply graded against the spec:** findings carry the spec's own addresses, never prose
+**every reply is linted:** against the output style rules to keep conversations consistent
+- used by the `retardify-output.sh` `stop` hook automatically but can be used manually for debugging
 - grades the mechanically checkable rules: B1 markup, B2 prose, B6 shapes, C2 width, C8 ceiling
-- HARD findings block a stop-hook turn; SOFT ones only ride along with a hard one
-- reads the width and the ceiling from the style copy beside it, so the spec stays the one source
-- C10 exemptions hold: code, terminal output, quoted content and tables are never graded
-- the stop action `retardify-output.sh` is its one automated caller, and degrades without it
+- blocks on HARD findings and quotes the offending line so the fix is mechanical
 
 # Instructions
 

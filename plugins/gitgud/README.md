@@ -25,7 +25,7 @@ TABLE OF CONTENTS
 ├─ /gitgud ──────── audit · backup · continue · deliver · prune · nuke · rerun · ship
 ├─ /retardify ───── file · code · output · plan · graph · quiz · manual · review · log · todo
 ├─ Hooks & Actions
-├─ /sessionstart ── inject-readme · inject-log · inject-changes
+├─ /sessionstart ── inject-readme · inject-log · inject-changes · inject-support
 ├─ /stop ────────── retardify-output · synthesize-log
 ├─ /pretooluse ──── block-policy-edits · block-destructive-git · block-outside-moves
 ├─ /posttooluse ─── eslint · retardify-code · retardify-file
@@ -39,11 +39,11 @@ TABLE OF CONTENTS
 
 | /operator                    | /gitgud                | /retardify         | hooks                           |
 |------------------------------|------------------------|--------------------|---------------------------------|
-| [:setup](#setup)             | [:audit](#audit)       | [:file](#file)     | [pretooluse](#pretooluse)       |
-| [:credentials](#credentials) | [:backup](#backup)     | [:code](#code)     | [posttooluse](#posttooluse)     |
-| [:permissions](#permissions) | [:continue](#continue) | [:output](#output) | [sessionstart](#sessionstart)   |
-| [:scripts](#scripts)         | [:deliver](#deliver)   | [:plan](#plan)     | [taskcompleted](#taskcompleted) |
-| [:settings](#settings)       | [:prune](#prune)       | [:graph](#graph)   | [stop](#stop)                   |
+| [:setup](#setup)             | [:audit](#audit)       | [:file](#file)     | [sessionstart](#sessionstart)   |
+| [:credentials](#credentials) | [:backup](#backup)     | [:code](#code)     | [stop](#stop)                   |
+| [:permissions](#permissions) | [:continue](#continue) | [:output](#output) | [pretooluse](#pretooluse)       |
+| [:scripts](#scripts)         | [:deliver](#deliver)   | [:plan](#plan)     | [posttooluse](#posttooluse)     |
+| [:settings](#settings)       | [:prune](#prune)       | [:graph](#graph)   | [taskcompleted](#taskcompleted) |
 | [:issues](#issues)           | [:nuke](#nuke)         | [:quiz](#quiz)     |                                 |
 |                              | [:rerun](#rerun)       | [:manual](#manual) |                                 |
 |                              | [:ship](#ship)         | [:review](#review) |                                 |
@@ -699,7 +699,7 @@ effort: high
 license: MIT
 compatibility: requires bash, curl, git
 description: bucket uncommitted work into atomic, single-purpose PRs, gate the plan, then hand back every block of it
-argument-hint: "[--help] [--debug] [--finished]"
+argument-hint: "[--help] [--debug] [--finished] [guidance]"
 disable-model-invocation: true
 metadata:
   kind: trigger
@@ -708,6 +708,9 @@ metadata:
 **a messy tree becomes single-purpose PRs:** bucketed, ordered and written, ready to paste
 - bucketing, ordering and message drafting are the reasoning it does for you
 - each bucket: branch, commit, push, PR, auto-merge, then back to the trunk
+- free text after the flags is bucketing guidance, as in `keep the readme out of the hook bucket`
+- an apostrophe in that guidance is safe, since the invocation quotes it
+- guidance narrows how work groups; it never authorizes running a block
 - runs none of it; every bucket is a block you paste into your own terminal
 
 #### Prune
@@ -983,20 +986,17 @@ model: opus
 effort: high
 license: MIT
 compatibility: requires bash, git
-description: output style linter run by the stop hook, or on a reply file or stdin via <path> argument
+description: output style linter run by the stop hook or via <path> argument
 argument-hint: "[--help] <path>|-"
 disable-model-invocation: true
 metadata:
   kind: trigger
 ---
 ```
-
-**the reply graded against the spec:** findings carry the spec's own addresses, never prose
+**every reply is linted:** against the output style rules to keep conversations consistent
+- used by the `retardify-output.sh` `stop` hook automatically but can be used manually for debugging
 - grades the mechanically checkable rules: B1 markup, B2 prose, B6 shapes, C2 width, C8 ceiling
-- HARD findings block a stop-hook turn; SOFT ones only ride along with a hard one
-- reads the width and the ceiling from the style copy beside it, so the spec stays the one source
-- C10 exemptions hold: code, terminal output, quoted content and tables are never graded
-- the stop action `retardify-output.sh` is its one automated caller, and degrades without it
+- blocks on HARD findings and quotes the offending line so the fix is mechanical
 
 #### Plan
 ```
@@ -1172,116 +1172,6 @@ metadata:
 > in a settings scope, since a settings `hooks` block takes the same JSON shape as `hooks.json`;
 > handler identity is the command string, so one string in two scopes runs once, two spellings twice
 
-### pretooluse
-> fires before every Bash call; each action reads the whole command string and can deny it
-
-#### pretooluse/block-destructive-git
-```
-plugins/operator/hooks/pretooluse/block-destructive-git.sh
-```
-```yaml
----
-name: block-destructive-git
-description: denies force pushes, force branch deletes, non-ff merges and unsafe switches before bash runs them
----
-```
-
-**the four git verbs that lose work:** denied on the whole string, handed back to the user
-- depends on no sibling plugin; one self-contained file plus `jq`
-- decides one thing: does the command carry a destructive git shape anywhere in its string
-- force push, force branch delete, a merge without `--ff-only`, a switch that creates or discards
-- deny rules are prefix-anchored and miss trailing flags, which is the gap this action closes
-- costs one process spawn per Bash call, measured at roughly 60ms
-
-#### pretooluse/block-policy-edits
-```
-plugins/operator/hooks/pretooluse/block-policy-edits.sh
-```
-```yaml
----
-name: block-policy-edits
-description: denies bash writers, heredocs and redirects aimed at settings, hooks and other policy paths
----
-```
-
-**the write the Edit rules never see:** bash reaches policy files, so this gate reads bash
-- depends on no sibling plugin; needs `shared/commands.sh` beside it, and `jq`
-- decides one thing: does an unquoted segment aim a writer, heredoc or redirect at a policy path
-- an interpreter beside a policy path counts as a writer, and a runtime-resolved target denies
-- splits compounds on unquoted `&|;` only, so a quoted `sed 's|a|b|'` cannot tear itself apart
-- costs one process spawn per Bash call, measured at roughly 60ms
-
-#### pretooluse/block-outside-moves
-```
-plugins/operator/hooks/pretooluse/block-outside-moves.sh
-```
-```yaml
----
-name: block-outside-moves
-description: denies any mv whose destination lands outside the repo, where git cannot recover it
----
-```
-
-**a move out of the repo deletes it from git's reach:** nothing staged survives, so it denies
-- depends on no sibling plugin; needs `shared/commands.sh` beside it, and `jq`
-- decides one thing: does an `mv` segment's destination resolve outside the repo root
-- an in-repo rename passes silently, so ordinary refactors never pay for the check
-- costs one process spawn per Bash call, measured at roughly 60ms
-
-### posttooluse
-> fires after every Write or Edit lands; findings return as context, never as failures
-
-#### posttooluse/eslint
-```
-plugins/operator/hooks/posttooluse/eslint.sh
-```
-```yaml
----
-name: eslint
-description: runs eslint --fix on every js, jsx, ts and tsx write, silently and in place
----
-```
-
-**mechanical fixes before human ones:** what a formatter can fix never reaches the linters
-- depends on no sibling plugin; uses `npx eslint` when the host project carries one
-- decides nothing: fixes land in place, and unfixable findings stay for the linters
-- silent for every other file type, and silent when eslint is absent
-- costs one process spawn per write, plus eslint's own runtime on matching files
-
-#### posttooluse/retardify-file
-```
-plugins/operator/hooks/posttooluse/retardify-file.sh
-```
-```yaml
----
-name: retardify-file
-description: returns file-shape findings as context after each write, capped and truncation-honest
----
-```
-
-**the shape around the logic:** findings come back as context, and the agent fixes them next turn
-- depends on the retardify plugin: it runs `/retardify:file`'s sidecar, and degrades without it
-- carries its own cap of 10 findings, independent of its siblings, and says how many it hid
-- silent when nothing is wrong, so a clean file costs one exit and no context
-- costs one process spawn plus one sidecar run per write
-
-#### posttooluse/retardify-code
-```
-plugins/operator/hooks/posttooluse/retardify-code.sh
-```
-```yaml
----
-name: retardify-code
-description: returns code-legibility findings as context after each write, capped and truncation-honest
----
-```
-
-**the mechanics inside the logic:** findings come back as context, and the agent fixes them next turn
-- depends on the retardify plugin: it runs `/retardify:code`'s sidecar, and degrades without it
-- carries its own cap of 10 findings, independent of its siblings, and says how many it hid
-- silent when nothing is wrong, so a clean file costs one exit and no context
-- costs one process spawn plus one sidecar run per write
-
 ### sessionstart
 > fires at session start; each action owns one payload, and the harness caps each at 10000 chars
 
@@ -1337,25 +1227,24 @@ description: injects the dirty working tree with ages and owners, so agents noti
 - closes on the directive that stops a foreign stage, revert or commit
 - costs one process spawn and a `git status` per session start
 
-### taskcompleted
-> fires when a task completes; blocking is feedback here, the completion itself still stands
-
-#### taskcompleted/append-log
+#### sessionstart/inject-support
 ```
-plugins/operator/hooks/taskcompleted/append-log.sh
+plugins/operator/hooks/sessionstart/inject-support.sh
 ```
 ```yaml
 ---
-name: append-log
-description: blocks a completing task until a note lands in today's log, and does nothing else
+name: inject-support
+description: injects how to report a plugin defect, branching on source checkout versus install
 ---
 ```
 
-**the log is a precondition, not a chore:** no task closes on unwritten work
-- depends on the retardify plugin's log spec for the note's shape, `/retardify:log`
-- blocks with the ask; the agent is what writes, which is why the name says demand
-- a missing log file is treated as nothing, since `inject-log` owns the stub
-- costs one process spawn per completed task
+**where this plugin lives decides how a defect gets fixed:** edit the source, report the install
+- depends on no sibling plugin; one self-contained file plus `jq`
+- source mode fires when the plugin tree sits under the project root, and nudges for an issue
+- install mode names the version and the pinned commit read from the marketplace ledger
+- states the real failure: an update strands a local patch in an old version directory
+- hands the agent a `gh issue create` shape plus the url fallback, and keeps filing optional
+- costs one process spawn and two `jq` reads per session start
 
 ### stop
 > fires when a turn tries to end; each action blocks independently, and both asks arrive whole
@@ -1393,6 +1282,136 @@ description: blocks a closing turn while today's log carries pending notes or ov
 - greppable state decides: pending notes and oversized threads, debounced five minutes
 - an hourly full pass backstops what no grep can see; a missing log asks for nothing
 - costs one process spawn and a few greps per turn end
+
+### pretooluse
+> fires before every Bash call; each action reads the whole command string and can deny it
+
+#### pretooluse/block-policy-edits
+```
+plugins/operator/hooks/pretooluse/block-policy-edits.sh
+```
+```yaml
+---
+name: block-policy-edits
+description: denies bash writers, heredocs and redirects aimed at settings, hooks and other policy paths
+---
+```
+
+**the write the Edit rules never see:** bash reaches policy files, so this gate reads bash
+- depends on no sibling plugin; needs `shared/commands.sh` beside it, and `jq`
+- decides one thing: does an unquoted segment aim a writer, heredoc or redirect at a policy path
+- an interpreter beside a policy path counts as a writer, and a runtime-resolved target denies
+- splits compounds on unquoted `&|;` only, so a quoted `sed 's|a|b|'` cannot tear itself apart
+- costs one process spawn per Bash call, measured at roughly 60ms
+
+#### pretooluse/block-destructive-git
+```
+plugins/operator/hooks/pretooluse/block-destructive-git.sh
+```
+```yaml
+---
+name: block-destructive-git
+description: denies force pushes, force branch deletes, non-ff merges and unsafe switches before bash runs them
+---
+```
+
+**the four git verbs that lose work:** denied on the whole string, handed back to the user
+- depends on no sibling plugin; one self-contained file plus `jq`
+- decides one thing: does the command carry a destructive git shape anywhere in its string
+- force push, force branch delete, a merge without `--ff-only`, a switch that creates or discards
+- deny rules are prefix-anchored and miss trailing flags, which is the gap this action closes
+- costs one process spawn per Bash call, measured at roughly 60ms
+
+#### pretooluse/block-outside-moves
+```
+plugins/operator/hooks/pretooluse/block-outside-moves.sh
+```
+```yaml
+---
+name: block-outside-moves
+description: denies any mv whose destination lands outside the repo, where git cannot recover it
+---
+```
+
+**a move out of the repo deletes it from git's reach:** nothing staged survives, so it denies
+- depends on no sibling plugin; needs `shared/commands.sh` beside it, and `jq`
+- decides one thing: does an `mv` segment's destination resolve outside the repo root
+- an in-repo rename passes silently, so ordinary refactors never pay for the check
+- costs one process spawn per Bash call, measured at roughly 60ms
+
+### posttooluse
+> fires after every Write or Edit lands; findings return as context, never as failures
+
+#### posttooluse/eslint
+```
+plugins/operator/hooks/posttooluse/eslint.sh
+```
+```yaml
+---
+name: eslint
+description: runs eslint --fix on every js, jsx, ts and tsx write, silently and in place
+---
+```
+
+**mechanical fixes before human ones:** what a formatter can fix never reaches the linters
+- depends on no sibling plugin; uses `npx eslint` when the host project carries one
+- decides nothing: fixes land in place, and unfixable findings stay for the linters
+- silent for every other file type, and silent when eslint is absent
+- costs one process spawn per write, plus eslint's own runtime on matching files
+
+#### posttooluse/retardify-code
+```
+plugins/operator/hooks/posttooluse/retardify-code.sh
+```
+```yaml
+---
+name: retardify-code
+description: returns code-legibility findings as context after each write, capped and truncation-honest
+---
+```
+
+**the mechanics inside the logic:** findings come back as context, and the agent fixes them next turn
+- depends on the retardify plugin: it runs `/retardify:code`'s sidecar, and degrades without it
+- carries its own cap of 10 findings, independent of its siblings, and says how many it hid
+- silent when nothing is wrong, so a clean file costs one exit and no context
+- costs one process spawn plus one sidecar run per write
+
+#### posttooluse/retardify-file
+```
+plugins/operator/hooks/posttooluse/retardify-file.sh
+```
+```yaml
+---
+name: retardify-file
+description: returns file-shape findings as context after each write, capped and truncation-honest
+---
+```
+
+**the shape around the logic:** findings come back as context, and the agent fixes them next turn
+- depends on the retardify plugin: it runs `/retardify:file`'s sidecar, and degrades without it
+- carries its own cap of 10 findings, independent of its siblings, and says how many it hid
+- silent when nothing is wrong, so a clean file costs one exit and no context
+- costs one process spawn plus one sidecar run per write
+
+### taskcompleted
+> fires when a task completes; blocking is feedback here, the completion itself still stands
+
+#### taskcompleted/append-log
+```
+plugins/operator/hooks/taskcompleted/append-log.sh
+```
+```yaml
+---
+name: append-log
+description: blocks a completing task until a note lands in today's log, and does nothing else
+---
+```
+
+**the log is a precondition, not a chore:** no task closes on unwritten work
+- depends on the retardify plugin's log spec for the note's shape, `/retardify:log`
+- blocks with the ask; the agent is what writes, which is why the name says demand
+- a missing log file is treated as nothing, since `inject-log` owns the stub
+- costs one process spawn per completed task
 
 ## Styles
 

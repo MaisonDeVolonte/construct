@@ -5,7 +5,7 @@ effort: high
 license: MIT
 compatibility: requires bash, curl, git
 description: bucket uncommitted work into atomic, single-purpose PRs, gate the plan, then hand back every block of it
-argument-hint: "[--help] [--debug] [--finished]"
+argument-hint: "[--help] [--debug] [--finished] [guidance]"
 disable-model-invocation: true
 metadata:
   kind: trigger
@@ -13,19 +13,24 @@ metadata:
 **a messy tree becomes single-purpose PRs:** bucketed, ordered and written, ready to paste
 - bucketing, ordering and message drafting are the reasoning it does for you
 - each bucket: branch, commit, push, PR, auto-merge, then back to the trunk
+- free text after the flags is bucketing guidance, as in `keep the readme out of the hook bucket`
+- an apostrophe in that guidance is safe, since the invocation quotes it
+- guidance narrows how work groups; it never authorizes running a block
 - runs none of it; every bucket is a block you paste into your own terminal
 
 # Instructions
 
 ## Telemetry
 ```!
-"${CLAUDE_PLUGIN_ROOT}"/skills/deliver/deliver.sh $ARGUMENTS
+"${CLAUDE_PLUGIN_ROOT}"/skills/deliver/deliver.sh "$ARGUMENTS"
 echo "sidecar exit: $?"
 ```
 - `help: requested` → the run was refused before it started; `## Help` below is the whole turn
 - it already ran, so there is no command to issue
 - fail (`sidecar exit` > 0) → abort and report: "<raw terminal error>"
 - success (`sidecar exit` = 0) → capture `default branch` from the telemetry
+- IF `guidance` reads anything but `none`, it is the user's bucketing instruction; honor it in step 1
+- guidance narrows how work groups; it never authorizes running a block or skipping the gate
 - IF the handover block names any prep command, hand it over and WAIT before step 2
 - the preflight measures only, so the tree is still wherever the user left it
 - bucketing against an unsynced trunk drafts commits the user then has to redo
@@ -69,18 +74,20 @@ $ATOMIC_BRANCH # atomic-type/atomic-scope/atomic-title-slug
 $ATOMIC_DESCRIPTION # multiline string of hyphen-delimited bullets
 $ATOMIC_COMMIT # $ATOMIC_TYPE($ATOMIC_SCOPE): $ATOMIC_TITLE
 ```
-- emit the plan as a table, one row per bucket, and nothing runnable yet
+- emit the plan as ONE fenced block, questions first, then the buckets, and nothing runnable yet
   ```text
-  | # | commit | files | depends on |
-  |---|--------|-------|------------|
-  | 1 | type(scope): title | n files | — |
-  | 2 | type(scope): title | n files | 1 |
+  a. every question you need answered, one per line, or omit this section entirely
+  b. a withheld file, a blocked gate or a type you are unsure of each earn a line here
+
+  1. type(scope): title (n files)
+  2. type(scope): title (n files, after 1)
   ```
-- name what each bucket delivers, and what it deliberately leaves to a later one
-- mark any two buckets INDEPENDENT when their files are disjoint and neither references the other
-- say plainly why a bucket cannot be split further when it looks large; a security-shaped
-  grouping (a permission and the guard that bounds it) is atomic even at six files
-- ask: "does this bucketing look right? say go and I'll emit every block"
+- the fence is the whole plan; a reader scanning it must not have to find prose between the rows
+- a dependency rides in its own bucket's parentheses, so INDEPENDENT is the unmarked default
+- every caveat becomes a lettered question above, never a paragraph beside the list
+- what a bucket leaves to a later one belongs in that later bucket's title, not in prose
+- a bucket that cannot be split further says so as a question, since that is a judgment to confirm
+- close with: "does this bucketing look right? say go and I'll emit every block"
 - STOP here and WAIT; the plan is the gate, and a wrong bucket costs nothing to fix at this point
 
 3. verify every bucket before emitting a single block, since a red PR costs a round trip
