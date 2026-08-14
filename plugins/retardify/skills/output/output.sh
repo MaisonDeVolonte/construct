@@ -5,19 +5,19 @@
 # @description
 # PAIR
 # - sidecar for `/retardify:output` — grades one reply against the Output Style spec
-# - findings carry the spec's own addresses, so a report reads B1, B2, L2 or L8 rather than prose
-# - B3, S1 to S4, L1, L4 to L7 and every Evidence row stay the agent's job; no grep can judge them
+# - findings carry the spec's own addresses, so a report reads B1, B2, C2 or C8 rather than prose
+# - B3, F1 to F7, C1, C4 to C7 and every Grounding row stay the agent's job; no grep can judge them
 # - reads a file holding the reply text, or stdin when the path is `-`
 # - the stop action `retardify-output.sh` calls it the same way a user does
 # NUMBERS
 # - the width and the ceiling are read from the style copy beside this skill, never restated
 # - the hardcoded constants only hold when that copy is absent, so the spec stays the one source
 # TIERS
-# - HARD findings block a turn: B1 markup, L2 width, L8 ceiling, and B2 once prose mode has won
+# - HARD findings block a turn: B1 markup, C2 width, C8 ceiling, and B2 once prose mode has won
 # - SOFT findings only ride along with a hard one, since one stray prose line is a nit
 # - B2 stays soft until it passes WRAP_TOLERANCE, which is the line between a nit and paragraphs
 # EXEMPT
-# - L10 names them: code, terminal output, quoted content and tables, plus blank lines from L3
+# - C10 names them: code, terminal output, quoted content and tables, plus blank lines from C3
 # - a fence closes only on a delimiter at least as long as the one that opened it
 # - that is what stops a nested block from ending the wider fence around it early
 # - a fence, a table or a quote may sit indented under a list item, so leading space is shed first
@@ -34,9 +34,9 @@ case " $* " in *" --help "*|*" -h "*) echo "help: requested"; exit 0;; esac
 
 # the style copy beside this skill owns the numbers; the constants only hold when it is absent
 STYLE_COPY="$(dirname "${BASH_SOURCE[0]}")/../../output-styles/operator.md"
-MAX_WIDTH=$(sed -n 's/.*\[L2\] lines: max \([0-9]\{1,\}\).*/\1/p' "$STYLE_COPY" 2>/dev/null | head -n 1)
+MAX_WIDTH=$(sed -n 's/.*\[C2\] lines:.*[^0-9]\([0-9]\{1,\}\) characters.*/\1/p' "$STYLE_COPY" 2>/dev/null | head -n 1)
 MAX_WIDTH=${MAX_WIDTH:-100}
-MAX_LINES=$(sed -n 's/.*\[L8\] reply ceiling: \([0-9]\{1,\}\).*/\1/p' "$STYLE_COPY" 2>/dev/null | head -n 1)
+MAX_LINES=$(sed -n 's/.*\[C8\] reply ceiling:[^0-9]*\([0-9]\{1,\}\).*/\1/p' "$STYLE_COPY" 2>/dev/null | head -n 1)
 MAX_LINES=${MAX_LINES:-30}
 # a stray prose line is a nit; four of them is a paragraph, which is the failure worth blocking
 WRAP_TOLERANCE=3
@@ -101,22 +101,22 @@ while IFS= read -r raw; do
     hard B1 "$LINE" "bold or italic; a LABEL: carries the emphasis instead"
   fi
 
-  # L10 exempts a table row and quoted content, so neither earns a width or a shape finding
+  # C10 exempts a table row and quoted content, so neither earns a width or a shape finding
   case "$text" in
     '|'*|'>'*) continue;;
   esac
 
   if [ ${#raw} -gt "$MAX_WIDTH" ]; then
-    hard L2 "$LINE" "${#raw} chars against a $MAX_WIDTH cap; cut it, do not wrap it"
+    hard C2 "$LINE" "${#raw} chars against a $MAX_WIDTH cap; cut it, do not wrap it"
   fi
 
-# b4's shapes: an epigram is matchable where "plainly spoken" is not, so name the forms
+# b6's shapes: an epigram is matchable where "plainly spoken" is not, so name the forms
 if [[ $text =~ (is|are)\ not\ .+,\ (it|that|they)\ (is|are) ]] \
 || [[ $text =~ [a-z]\ beats\ [a-z] ]] \
 || [[ $text =~ (^|[[:space:]])[Nn]o\ [a-z]+\ without\ [a-z] ]] \
 || [[ $text =~ ,\ never\ [a-z]+([[:space:]][a-z]+)?$ ]] \
 || [[ $text =~ ,\ not\ (a|an|the|its|their)?[[:space:]]?[a-z]+([[:space:]][a-z]+)?$ ]]; then
-soft B4 "$LINE" "epigram shape; name what it does, in the order it does it"
+soft B6 "$LINE" "epigram shape; name what it does, in the order it does it"
 fi
 
   # b2's own definition: anything that is none of the allowed shapes is a wrapped prose line
@@ -132,7 +132,7 @@ if [ "$FENCE_LEN" -ne 0 ]; then
 fi
 
 if [ "$COUNTED" -gt "$MAX_LINES" ]; then
-  hard L8 0 "$COUNTED lines against a $MAX_LINES ceiling; cut, log the rest, cite the log"
+  hard C8 0 "$COUNTED lines against a $MAX_LINES ceiling; cut, log the rest, cite the log"
 fi
 
 # soft findings never block alone, but a reply that has gone fully prose is not a nit any more

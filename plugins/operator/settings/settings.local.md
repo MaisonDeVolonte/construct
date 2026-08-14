@@ -35,7 +35,7 @@
 "hooks": {
   "SessionStart": [{ "hooks": [
     { "type": "command", "command": "plugins/operator/hooks/sessionstart/inject-readme.sh" },
-    { "type": "command", "command": "plugins/operator/hooks/sessionstart/inject-logs.sh" },
+    { "type": "command", "command": "plugins/operator/hooks/sessionstart/inject-log.sh" },
     { "type": "command", "command": "plugins/operator/hooks/sessionstart/inject-changes.sh" }
   ] }],
   "PreToolUse": [{ "matcher": "Bash", "hooks": [
@@ -48,10 +48,10 @@
     { "type": "command", "command": "plugins/operator/hooks/posttooluse/retardify-file.sh", "timeout": 120 },
     { "type": "command", "command": "plugins/operator/hooks/posttooluse/retardify-code.sh", "timeout": 120 }
   ] }],
-  "TaskCompleted": [{ "hooks": [{ "type": "command", "command": "plugins/operator/hooks/taskcompleted/demand-log-note.sh" }] }],
+  "TaskCompleted": [{ "hooks": [{ "type": "command", "command": "plugins/operator/hooks/taskcompleted/append-log.sh" }] }],
   "Stop": [{ "hooks": [
     { "type": "command", "command": "plugins/operator/hooks/stop/retardify-output.sh" },
-    { "type": "command", "command": "plugins/operator/hooks/stop/demand-log-synthesis.sh" }
+    { "type": "command", "command": "plugins/operator/hooks/stop/synthesize-log.sh" }
   ] }]
 }
 ```

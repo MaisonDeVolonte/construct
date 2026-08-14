@@ -4,15 +4,15 @@
     "plugins/gitgud/README.md",
     "plugins/retardify/README.md"
   ],
-  "## Output Style": [
+  "### Output Style": [
     "plugins/operator/output-styles/operator.md",
     "plugins/gitgud/output-styles/operator.md",
     "plugins/retardify/output-styles/operator.md"
   ],
-  "## Secrets": [
-    "plugins/operator/shared/secrets.sh",
-    "plugins/gitgud/shared/secrets.sh",
-    "plugins/retardify/shared/secrets.sh"
+  "### Subagent Style": [
+    "plugins/operator/subagent-styles/operator.md",
+    "plugins/gitgud/subagent-styles/operator.md",
+    "plugins/retardify/subagent-styles/operator.md"
   ],
   "#### Suite Audit": "plugins/operator/skills/audit/SKILL.md",
   "#### Credentials": "plugins/operator/skills/credentials/SKILL.md",
@@ -45,9 +45,9 @@
   "#### posttooluse/retardify-file": "plugins/operator/hooks/posttooluse/retardify-file.md",
   "#### posttooluse/retardify-code": "plugins/operator/hooks/posttooluse/retardify-code.md",
   "#### sessionstart/inject-readme": "plugins/operator/hooks/sessionstart/inject-readme.md",
-  "#### sessionstart/inject-logs": "plugins/operator/hooks/sessionstart/inject-logs.md",
+  "#### sessionstart/inject-log": "plugins/operator/hooks/sessionstart/inject-log.md",
   "#### sessionstart/inject-changes": "plugins/operator/hooks/sessionstart/inject-changes.md",
-  "#### taskcompleted/demand-log-note": "plugins/operator/hooks/taskcompleted/demand-log-note.md",
+  "#### taskcompleted/append-log": "plugins/operator/hooks/taskcompleted/append-log.md",
   "#### stop/retardify-output": "plugins/operator/hooks/stop/retardify-output.md",
-  "#### stop/demand-log-synthesis": "plugins/operator/hooks/stop/demand-log-synthesis.md"
+  "#### stop/synthesize-log": "plugins/operator/hooks/stop/synthesize-log.md"
 }

@@ -1,6 +1,6 @@
 #!/bin/bash
 # ======================================================
-# @file inject-logs.sh - recent log threads into context
+# @file inject-log.sh - recent log threads into context
 # ======================================================
 # @description
 # - fires at session start: injects the newest log threads under a `## recent threads` heading

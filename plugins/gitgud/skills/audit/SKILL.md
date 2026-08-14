@@ -78,7 +78,7 @@ the counts as hyphen bullets: what the tree is made of, and what each section me
 *example:*
 > - 78 tracked files across 3 plugins, carrying 19 skills and 6 hooks
 > - 19 skill docs, 0 missing a sidecar and 0 sidecars missing a doc
-> - 3 secrets.sh copies, all byte identical, against 3 plugins
+> - 2 secrets.sh copies, all byte identical, against 2 calling plugins
 
 ### findings
 one bullet per issue, leading with the label this doc assigns
@@ -89,12 +89,12 @@ one bullet per issue, leading with the label this doc assigns
 | `Orphan Pair` | a doc with no sidecar, or a sidecar with no doc |
 | `Unpinned Version` | a manifest version of `unset`, so every commit reads as a new release |
 | `Catalog Gap` | fewer catalog entries than plugins, so an installed bundle cannot resolve |
-| `Shared Drift` | the `secrets.sh` copies disagree, which duplication only survives while they match |
-| `Missing Copy` | fewer copies than plugins, so a plugin cannot reach the library at all |
+| `Shared Drift` | the `secrets.sh` copies disagree, and this audit is the only thing comparing them |
+| `Missing Copy` | a plugin calling `scan_secrets` with no copy beside it, so the sidecar cannot load |
 | `Stale Artifact` | a kind whose newest file is old, meaning its writer stopped being run |
 
 *example:*
-> - **Shared Drift** — 2 versions across 3 secrets.sh copies; retardify holds the stale one
+> - **Shared Drift** — 2 versions across 2 secrets.sh copies; retardify holds the stale one
 > - **Stale Artifact** — `.construct/operator/credentials/` has not been written since 2026-08-01
 > - **Unpinned Version** — gitgud and retardify both carry `version: unset`
 
@@ -162,7 +162,7 @@ SPEC: <this doc's own path>
 - name the flag or the sibling skill that fits their answer, then STOP
 - run no step, write no file, and never fall through to step 1
 
-## Output Style
+## Subagent Style
 ```!
-awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
+awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/subagent-styles/operator.md"
 ```

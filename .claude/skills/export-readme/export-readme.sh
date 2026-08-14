@@ -194,11 +194,16 @@ plugin_of() {
   printf '%s' "$1" | sed -n 's|.*plugins/\([a-z][a-z-]*\)/.*|\1|p'
 }
 
-# an output style is mapped like a skill and checked like almost nothing: it carries no kind, no
-# invocation and no listing entry, so the fields that route one are dead config on it
+# a style earns name and description only; the harness scans output-styles/ and never its sibling
 is_style() {
-  case "$1" in */output-styles/*.md) return 0;; *) return 1;; esac
+  case "$1" in */output-styles/*.md|*/subagent-styles/*.md) return 0;; *) return 1;; esac
 }
+
+# a skill pastes the brief into every invocation, so an uncapped one stops being light unseen
+is_brief() {
+  case "$1" in */subagent-styles/*.md) return 0;; *) return 1;; esac
+}
+BRIEF_CAP=2500
 
 # a hook action's doc is style-shaped for the same reason: nothing invokes it by name, so it earns
 # name and description only, and the drift compare is the reason it is mapped at all
@@ -360,6 +365,16 @@ while IFS=$'\t' read -r heading skill; do
     fi
   done
 
+  # the brief is pasted into every skill invocation, so its size is the contract, not a nit
+  if is_brief "$skill"; then
+    bytes=$(wc -c < "$newtop" | tr -d ' ')
+    if [ "$bytes" -gt "$BRIEF_CAP" ]; then
+      err "$SOURCE" "$hline" brief_too_large \
+        "'$heading' renders $bytes bytes against a $BRIEF_CAP cap; cut a section, do not wrap it"
+      blocked=1
+    fi
+  fi
+
   # a style or a hook doc is not listed, not invoked and has no kind, so the rules below judge
   # fields it would never carry; everything after them is the drift compare it is mapped for
   if is_style "$skill" || is_hookdoc "$skill"; then
@@ -495,17 +510,10 @@ if [ ${#ONLY[@]} -eq 0 ]; then
     fi
   done
   # a style copy the map misses is the drift this fan-out exists to stop, so it is an ERROR too
-  for style in plugins/*/output-styles/*.md; do
+  for style in plugins/*/output-styles/*.md plugins/*/subagent-styles/*.md; do
     [ -f "$style" ] || continue
     if ! grep -qFx "$style" "$SCRATCH/mapped"; then
       err "$style" 1 unmapped_style "no map entry, so this copy can drift from the readme unseen"
-    fi
-  done
-  # the secrets copies fan out the same way the styles do, so an unmapped one is the same failure
-  for script in plugins/*/shared/secrets.sh; do
-    [ -f "$script" ] || continue
-    if ! grep -qFx "$script" "$SCRATCH/mapped"; then
-      err "$script" 1 unmapped_script "no map entry, so this copy can drift from the readme unseen"
     fi
   done
   # a plugin root readme is the same fan-out again, and a stale one is the copy a marketplace

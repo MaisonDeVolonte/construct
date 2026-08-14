@@ -2,7 +2,7 @@
 name: export-readme
 description: "The readme is the source of truth: sections land on skill tops, styles and scripts, the file on plugin roots."
 argument-hint: "[--help] [--check] [<skill>...]"
-when_to_use: "Editing any skill's frontmatter or preamble, a style or secrets.sh copy, or wiring a new section into the export map. Also after ANY README.md edit, since each plugin root carries a byte-identical copy, or when a managed region and its readme section disagree."
+when_to_use: "Editing any skill's frontmatter or preamble, an output style copy, or wiring a new section into the export map. Also after ANY README.md edit, since each plugin root carries a byte-identical copy, or when a managed region and its readme section disagree."
 disable-model-invocation: true
 metadata:
   kind: spec
@@ -22,29 +22,32 @@ the readme's mapped sections are the source of truth for every managed region:
   below that heading belongs to the skill and is never touched
 
 ## the output style
-`## Output Style` maps to one `output-styles/operator.md` per plugin, and the three copies exist
-only because a plugin has to reach its own file through `CLAUDE_PLUGIN_ROOT`:
+`### Output Style` maps to one `output-styles/operator.md` per plugin and `### Subagent Style` to
+one `subagent-styles/operator.md`; the copies exist so each plugin reaches its own `CLAUDE_PLUGIN_ROOT`:
 
 - a style file carries no body heading, so its managed region is the whole file
 - it earns `name` and `description` and nothing else; kind, license and the listing cap route an
   invocation a style never has
 - `name:` must match the file, not a folder, since a style owns a file rather than a directory
-- full runs sweep `plugins/*/output-styles/*.md` too; an unmapped copy is an ERROR, since drifting
-  unseen is the exact failure the fan-out exists to stop
+- full runs sweep `plugins/*/output-styles/*.md` and its `subagent-styles/` sibling; an unmapped
+  copy is an ERROR, since drifting unseen is the exact failure the fan-out exists to stop
+- the subagent copy earns a 2500-byte cap, since every skill pastes it into every invocation
+- over the cap is an ERROR that blocks its own section: cut a rule, never wrap one
 - never edit a copy: fix the readme section, then re-export all three
 
 ## the scripts
-`## Secrets` maps to one `shared/secrets.sh` per plugin, the same fan-out for the same reason: an
-install copies one plugin's directory and never a sibling, so the file cannot be shared:
+a section may map to a shell script instead of a skill doc; NO section does today, since the
+`shared/` libraries were unhooked once none of them fanned out to every plugin:
 
 - a script section carries one ```bash fence; the fence's inner lines become the file, verbatim
 - the prose around the fence is readme documentation and never lands in a copy
 - a script has no frontmatter, so every yaml rule skips it; the fence must open `#!/bin/bash`
 - the whole file is the managed region and a stale copy is replaced whole; there is no merge,
   since two edited copies is a mistake not a branch
-- full runs sweep `plugins/*/shared/secrets.sh` too, so a new plugin's copy cannot drift unmapped
-- `/gitgud:audit` reports copy drift and stays read-only; a bare run scoped to `secrets` is the repair
-- never edit a copy: fix the readme fence, then re-export all three
+- a data file cannot be a target at all, since the fence must open with a shebang
+- `shared/secrets.sh` is duplicated in operator and retardify, and `/gitgud:audit` md5s the copies
+- that audit is now the ONLY thing comparing them, so a red `Shared Drift` is the whole signal
+- never edit a copy alone: change both, then re-run `/gitgud:audit` to prove they still match
 
 ## the readme copies
 `README.md` maps to one copy per plugin root, and this entry names no section: the source file
@@ -66,8 +69,8 @@ itself is what lands, byte for byte, since an install takes one plugin's directo
 - `--check` writes nothing and exits 1 on any drift or ERROR; this is the one mode ci runs
 - the drift table names each skill, which half moved (frontmatter, preamble, or both), the line
   delta, and which side moved last
-- scope either mode with skill names (`credentials` or `operator:credentials`; `secrets` and
-  `readme` each scope their fan-out)
+- scope either mode with skill names (`credentials` or `operator:credentials`; `readme` scopes
+  its own fan-out)
 - the map and the source are fixed paths, edited by hand; no flag swaps either one
 
 ## the checks
@@ -89,7 +92,7 @@ lands; validate-skills owns the body, the sidecar, the pairing, and the index, a
 - a readme copy earns none of them either; its plugin directory missing is its one ERROR
 - a heading the readme lacks, a duplicated heading, a section with no yaml fence, or a mapped
   file that does not exist are each an ERROR naming the exact readme or skill line
-- full runs sweep coverage both ways: a SKILL.md, style, secrets or readme copy on disk with no map
+- full runs sweep coverage both ways: a SKILL.md, style or readme copy on disk with no map
   entry is an ERROR, and a catalog `####` heading the map never names is a WARN; scoped runs skip it
 - an ERROR blocks only its own skill; every other drifted section still exports
 
@@ -113,7 +116,7 @@ drift can be legitimate in either direction, so the fresher copy is never writte
 - RECONCILE every copy_newer refusal deliberately; source of truth means the readme wins by default, not always
 - FIX every ERROR in the readme section the finding points at, then re-run
 - RUN `.claude/skills/validate-skills/validate-skills.sh` after an export, since the skill docs just changed
-- RE-RUN every sidecar sourcing secrets.sh after its fence changes, since a pattern change moves their findings
+- RE-RUN `/gitgud:audit` after editing either secrets.sh copy, since nothing else compares them now
 - COMMIT the readme and every exported copy together; a partial commit reintroduces the drift
 
 ## Help

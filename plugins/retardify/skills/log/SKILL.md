@@ -11,7 +11,7 @@ metadata:
 ---
 **today's work, shaped for tomorrow's session:** the next agent reads it instead of asking you
 - threads group work by topic, carrying their own notes and prompts
-- `inject-logs` carries the four most recent threads forward across days
+- `inject-log` carries the four most recent threads forward across days
 - the stop hook demands it, so a turn cannot close on an unwritten day
 
 # .construct/retardify/log/YYYY-MM-DD.md
@@ -146,7 +146,7 @@ SPEC: <this doc's own path>
 - name the flag or the sibling skill that fits their answer, then STOP
 - run no step, write no file, and never fall through to step 1
 
-## Output Style
+## Subagent Style
 ```!
-awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
+awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/subagent-styles/operator.md"
 ```

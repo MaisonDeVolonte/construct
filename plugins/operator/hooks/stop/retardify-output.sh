@@ -12,7 +12,7 @@
 # - the transcript may lag a turn, so findings can describe the reply before the last
 # - degrades to one stderr line when the retardify plugin is not installed beside operator
 # - anchors to the project root first, so the escape files resolve at the repo rather than a cwd
-# @see plugins/retardify/skills/output/, plugins/operator/hooks/hooks.json, plugins/operator/hooks/stop/demand-log-synthesis.sh
+# @see plugins/retardify/skills/output/, plugins/operator/hooks/hooks.json, plugins/operator/hooks/stop/synthesize-log.sh
 
 # hooks inherit the session's cwd, so anchor first; every path below stays relative to the root
 cd "${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}" || exit 0
