@@ -1,6 +1,6 @@
 #!/bin/bash
 # ========================================================
-# @file demand-log-note.sh - blocks until a note is logged
+# @file append-log.sh - blocks until a note is logged
 # ========================================================
 # @description
 # - fires when a task completes: blocks the turn until a note lands in today's log
@@ -9,7 +9,7 @@
 # - a missing log file is treated as nothing, since the sessionstart action owns the stub (see #1)
 # - works with any harness that can read files and follow instructions
 # - anchors to the project root first, since a subdirectory cwd would name a stray log
-# - #1: inject-logs.sh stubs today's file at session start, so a missing one means no log protocol
+# - #1: inject-log.sh stubs today's file at session start, so a missing one means no log protocol
 # @see plugins/retardify/skills/log/SKILL.md, plugins/operator/hooks/hooks.json, .construct/retardify/log/
 
 command -v jq >/dev/null 2>&1 || exit 0

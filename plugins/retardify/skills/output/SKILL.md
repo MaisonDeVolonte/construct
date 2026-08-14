@@ -12,10 +12,10 @@ metadata:
 ---
 
 **the reply graded against the spec:** findings carry the spec's own addresses, never prose
-- grades the mechanically checkable rules: B1 markup, B2 prose, B4 shapes, L2 width, L8 ceiling
+- grades the mechanically checkable rules: B1 markup, B2 prose, B6 shapes, C2 width, C8 ceiling
 - HARD findings block a stop-hook turn; SOFT ones only ride along with a hard one
 - reads the width and the ceiling from the style copy beside it, so the spec stays the one source
-- L10 exemptions hold: code, terminal output, quoted content and tables are never graded
+- C10 exemptions hold: code, terminal output, quoted content and tables are never graded
 - the stop action `retardify-output.sh` is its one automated caller, and degrades without it
 
 # Instructions
@@ -38,9 +38,9 @@ else echo "no path given, so nothing ran; pass a reply file, or - to grade stdin
 |---|---|
 | `B1` | markup outside a list, table, fence or backtick: bold, italics, emoji, fenced plaintext |
 | `B2` | a prose line, or past the tolerance, a reply that has gone fully paragraphs |
-| `B4` | an epigram shape standing in for a plain statement |
-| `L2` | a line wider than the spec's character cap |
-| `L8` | a reply taller than the spec's line ceiling |
+| `B6` | a banned sentence shape standing in for a plain statement |
+| `C2` | a line wider than the spec's character cap |
+| `C8` | a reply taller than the spec's line ceiling |
 
 - line 0 names a whole-reply finding: an unclosed fence, the ceiling, or the prose tolerance
 - the width and ceiling numbers come from `output-styles/operator.md`, read at run time
@@ -73,7 +73,7 @@ SPEC: <this doc's own path>
 - name the flag or the sibling skill that fits their answer, then STOP
 - run no step, write no file, and never fall through to step 1
 
-## Output Style
+## Subagent Style
 ```!
-awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/output-styles/operator.md"
+awk 'NR>1 && /^---$/ {p=1; next} p' "${CLAUDE_PLUGIN_ROOT}/subagent-styles/operator.md"
 ```

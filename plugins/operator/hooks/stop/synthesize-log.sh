@@ -1,6 +1,6 @@
 #!/bin/bash
 # ====================================================================
-# @file demand-log-synthesis.sh - blocks a turn on an unsynthesized log
+# @file synthesize-log.sh - blocks a turn on an unsynthesized log
 # ====================================================================
 # @description
 # - fires when a turn tries to end: asks for a synthesis when the log carries pending work

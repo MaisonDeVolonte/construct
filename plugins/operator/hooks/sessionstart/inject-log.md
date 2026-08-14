@@ -1,5 +1,5 @@
 ---
-name: inject-logs
+name: inject-log
 description: injects the newest log threads into opening context, and stubs today's log file
 ---
 

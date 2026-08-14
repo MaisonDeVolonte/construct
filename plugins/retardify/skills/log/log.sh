@@ -9,7 +9,7 @@
 # ARTIFACT
 # - `.construct/retardify/log/YYYY-MM-DD.md`, one file per day, holding the work and the prompts that drove it
 # - gitignored in this repo; host projects decide for themselves whether to track it
-# - `inject-logs.sh` creates the day's file and `demand-log-synthesis.sh` gates the session on it
+# - `inject-log.sh` creates the day's file and `synthesize-log.sh` gates the session on it
 # - no trigger wraps it: a thread, a note or a synthesis is asked for in plain words
 # - a thread groups work by task or topic; notes and prompts append under the thread they belong to
 # - notes get absorbed into the thread's prose on synthesis; prompts stay a list and get pruned
@@ -170,7 +170,7 @@ check_filename() {
   esac
 }
 
-# `inject-logs.sh` seeds the file with its own path as the h1, so a mismatch means yesterday's log
+# `inject-log.sh` seeds the file with its own path as the h1, so a mismatch means yesterday's log
 # was copied forward, which is how one day's threads end up filed under another day
 check_header() {
   local file=$1 expected actual

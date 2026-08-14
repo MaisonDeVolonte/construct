@@ -8,9 +8,11 @@
 # - `scan_secrets <file>` grades every match and reports through those two, deciding nothing itself
 # - an unambiguous provider token is an ERROR; a merely credential-shaped string is a WARN
 # COPIES
-# - one per plugin, since an install copies a plugin's own directory and never a sibling
-# - byte-identical by contract, exported from README.md, and `/gitgud:audit` reports the first drift
-# @see README.md, .claude/skills/export-readme/map.json, plugins/gitgud/skills/audit/audit.sh
+# - one per CALLING plugin, since an install copies a plugin's own directory and never a sibling
+# - operator and retardify both call `scan_secrets`; gitgud never did, so it carries no copy
+# - byte-identical by contract, hand-edited in both places, never generated from anywhere
+# - `/gitgud:audit` md5s every copy it finds and is the ONLY thing comparing them
+# @see plugins/gitgud/skills/audit/audit.sh, plugins/operator/shared/secrets.sh, plugins/retardify/shared/secrets.sh
 
 if [ "${BASH_SOURCE[0]}" = "$0" ]; then
   echo "fatal: source this file from a sidecar, do not run it" >&2; exit 1

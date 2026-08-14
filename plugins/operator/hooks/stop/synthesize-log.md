@@ -1,5 +1,5 @@
 ---
-name: demand-log-synthesis
+name: synthesize-log
 description: blocks a closing turn while today's log carries pending notes or oversized threads
 ---
 
