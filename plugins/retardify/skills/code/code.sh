@@ -16,7 +16,7 @@
 # - a leading slash reads as repo-relative, so `/src/app.ts` and `src/app.ts` name the same file
 # - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
 # - `--strict` promotes warnings to errors; exits 1 on any error
-# @see plugins/retardify/skills/code/SKILL.md, plugins/retardify/skills/file/file.sh, plugins/operator/hooks/posttooluse.sh, .construct/retardify/code/
+# @see plugins/retardify/skills/code/SKILL.md, plugins/retardify/skills/file/file.sh, plugins/operator/hooks/posttooluse/retardify-code.sh, .construct/retardify/code/
 
 set -euo pipefail
 

@@ -7,7 +7,7 @@
 # - sidecar for `/retardify:log` — asserts a day's log matches the shape its SKILL.md documents
 # - the doc carries threads, notes and prompts; this file carries what a script can judge
 # ARTIFACT
-# - `.construct/retardify/log/YYYY-MM-DD.md`, one file per day, holding the work and the prompts that drove it
+# - `.construct/retardify/log/YYYY-MM-DD.md`, one file per day, holding work and its prompts
 # - gitignored in this repo; host projects decide for themselves whether to track it
 # - `inject-log.sh` creates the day's file and `synthesize-log.sh` gates the session on it
 # - no trigger wraps it: a thread, a note or a synthesis is asked for in plain words
@@ -17,7 +17,7 @@
 # - defaults to every file in `.construct/retardify/log/`; pass files or a directory to scope it
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
 # - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
-# @see plugins/retardify/skills/log/SKILL.md, plugins/operator/hooks/sessionstart.sh, plugins/operator/hooks/stop.sh, .construct/retardify/log/, plugins/retardify/shared/secrets.sh
+# @see plugins/retardify/skills/log/SKILL.md, plugins/operator/hooks/sessionstart/inject-log.sh, plugins/operator/hooks/stop/synthesize-log.sh, .construct/retardify/log/, plugins/retardify/shared/secrets.sh
 
 set -euo pipefail
 
