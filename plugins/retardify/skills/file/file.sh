@@ -18,7 +18,7 @@
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
 # - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
 # - a broken `@see` only warns, since nothing gates references; `/retardify:todo` reports repo-wide
-# @see plugins/retardify/skills/file/SKILL.md, plugins/retardify/skills/todo/todo.sh, plugins/operator/hooks/posttooluse.sh, plugins/retardify/shared/secrets.sh, .construct/retardify/file/
+# @see plugins/retardify/skills/file/SKILL.md, plugins/retardify/skills/todo/todo.sh, plugins/operator/hooks/posttooluse/retardify-file.sh, plugins/retardify/shared/secrets.sh, .construct/retardify/file/
 
 set -euo pipefail
 
@@ -583,7 +583,9 @@ check_block_comment() {
 
 # --- run list (add new checks here) ---
 WAYFINDER_SCANNED=0
-for file in "${FILES[@]}"; do
+# an argument filtered down to nothing is a legitimate run, so the empty array expands to nothing
+# rather than tripping set -u; bash 3.2 treats a bare "${FILES[@]}" here as an unbound variable
+for file in ${FILES[@]+"${FILES[@]}"}; do
   check_naming  "$file"
   check_modules "$file"
 
