@@ -2,21 +2,34 @@
   "name": "TheConstruct",
   "owner": { "name": "MaisonDeVolonte", "url": "https://github.com/MaisonDeVolonte" },
   "description": "Secure agentic coding infra for Claude Code: sandboxed environments, masked credentials, and deterministic automations.",
+  "version": "0.3.0",
   "plugins": [
     {
       "name": "operator", "source": "./plugins/operator", "category": "security",
       "description": "The bundle: session hooks, the deny floor, the sandbox probes, and both plugins below.",
-      "keywords": [ "sandbox", "security", "permissions", "credentials", "hooks", "agents" ]
+      "keywords": [ "sandbox", "security", "permissions", "credentials", "hooks", "agents" ],
+      "author": { "name": "MaisonDeVolonte", "url": "https://github.com/MaisonDeVolonte" },
+      "homepage": "https://github.com/MaisonDeVolonte/construct",
+      "repository": "https://github.com/MaisonDeVolonte/construct",
+      "license": "MIT"
     },
     {
       "name": "gitgud", "source": "./plugins/gitgud", "category": "workflow",
       "description": "The whole git dance: atomic delivery, branch triage, backup, sync and release.",
-      "keywords": [ "git", "trunk-based", "pull-request", "release", "workflow" ]
+      "keywords": [ "git", "trunk-based", "pull-request", "release", "workflow" ],
+      "author": { "name": "MaisonDeVolonte", "url": "https://github.com/MaisonDeVolonte" },
+      "homepage": "https://github.com/MaisonDeVolonte/construct",
+      "repository": "https://github.com/MaisonDeVolonte/construct",
+      "license": "MIT"
     },
     {
       "name": "retardify", "source": "./plugins/retardify", "category": "documentation",
       "description": "Keeps machine output legible: conventions, linters, and prose a human can follow.",
-      "keywords": [ "linter", "readability", "conventions", "documentation", "code-review", "planning" ]
+      "keywords": [ "linter", "readability", "conventions", "documentation", "code-review", "planning" ],
+      "author": { "name": "MaisonDeVolonte", "url": "https://github.com/MaisonDeVolonte" },
+      "homepage": "https://github.com/MaisonDeVolonte/construct",
+      "repository": "https://github.com/MaisonDeVolonte/construct",
+      "license": "MIT"
     }
   ]
 }
