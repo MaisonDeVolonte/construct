@@ -123,6 +123,18 @@ git command two
 - a sidecar that needs to mutate emits the command instead of running it, into either block
 - close every trigger with ONE copy-paste bash block holding the handover, in that same order
 
+## the exec bit
+every sidecar and every hook is tracked `100755`, since git records the mode an install copies:
+
+- a `chmod` that never reached the index fixes the authoring machine and nobody else's
+- the failure lands on the user as `permission denied` from a path they did not write
+- `inject-support.sh` shipped `100644` and died on the first outside install, which is why this is a gate
+- the check reads `git ls-files -s`, never the disk, so a local bit nobody committed still fails
+- an untracked file has no recorded mode yet, so it is skipped rather than guessed at
+- hooks pair with no doc, so they are walked repo-wide once instead of per skill
+- the repair is `git update-index --chmod=+x <path>`, which the finding prints in full
+- `shared/*.sh` stays `100644` on purpose, since those are sourced and never exec'd
+
 ## the read-only contract
 - a sidecar may fetch, since that moves only remote-tracking refs, and may call the github api
 - a sidecar may NOT stash, switch, merge, push, reset, restore, clean, or delete a branch
@@ -142,6 +154,7 @@ git command two
 
 - RUN `.claude/skills/validate-skills/validate-skills.sh` after touching a trigger doc or its sidecar; pass a path to scope it
 - RUN `.claude/skills/export-readme/export-readme.sh` after touching frontmatter or a preamble; the readme is their source
+- CONFIRM a new sidecar or hook reads `100755` under `git ls-files -s <path>`, since the disk bit lies
 - FIX every ERROR, since each one breaks a rule this spec states outright
 - STOP on a `secret` finding and ask the user before truncating it; the key needs rotating first
 - JUSTIFY or fix every WARN; the sidecar tolerates them, the next reader may not
