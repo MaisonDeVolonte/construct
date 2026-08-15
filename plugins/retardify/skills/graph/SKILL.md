@@ -33,6 +33,8 @@ echo "sidecar exit: $?"
   - read the repo for every fact the goal depends on
   - ASK the user for whatever the repo cannot answer, in one round, then WAIT for the answers
   - a fact from neither the repo nor the user does not exist, and never reaches `context`
+  - the round covers what `/retardify:plan` will need too: hosting, credentials, ordering, who runs what
+  - a gap left here becomes a question at plan time, which is where it interrupts an unattended run
 
 2. write `[target]` in the shape defined under `## the shape` below
   - seven fields in order: goal, context, done when, fan out, rules, verify, output
@@ -55,6 +57,9 @@ echo "sidecar exit: $?"
 > the spec this skill writes against; the validator below grades what landed
 
 **the file:** `.construct/retardify/graph/YYYY-MM-DD-operation-<title>.md`, one per spec
+- `<title>` is capped at 36 characters, which is what the `output` line has left inside the 100 cap
+- 64 of those columns are spent before the title: 14 indent, 26 path, 21 prefix and 3 for `.md`
+- `output` carries the path alone, since any trailing prose spends columns the title needs
 - written on explicit `@graphspec --<artifact> <goal>`, where the flag defaults to `--plan`
 - the flag names what executing the spec must produce, so `--plan` yields a plan file
 - `--plan` is the only flag; the dated artifacts stay owned by their own triggers
@@ -139,7 +144,7 @@ RULES:        1. a finding without evidence does not survive verify
 VERIFY:       a fresh agent attacks each finding against DONE WHEN and CONTEXT
               evidence that fails to reproduce, or contradicts a known fact, kills the finding
 
-OUTPUT:       .construct/retardify/plan/2026-07-30-operation-monorepo.md, per the plan spec, passing its sidecar
+OUTPUT:       .construct/retardify/plan/2026-07-30-operation-monorepo.md
 
 ```
 
