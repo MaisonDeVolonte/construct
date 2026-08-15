@@ -43,6 +43,7 @@
   "#### pretooluse/block-destructive-git": "plugins/operator/hooks/pretooluse/block-destructive-git.md",
   "#### pretooluse/block-policy-edits": "plugins/operator/hooks/pretooluse/block-policy-edits.md",
   "#### pretooluse/block-outside-moves": "plugins/operator/hooks/pretooluse/block-outside-moves.md",
+  "#### pretooluse/suggest-allow-rules": "plugins/operator/hooks/pretooluse/suggest-allow-rules.md",
   "#### posttooluse/eslint": "plugins/operator/hooks/posttooluse/eslint.md",
   "#### posttooluse/retardify-file": "plugins/operator/hooks/posttooluse/retardify-file.md",
   "#### posttooluse/retardify-code": "plugins/operator/hooks/posttooluse/retardify-code.md",

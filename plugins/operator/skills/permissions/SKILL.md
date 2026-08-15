@@ -39,7 +39,11 @@ echo "sidecar exit: $?"
   - `no deny rule names X, and an allow wildcard covers it` is the one to act on first: that
     command is auto-approved today with no prompt at all
 
-2. report inline
+2. report inline, and read `allow rules to add next` as work rather than trivia
+  - each line is a rule `suggest-allow-rules` logged because that command shape is documented to
+    prompt, ranked by how often it asked, so the top line is the one costing the most turns
+  - carry every one into `resolutions` verbatim, naming the scope file the user pastes it into
+  - `suggested: 0` means no command tripped the hook, which is a clean result rather than a gap
 3. append one entry to `[audit_file]`, in the shape defined under `## the shape` below
   - the heading reads `## Permissions Audit #[next_audit]: [timestamp]`, both from the telemetry
   - `state` is what the run measured, as hyphen bullets, one clause each
@@ -71,7 +75,7 @@ one file per day, appended to by every deliberate run:
 ## Permissions Audit #1: YYYY-MM-DD HH:MM
 
 ### state
-the counts as hyphen bullets: cases loaded, tier 1 replayed, how many held, errors, warnings
+the counts as hyphen bullets: cases loaded, tier 1 replayed, how many held, errors, warnings, suggested
 
 *example:*
 > - 78 corpus cases loaded, 38 of them tier 1 replays fed to the live hook
