@@ -31,6 +31,8 @@ echo "sidecar exit: $?"
 - success (`sidecar exit` = 0) → capture `default branch` from the telemetry
 - IF `guidance` reads anything but `none`, it is the user's bucketing instruction; honor it in step 1
 - guidance narrows how work groups; it never authorizes running a block or skipping the gate
+- every `issue #n` row is an open issue on origin, and a candidate for a bucket to close
+- IF `open issues` reads `unreadable`, link nothing and say the rows never arrived
 - IF the handover block names any prep command, hand it over and WAIT before step 2
 - the preflight measures only, so the tree is still wherever the user left it
 - bucketing against an unsynced trunk drafts commits the user then has to redo
@@ -55,11 +57,16 @@ echo "sidecar exit: $?"
   - `most dominant domain` of changes spanning multiple domains
   - `misc` for changes spanning multiple unrelated domains
 - titles: stated outcomes, verb first, doesn't repeat type or scope, in present tense
+- titles are scanned as a list, so plain english wins over the vocabulary the diff happens to use
+- a title names the subject it acts on in quotes, since the scope carries a class and never a name
+- a title carrying a term the reader must open the file to understand is a rewrite, not a title
 - examples:
   - correct: `new(skill): generate github issues report and analysis`
   - incorrect: `new(issues): operator issues skill`
   - correct: `improve(tool): migrate skill frontmatter checks to 'export-readme'`
   - incorrect: `improve(check-skills): hand frontmatter rules to export-readme`
+  - correct: `improve(skill): link 'gitgud:deliver' buckets to the issues they close`
+  - incorrect: `improve(skill): carry a closing trailer into each bucket's pr body`
 
 2. plan EVERY bucket, then STOP and gate on the plan
 - sort the buckets by dependency and prioritize foundational changes
@@ -73,14 +80,19 @@ $ATOMIC_TITLE_SLUG # very-short-plain-english-title
 $ATOMIC_BRANCH # atomic-type/atomic-scope/atomic-title-slug
 $ATOMIC_DESCRIPTION # multiline string of hyphen-delimited bullets
 $ATOMIC_COMMIT # $ATOMIC_TYPE($ATOMIC_SCOPE): $ATOMIC_TITLE
+$ATOMIC_CLOSES # open issue numbers this bucket fixes, or none
 ```
+- link an `issue #n` row ONLY when the issue names the file or the symptom that bucket fixes
+- the link closes the issue on merge, so an unsure match earns a lettered question, never a trailer
+- read the issue itself before linking on anything weaker than its title:
+  `curl -sS -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/repos/<slug>/issues/<n>`
 - emit the plan as ONE fenced block, questions first, then the buckets, and nothing runnable yet
   ```text
   a. every question you need answered, one per line, or omit this section entirely
   b. a withheld file, a blocked gate or a type you are unsure of each earn a line here
 
   1. type(scope): title (n files)
-  2. type(scope): title (n files, after 1)
+  2. type(scope): title (n files, after 1, closes #12)
   ```
 - the fence is the whole plan; a reader scanning it must not have to find prose between the rows
 - a dependency rides in its own bucket's parentheses, so INDEPENDENT is the unmarked default
@@ -100,6 +112,8 @@ $ATOMIC_COMMIT # $ATOMIC_TYPE($ATOMIC_SCOPE): $ATOMIC_TITLE
 
 4. emit every block, in dependency order, then STOP
 - ONE fenced bash block per bucket, every variable already expanded, numbered `# BUCKET n of N`
+- a linked bucket ends `$ATOMIC_DESCRIPTION` with one `Closes #n` line per issue, below the bullets
+- `--fill` copies that commit body into the pr, so the merge closes the issue with no extra step
 - bucket 1 runs as written:
 ```bash
 git switch -c "$ATOMIC_BRANCH" "$DEFAULT_BRANCH"

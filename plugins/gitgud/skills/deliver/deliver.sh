@@ -17,6 +17,7 @@
 # - read-only: switch, merge and restore are denied, so the preflight measures rather than moves
 # - github auth preflights through curl + bearer, since gh cannot verify tls in the sandbox
 # - github's git endpoints take only basic auth, which base64s past the proxy, so push needs a tty
+# - every open issue on origin is printed, so a bucket that fixes one can close it on merge
 # - a delivered `.claude/settings.json` strands its checkout, so the pull after needs the hatch
 # @see plugins/gitgud/skills/deliver/SKILL.md, plugins/gitgud/skills/rerun/SKILL.md, plugins/gitgud/shared/handover.sh, .claude/skills/validate-skills/SKILL.md
 
@@ -92,6 +93,37 @@ if git status --porcelain 2>/dev/null | grep -q '\.claude/settings\.json'; then
   TOUCHES_SETTINGS=yes
 fi
 
+# open issues ride along, so a bucket that fixes one can carry a closing trailer into its pr
+# the read is advisory: a failed fetch costs the linking rather than the delivery
+SLUG=$(git remote get-url origin 2>/dev/null \
+  | sed -e 's|^git@github\.com:||' -e 's|^ssh://git@github\.com/||' \
+        -e 's|^https://github\.com/||' -e 's|\.git$||')
+ISSUES_BODY=$(mktemp "${TMPDIR:-/tmp}/gitgud-deliver.XXXXXX")
+trap 'rm -f "$ISSUES_BODY"' EXIT
+ISSUES_URL="https://api.github.com/repos/$SLUG/issues"
+ISSUES_URL="$ISSUES_URL?state=open&per_page=100&sort=created&direction=asc"
+ISSUES_CODE="origin is not github"
+case "$SLUG" in */*) ISSUES_CODE=fetch;; esac
+if [ "$ISSUES_CODE" = fetch ]; then
+  ISSUES_CODE=$(curl -sS --max-time 15 -o "$ISSUES_BODY" -w '%{http_code}' \
+    -H "Accept: application/vnd.github+json" \
+    -H "Authorization: Bearer $GH_TOKEN" "$ISSUES_URL" 2>/dev/null || echo 000)
+fi
+
+# this endpoint counts a pull request as an issue, so the pull_request stub is what separates them
+OPEN_ISSUES=0
+RAW_ISSUES=0
+ISSUE_ROWS=""
+if [ "$ISSUES_CODE" = 200 ]; then
+  RAW_ISSUES=$(jq 'length' "$ISSUES_BODY" 2>/dev/null || echo 0)
+  OPEN_ISSUES=$(jq '[.[] | select(.pull_request == null)] | length' \
+    "$ISSUES_BODY" 2>/dev/null || echo 0)
+  ISSUE_ROWS=$(jq -r '[.[] | select(.pull_request == null)][] |
+    "issue #\(.number)|[\([.labels[].name] | join(",")
+      | if . == "" then "none" else . end)] \(.title | gsub("[\\t\\n\\r|]"; " "))"' \
+    "$ISSUES_BODY" 2>/dev/null || true)
+fi
+
 telemetry_open gitgud:deliver
 telemetry_line "default branch" "$DEFAULT_BRANCH"
 telemetry_line "current branch" "$CURRENT_BRANCH"
@@ -102,6 +134,20 @@ telemetry_line "trunk behind origin" "$BEHIND"
 telemetry_line "trunk ahead of origin" "$AHEAD"
 telemetry_line "touches .claude/settings.json" "$TOUCHES_SETTINGS"
 telemetry_line "guidance" "${GUIDANCE:-none}"
+
+# one row per open issue, so the trigger can offer a link and the user can veto it at the gate
+if [ "$ISSUES_CODE" != 200 ]; then
+  telemetry_line "open issues" "unreadable ($ISSUES_CODE)"
+else
+  telemetry_line "open issues" "$OPEN_ISSUES"
+  if [ "$RAW_ISSUES" -ge 100 ]; then
+    telemetry_line "open issues note" "first 100 rows only, so an older issue may be unseen"
+  fi
+  while IFS='|' read -r ISSUE_KEY ISSUE_VALUE; do
+    [ -n "$ISSUE_KEY" ] || continue
+    telemetry_line "$ISSUE_KEY" "$ISSUE_VALUE"
+  done <<< "$ISSUE_ROWS"
+fi
 
 handover_open gitgud:deliver
 if [ "$AHEAD" -gt 0 ]; then
