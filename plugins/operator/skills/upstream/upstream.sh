@@ -1,10 +1,10 @@
 #!/bin/bash
 # ====================================================
-# @file issues.sh - upstream claude-code issue tracker
+# @file upstream.sh - upstream claude-code issue tracker
 # ====================================================
 # @description
 # PAIR
-# - sidecar for `/operator:issues` — fetches issue movement, then hands the telemetry to the doc
+# - sidecar for `/operator:upstream` — fetches issue movement, then hands the telemetry to the doc
 # - read-only: it greps, fetches and prints; the trigger writes the report it shapes
 # - rides plain curl end to end, since the tracked list includes the issue that breaks `gh` (#26466)
 # TRACKED
@@ -19,7 +19,7 @@
 # - GH_TOKEN rides along when set, masked or real, since the proxy injects on its listed hosts
 # - a rejected token falls back to anonymous with a warning, and the value is never printed
 # - anonymous runs at 60 core calls an hour, so the telemetry carries the remaining quota
-# @see plugins/operator/skills/issues/SKILL.md, plugins/operator/shared/secrets.sh, README.md
+# @see plugins/operator/skills/upstream/SKILL.md, plugins/operator/shared/secrets.sh, README.md
 
 set -euo pipefail
 
@@ -45,10 +45,10 @@ command -v curl >/dev/null 2>&1 || { echo "fatal: curl is required" >&2; exit 1;
 REPO="anthropics/claude-code"
 API="https://api.github.com"
 ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
-ARTIFACTS="$ROOT/.construct/operator/issues"
+ARTIFACTS="$ROOT/.construct/operator/upstream"
 EXCLUDES="--exclude-dir=.git --exclude-dir=.construct --exclude-dir=node_modules --exclude-dir=tmp"
 
-TMP=$(mktemp -d "${TMPDIR:-/tmp}/issues.XXXXXX")
+TMP=$(mktemp -d "${TMPDIR:-/tmp}/upstream.XXXXXX")
 trap 'rm -rf "$TMP"' EXIT
 BODY="$TMP/body.json"
 
@@ -59,7 +59,7 @@ WARNINGS=0
 # FLAGS
 # ==============
 usage() {
-  echo "usage: issues.sh [--tracked] [--sandbox] [--hooks] [--plugins] [--permissions] [--since <days>]"
+  echo "usage: upstream.sh [--tracked] [--sandbox] [--hooks] [--plugins] [--permissions] [--since <days>]"
   echo "a bare run covers tracked plus every topic; each flag scopes the run to what it names"
 }
 
@@ -155,13 +155,13 @@ redact() {
 # TELEMETRY
 # ==============
 DAY=$(date +%F)
-AUDIT_FILE=".construct/operator/issues/$DAY.md"
+AUDIT_FILE=".construct/operator/upstream/$DAY.md"
 REPORT_COUNT=0
 if [ -f "$ROOT/$AUDIT_FILE" ]; then
-  REPORT_COUNT=$(grep -c '^## Issues Report #' "$ROOT/$AUDIT_FILE" 2>/dev/null || echo 0)
+  REPORT_COUNT=$(grep -c '^## Upstream Report #' "$ROOT/$AUDIT_FILE" 2>/dev/null || echo 0)
 fi
 
-echo "=== issues.sh sidecar ==="
+echo "=== upstream.sh sidecar ==="
 echo "audit_file: $AUDIT_FILE"
 echo "next_report: $((REPORT_COUNT+1))"
 echo "timestamp: $(date '+%Y-%m-%d %H:%M')"
