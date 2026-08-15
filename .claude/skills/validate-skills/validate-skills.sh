@@ -313,6 +313,24 @@ check_block_name() {
   done < <(grep -nE '(telemetry|handover|trigger)_open[[:space:]]+"?[A-Za-z]' "$sidecar" 2>/dev/null | sed 's/:/\t/' || true)
 }
 
+# the same rename risk in the two places a sidecar prints its own name through a plain echo: the
+# telemetry header and the fatal usage line both quote the command a user actually types
+check_self_name() {
+  local doc=$1 name plugin sidecar want n found
+  name=$(trigger_name "$doc")
+  sidecar="$(dirname "$doc")/$name.sh"
+  [ -f "$sidecar" ] || return 0
+  plugin=$(plugin_of "$doc")
+  [ -n "$plugin" ] || return 0
+  want="/$plugin:$name"
+  while IFS=$'\t' read -r n found; do
+    [ -n "$n" ] || continue
+    found=$(printf '%s' "$found" | grep -oE '/[A-Za-z][A-Za-z0-9:_-]*' | head -1 || true)
+    [ "$found" = "$want" ] && continue
+    err "$sidecar" "$n" self_name "prints '$found' where the invocation is '$want'"
+  done < <(grep -nE 'echo "=== /|fatal: /' "$sidecar" 2>/dev/null | sed 's/:/\t/' || true)
+}
+
 # the body checks: a doc can be shape-correct in its frontmatter and its pairing and still be
 # structurally broken inside, which is how a pasted archive shape corrupted two docs and every gate
 # still reported clean
@@ -684,6 +702,7 @@ for pair in "${PAIRS[@]}"; do
   check_scrub           "$pair"
   check_body            "$pair"
   check_block_name      "$pair"
+  check_self_name       "$pair"
   check_voice           "$pair"
   check_telemetry       "$pair"
   check_verify          "$pair"

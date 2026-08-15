@@ -35,7 +35,9 @@ else
 
   GOAL="$*"
   if [ -z "$GOAL" ]; then
-    echo "fatal: /write-graph needs a goal, as in: /write-graph import the backend repo" >&2; exit 1; fi
+    echo "fatal: /retardify:graph needs a goal, as in: /retardify:graph import the backend repo" >&2
+    exit 1
+  fi
 
   # the validator accepts letters digits and hyphens only, so all else collapses to a hyphen
   # 36 is the OUTPUT line's leftover: 100 columns less 14 indent, 26 path and 24 name furniture
@@ -50,7 +52,7 @@ else
   if [ -e "$TARGET" ]; then COLLISION=yes; else COLLISION=no; fi
   EXISTING=$(find "$ARTIFACTS" -maxdepth 1 -type f -name '*.md' | wc -l | tr -d ' ')
 
-  echo "=== /write-graph telemetry ==="
+  echo "=== /retardify:graph telemetry ==="
   echo "goal: $GOAL"
   echo "slug: $SLUG"
   echo "target: $TARGET"
