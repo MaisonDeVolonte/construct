@@ -22,11 +22,11 @@ TABLE OF CONTENTS
 ├─ Plugins & Skills
 ├─ /operator ────── upstream · setup · settings · permissions · scripts · credentials
 ├─ /gitgud ──────── audit · issues · backup · continue · deliver · prune · nuke · rerun · ship
-├─ /retardify ───── file · code · output · plan · graph · quiz · manual · review · log · todo
+├─ /retardify ───── file · code · output · plan · graph · research · quiz · manual · review · log · todo
 ├─ Hooks & Actions
 ├─ /sessionstart ── inject-readme · inject-log · inject-changes · inject-support
 ├─ /stop ────────── retardify-output · synthesize-log
-├─ /pretooluse ──── block-policy-edits · block-destructive-git · block-outside-moves
+├─ /pretooluse ──── block-policy-edits · block-destructive-git · block-outside-moves · suggest-allow-rules
 ├─ /posttooluse ─── eslint · retardify-code · retardify-file
 ├─ /taskcompleted ─ append-log
 ├─ Styles ───────── output style · subagent style
@@ -36,18 +36,19 @@ TABLE OF CONTENTS
 ## Features
 > *requires: claude code, bash, curl, git, jq; [MIT License](LICENSE)*
 
-| /operator                    | /gitgud                | /retardify         | hooks                           |
-|------------------------------|------------------------|--------------------|---------------------------------|
-| [:upstream](#upstream)       | [:audit](#audit)       | [:file](#file)     | [sessionstart](#sessionstart)   |
-| [:setup](#setup)             | [:issues](#issues)     | [:code](#code)     | [stop](#stop)                   |
-| [:settings](#settings)       | [:backup](#backup)     | [:output](#output) | [pretooluse](#pretooluse)       |
-| [:permissions](#permissions) | [:continue](#continue) | [:plan](#plan)     | [posttooluse](#posttooluse)     |
-| [:scripts](#scripts)         | [:deliver](#deliver)   | [:graph](#graph)   | [taskcompleted](#taskcompleted) |
-| [:credentials](#credentials) | [:prune](#prune)       | [:quiz](#quiz)     |                                 |
-|                              | [:nuke](#nuke)         | [:manual](#manual) |                                 |
-|                              | [:rerun](#rerun)       | [:review](#review) |                                 |
-|                              | [:ship](#ship)         | [:log](#log)       |                                 |
-|                              |                        | [:todo](#todo)     |                                 |
+| /operator                    | /gitgud                | /retardify             | hooks                           |
+|------------------------------|------------------------|------------------------|---------------------------------|
+| [:upstream](#upstream)       | [:audit](#audit)       | [:file](#file)         | [sessionstart](#sessionstart)   |
+| [:setup](#setup)             | [:issues](#issues)     | [:code](#code)         | [stop](#stop)                   |
+| [:settings](#settings)       | [:backup](#backup)     | [:output](#output)     | [pretooluse](#pretooluse)       |
+| [:permissions](#permissions) | [:continue](#continue) | [:plan](#plan)         | [posttooluse](#posttooluse)     |
+| [:scripts](#scripts)         | [:deliver](#deliver)   | [:graph](#graph)       | [taskcompleted](#taskcompleted) |
+| [:credentials](#credentials) | [:prune](#prune)       | [:research](#research) |                                 |
+|                              | [:nuke](#nuke)         | [:quiz](#quiz)         |                                 |
+|                              | [:rerun](#rerun)       | [:manual](#manual)     |                                 |
+|                              | [:ship](#ship)         | [:review](#review)     |                                 |
+|                              |                        | [:log](#log)           |                                 |
+|                              |                        | [:todo](#todo)         |                                 |
 
 ## Examples
 
@@ -998,6 +999,30 @@ metadata:
 - writes one file and stops; the fan-out begins only on your explicit go
 - the checkboxes belong to whatever it produces, never to the spec
 
+#### Research
+```
+/retardify:research
+```
+```yaml
+---
+name: research
+model: opus
+effort: max
+license: MIT
+compatibility: requires bash, git
+description: research a question on the web, reconcile it against this repo, then validate it (saves brief to .construct/)
+argument-hint: "[--help] <question>"
+disable-model-invocation: true
+metadata:
+  kind: trigger
+  artifact: .construct/retardify/research/
+---
+```
+**what the docs say, measured against what this repo does:** one brief instead of twelve tabs
+- every claim is fetched this run and cited; a claim from training never lands
+- the repo is probed first, so the answer is reconciled rather than recited
+- rounds continue while a round still finds a source the last one missed
+
 #### Quiz
 ```
 /retardify:quiz
@@ -1236,7 +1261,7 @@ description: blocks a closing turn while today's log carries pending notes or ov
 - costs one process spawn and a few greps per turn end
 
 ### pretooluse
-> fires before every Bash call; each action reads the whole command string and can deny it
+> fires before every Bash call; each action reads the whole command string and can deny or annotate it
 
 #### pretooluse/block-policy-edits
 ```
@@ -1290,6 +1315,27 @@ description: denies any mv whose destination lands outside the repo, where git c
 - decides one thing: does an `mv` segment's destination resolve outside the repo root
 - an in-repo rename passes silently, so ordinary refactors never pay for the check
 - costs one process spawn per Bash call, measured at roughly 60ms
+
+#### pretooluse/suggest-allow-rules
+```
+plugins/operator/hooks/pretooluse/suggest-allow-rules.sh
+```
+```yaml
+---
+name: suggest-allow-rules
+description: names the allow rule a command needs when a documented shape prompts despite the rules
+---
+```
+
+**the prompt no settings file explains:** three shapes prompt even under a matching prefix rule
+- depends on no sibling plugin; needs `shared/commands.sh` beside it, and `jq`
+- decides one thing: is this command about to prompt for a reason the allow list cannot show
+- an unquoted glob beside `find`, `sort`, `sed` or `git`, since the glob could expand into a flag
+- an exec wrapper, `watch`, `setsid`, `ionice` or `flock`, which runs whatever follows it
+- `find -exec` and `find -delete`, the two forms `Bash(find *)` is documented not to cover
+- casts no vote, since a hook `allow` never beats an `ask` or a `deny` rule
+- prints the paste-ready rule as `systemMessage`, then logs it for `/operator:permissions` to rank
+- costs one process spawn per Bash call, plus one awk pass per compound segment
 
 ### posttooluse
 > fires after every Write or Edit lands; findings return as context, never as failures
@@ -1999,7 +2045,6 @@ managed → cli → local → project → user (scalars override, arrays merge)
 > `/sandbox`: claude command that prints the merged config (the 'source of truth')
 - `/fewer-permission-prompts`: claude skill that proposes new allow entries from real transcript usage
 - [/operator:setup --audit](plugins/operator/skills/setup/SKILL.md): READ-ONLY; runs every lens below and merges them into one report (saved to file)
-- [suite.sh](plugins/operator/lib/suite.sh): the lens fan-out itself, driven only by that flag
 - [/operator:credentials](plugins/operator/skills/credentials/SKILL.md): READ-ONLY; probes every masked and denied credential live (saved to file)
 - [/operator:permissions](plugins/operator/skills/permissions/SKILL.md): READ-ONLY; replays the corpus through the real hook, then audits the live rules
 - [/operator:scripts](plugins/operator/skills/scripts/SKILL.md): READ-ONLY; tests every command a sidecar runs against the merged rules

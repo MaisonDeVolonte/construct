@@ -9,6 +9,9 @@
 # - one skill is one SKILL.md and one sidecar, so nothing outside this pair decides its shape
 # RUN
 # - no flag runs the trigger half, so every existing invocation is unchanged
+# - a path argument is a source document, and it stops the run on `confirm: required`
+# - the doc asks in chat and the user says go, since the goal and the filename were derived
+# - `--confirm` on the invocation skips that stop for anyone who already knows the answer
 # - `--check [paths]` runs the validator half; with no paths it grades the whole artifact dir
 # - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
 # @see plugins/retardify/skills/plan/SKILL.md, .construct/retardify/plan/, plugins/retardify/skills/graph/SKILL.md, plugins/retardify/skills/log/SKILL.md, plugins/retardify/shared/secrets.sh
@@ -33,38 +36,79 @@ else
   VALIDATOR="plugins/retardify/skills/plan/plan.sh --check"
   TODAY=$(date +%Y-%m-%d)
 
-  # a graph spec already names this plan's target as its own basename, so a spec path is an
-  # argument rather than a goal: the goal is read out of the file and the filename is inherited
-  SPEC=none
-  if [ "$#" -eq 1 ] && [ -f "$1" ]; then SPEC="$1"; fi
+  # the harness passes $ARGUMENTS as one quoted word, so a flag inside it arrives as plain text
+  ARGS="$*"
+  CONFIRMED=0
+  case " $ARGS " in *" --confirm "*) CONFIRMED=1;; esac
+  ARGS=$(printf '%s' "$ARGS" \
+    | sed -e 's/--confirm//g' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
 
-  GOAL="$*"
+  # a path is a source document rather than a goal, so the goal is read out of the file
+  # any readable file qualifies, since a research brief is promoted into a plan the same way
+  SPEC=none
+  SPEC_KIND=none
+  BASE=""
+  STEM=""
+  if [ -f "$ARGS" ]; then
+    SPEC="$ARGS"
+    BASE=$(basename "$SPEC")
+    STEM=$(printf '%s' "$BASE" | sed -e 's/\.[A-Za-z0-9]\{1,\}$//' \
+      -e 's/^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}-//' -e 's/^operation-//')
+  fi
+
+  # a goal is prose, so one word carrying a slash or an extension was meant to be a path
+  # reading it as a goal would name the plan after the typo and then plan the wrong work
+  if [ "$SPEC" = none ]; then
+    case "$ARGS" in
+      *[[:space:]]*) ;;
+      */*|*.*) echo "fatal: no such file: $ARGS" >&2; exit 1;;
+    esac
+  fi
+
+  GOAL="$ARGS"
   if [ "$SPEC" != none ]; then
+    # a graph spec states its own goal, so nothing is retyped and nothing drifts
     GOAL=$(sed -n 's/^GOAL:[[:space:]]*//p' "$SPEC" | head -n 1)
-    if [ -z "$GOAL" ]; then
-      echo "fatal: $SPEC carries no GOAL: line, so it is not a graph spec" >&2; exit 1; fi
+    SPEC_KIND=graph
+  fi
+  if [ "$SPEC" != none ] && [ -z "$GOAL" ]; then
+    # any other file: its first h1 states the subject, and the filename says so when there is none
+    SPEC_KIND=brief
+    GOAL=$(sed -n 's/^#[[:space:]]\{1,\}//p' "$SPEC" | head -n 1)
+  fi
+  if [ "$SPEC_KIND" = brief ] && [ -z "$GOAL" ]; then
+    GOAL=$(printf '%s' "$STEM" | tr '-' ' ')
   fi
   if [ -z "$GOAL" ]; then
-    echo "fatal: /write-plan needs a goal, as in: /write-plan split the settings floor" >&2; exit 1; fi
+    echo "fatal: /retardify:plan needs a goal or a path to read one from" >&2; exit 1; fi
 
   # the validator accepts letters digits and hyphens only, so all else collapses to a hyphen
   # 36 matches the graph cap, so a plan named here can still pair with a spec naming it there
-  SLUG=$(printf '%s' "$GOAL" | tr '[:upper:]' '[:lower:]' \
-    | sed -e 's/[^a-z0-9]/-/g' -e 's/--*/-/g' -e 's/^-//' -e 's/-$//' | cut -c1-36)
+  slugify() {
+    printf '%s' "$1" | tr '[:upper:]' '[:lower:]' \
+      | sed -e 's/[^a-z0-9]/-/g' -e 's/--*/-/g' -e 's/^-//' -e 's/-$//' | cut -c1-36
+  }
+  SLUG=$(slugify "$GOAL")
+  # a brief's filename is tighter than its opening heading, so it names the plan wherever it can
+  if [ "$SPEC_KIND" = brief ] && [ -n "$(slugify "$STEM")" ]; then SLUG=$(slugify "$STEM"); fi
   SLUG=${SLUG%-}
   if [ -z "$SLUG" ]; then
     echo "fatal: the goal has no letters or digits to build a filename from" >&2; exit 1; fi
 
   mkdir -p "$ARTIFACTS"
   TARGET="$ARTIFACTS/$TODAY-operation-$SLUG.md"
-  # the spec owns the pairing, so its basename wins over today's date and the derived slug
-  if [ "$SPEC" != none ]; then TARGET="$ARTIFACTS/$(basename "$SPEC")"; fi
+  # a source already named like a plan hands its name over, which is the pairing --plan promises
+  # any other name is derived instead, since an inherited one would fail the filename check
+  if printf '%s' "$BASE" | grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2}-operation-[A-Za-z0-9-]+\.md$'; then
+    TARGET="$ARTIFACTS/$BASE"
+  fi
   if [ -e "$TARGET" ]; then COLLISION=yes; else COLLISION=no; fi
   EXISTING=$(find "$ARTIFACTS" -maxdepth 1 -type f -name '*.md' | wc -l | tr -d ' ')
 
-  echo "=== /write-plan telemetry ==="
+  echo "=== /retardify:plan telemetry ==="
   echo "goal: $GOAL"
   echo "spec: $SPEC"
+  echo "spec_kind: $SPEC_KIND"
   echo "slug: $SLUG"
   echo "target: $TARGET"
   echo "collision: $COLLISION"
@@ -84,6 +128,13 @@ else
   if [ "$COLLISION" = yes ]; then
     echo "--- stop ---"
     echo "a plan already holds this slug; rename the goal or open the existing file"
+  fi
+
+  # a path resolves a goal, a filename and a target that nobody typed, so the run stops to show them
+  # a wrong path would otherwise spend the whole write before anyone could read what it planned
+  if [ "$SPEC" != none ] && [ "$CONFIRMED" -eq 0 ]; then
+    echo "--- confirm ---"
+    echo "confirm: required"
   fi
   echo "============================="
   exit 0
