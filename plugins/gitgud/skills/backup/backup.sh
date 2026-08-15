@@ -12,7 +12,8 @@
 # - history and working tree are captured separately: a `.git` copy alone loses uncommitted work
 # - the tree copy is tracked plus untracked-not-ignored, the exact set `clean -fd` can destroy
 # - ignored files are skipped on purpose, the same reason `/gitgud:nuke` stashes with -u not -a
-# - the destination is fixed at gitignored `tmp/backups/`, so it never becomes a copy-anywhere tool
+# - the destination is fixed at gitignored `.construct/gitgud/backup/`, never a copy-anywhere tool
+# - it is not `tmp/`, since scratch is always free to be emptied and a snapshot must outlive that
 # HANDOVER
 # - the restore is handed over, never run: putting files back overwrites what sits there now
 # - `cp` here is invisible to the deny list and the hook, since script lines are not tool calls
@@ -33,7 +34,7 @@ if [ ! -f "$SHARED/handover.sh" ]; then
 . "$SHARED/handover.sh"
 
 if [ "$#" -gt 0 ]; then
-  echo "fatal: git-backup takes no arguments; the destination is fixed at tmp/backups/" >&2
+  echo "fatal: git-backup takes no arguments; the destination is fixed at .construct/gitgud/backup/" >&2
   exit 1
 fi
 
@@ -45,7 +46,7 @@ ROOT=$(git rev-parse --show-toplevel)
 cd "$ROOT"
 
 STAMP=$(date +%Y-%m-%d-%H%M%S)
-DEST="tmp/backups/$STAMP"
+DEST=".construct/gitgud/backup/$STAMP"
 
 if [ -e "$DEST" ]; then
   echo "fatal: $DEST already exists, refusing to overwrite a backup" >&2; exit 1; fi
@@ -91,8 +92,8 @@ done < <(
 )
 
 BACKUP_SIZE=$(du -sh "$DEST" | awk '{print $1}')
-BACKUP_TOTAL=$(du -sh tmp/backups 2>/dev/null | awk '{print $1}')
-BACKUP_COUNT=$(find tmp/backups -mindepth 1 -maxdepth 1 -type d | grep -c . || true)
+BACKUP_TOTAL=$(du -sh .construct/gitgud/backup 2>/dev/null | awk '{print $1}')
+BACKUP_COUNT=$(find .construct/gitgud/backup -mindepth 1 -maxdepth 1 -type d | grep -c . || true)
 
 # ==============
 # MANIFEST
@@ -137,6 +138,6 @@ handover_cmd "cp $DEST/worktree/<path> <path>"
 handover_note "read $DEST/MANIFEST.txt for what this snapshot holds"
 if [ "${BACKUP_COUNT:-0}" -gt 5 ]; then
   handover_note "$BACKUP_COUNT snapshots now hold $BACKUP_TOTAL; delete the stale ones yourself:"
-  handover_cmd "rm -rf tmp/backups/<stamp>"
+  handover_cmd "rm -rf .construct/gitgud/backup/<stamp>"
 fi
 block_close
