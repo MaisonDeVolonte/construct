@@ -118,7 +118,7 @@ EXPECTED_READINESS=$'Blockers\nAgents\nPermissions'
 
 # the only actions a permissions row may propose; deny beats allow, so a denied path is
 # narrowed at the deny rule rather than granted an allow that can never take effect
-PERMISSION_ACTIONS=$'add to allow\nnarrow deny\nremove from deny\nadd to deny\nadd to allowWrite\nadd to allowRead\nadd to denyRead\nadd to allowedDomains\nadd to deniedDomains\nadd to excludedCommands'
+PERMISSION_ACTIONS=$'add to allow\nadd to ask\nnarrow deny\nremove from deny\nadd to deny\nadd to allowWrite\nadd to allowRead\nadd to denyRead\nadd to allowedDomains\nadd to deniedDomains\nadd to excludedCommands'
 
 # the layer decides the rule shape, so the row check knows whether to expect `Tool(pattern)`
 # or a bare path or host; a bash write needs a sandbox row even when a permission rule allows it
