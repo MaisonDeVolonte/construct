@@ -13,6 +13,7 @@
 # - classifies each local branch as gone, merged, or live, so the handover deletes only the spent
 # - emits `-d` or `-D` to match, since `-d` consults the same patch-id read a rebase already fooled
 # - a gone branch that is neither merged nor absorbed is kept, never offered for deletion
+# - `production` is excluded by name, since a release branch reads merged and behind by design
 # TRIGGER
 # - the doc folds in `git-audit.sh`, whose local/remote/ghost/zombie split catches the rebased ones
 # - stash and branch deletes are denied, so the whole block stays the user's to run in order
@@ -36,6 +37,10 @@ require_no_op_in_progress
 
 DEFAULT_BRANCH=$(git_default_branch)
 STARTING_BRANCH=$(git_current_branch)
+
+# a release branch reads merged and behind by design, which is exactly the shape a spent branch
+# has, so it is excluded by name before the classification ever sees it (see the doc's ignored row)
+PRODUCTION_BRANCH="production"
 
 if [ -z "$DEFAULT_BRANCH" ]; then
   echo "fatal: missing remote default branch" >&2; exit 1; fi
@@ -65,9 +70,10 @@ fi
 # a branch is spent when its remote is gone, or when trunk already contains every commit on it;
 # anything else is live work and never reaches the handover
 GONE_BRANCHES=$(git for-each-ref --format='%(refname:short) %(upstream:track)' refs/heads/ \
-  | awk '$2 == "[gone]" { print $1 }' | grep -vx "$DEFAULT_BRANCH" || true)
+  | awk '$2 == "[gone]" { print $1 }' \
+  | grep -vx "$DEFAULT_BRANCH" | grep -vx "$PRODUCTION_BRANCH" || true)
 MERGED_BRANCHES=$(git branch --merged "origin/$DEFAULT_BRANCH" --format='%(refname:short)' \
-  | grep -vx "$DEFAULT_BRANCH" || true)
+  | grep -vx "$DEFAULT_BRANCH" | grep -vx "$PRODUCTION_BRANCH" || true)
 
 SPENT_BRANCHES=$(printf '%s\n%s\n' "$GONE_BRANCHES" "$MERGED_BRANCHES" | grep -v '^$' | sort -u || true)
 SPENT_COUNT=$(printf '%s' "$SPENT_BRANCHES" | grep -c . || true)
@@ -88,7 +94,7 @@ for branch in $SPENT_BRANCHES; do
 done
 DELETE_COUNT=$(printf '%s' "$DELETE_SAFE $DELETE_FORCE" | tr ' ' '\n' | grep -c . || true)
 LIVE_COUNT=$(git for-each-ref --format='%(refname:short)' refs/heads/ \
-  | grep -vx "$DEFAULT_BRANCH" | grep -c . || true)
+  | grep -vx "$DEFAULT_BRANCH" | grep -vx "$PRODUCTION_BRANCH" | grep -c . || true)
 LIVE_COUNT=$((LIVE_COUNT - SPENT_COUNT))
 
 telemetry_open gitgud:prune
