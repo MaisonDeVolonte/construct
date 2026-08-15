@@ -11,7 +11,7 @@
 # - carries the repo slug, the plugin version and the pinned commit, so a report needs no digging
 # - the patch is never forbidden; the issue is what makes the patch reach the next release
 # - self-contained on purpose: a manual install copies this one file and registers it
-# @see plugins/operator/hooks/hooks.json, plugins/operator/skills/issues/SKILL.md
+# @see plugins/operator/hooks/hooks.json, plugins/operator/skills/upstream/SKILL.md
 
 command -v jq >/dev/null 2>&1 || exit 0
 
