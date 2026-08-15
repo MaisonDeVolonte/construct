@@ -24,7 +24,7 @@
 # - the env file is deny-listed, so not seeing it is the pass rather than a finding
 # - an emit run never appends to the artifact, since these lines carry absolute home paths
 # - it emits and never applies, because the deny floor stops this sidecar writing a settings file
-# @see plugins/operator/skills/settings/SKILL.md, plugins/operator/lib/suite.sh, .construct/operator/settings/
+# @see plugins/operator/skills/settings/SKILL.md, plugins/operator/skills/setup/setup.sh, .construct/operator/settings/
 
 set -euo pipefail
 
