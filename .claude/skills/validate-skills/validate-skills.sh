@@ -654,11 +654,16 @@ check_scrub() {
 # a trigger acts on the repo and is invoked deliberately; a spec describes a shape and should load
 # whenever the model touches the thing it describes. the kind gates which body checks run here;
 # whether it is declared correctly is export-readme's rule, judged at the readme source
+# both yaml spellings are read, since an unread kind SKIPS the trigger checks rather than failing:
+# `metadata: {kind: trigger}` is valid yaml, and the block-only reader graded it unset (see #4)
 skill_kind() {
   local doc=$1 declared
-  declared=$(awk '/^metadata:/ { inside = 1; next }
-                  inside && /^[^[:space:]]/ { inside = 0 }
-                  inside && /^[[:space:]]+kind:/ { gsub(/^[[:space:]]+kind:[[:space:]]*/, ""); print; exit }' "$doc")
+  declared=$(awk '
+/^metadata:[[:space:]]*\{/ && match($0, /kind:[[:space:]]*[A-Za-z_-]+/) {
+  flow = substr($0, RSTART, RLENGTH); sub(/kind:[[:space:]]*/, "", flow); print flow; exit }
+/^metadata:/ { inside = 1; next }
+inside && /^[^[:space:]]/ { inside = 0 }
+inside && /^[[:space:]]+kind:/ { gsub(/^[[:space:]]+kind:[[:space:]]*/, ""); print; exit }' "$doc")
   printf '%s' "${declared:-unset}"
 }
 
