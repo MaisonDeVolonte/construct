@@ -5,6 +5,7 @@
 # @description
 # - fires at session start: injects how an agent should report a defect in these plugins
 # - branches on where the plugin tree sits, since that decides who owns the file being edited
+# - resolves both paths first, since a symlinked install otherwise reads as a stranded copy
 # - inside the project root it is the user's own source, so the block is a one-line nudge
 # - anywhere else it is an install, and a local patch is stranded rather than reverted on update
 # - a marketplace install is version-pinned, so an update writes a new directory beside the patch
@@ -17,15 +18,19 @@ command -v jq >/dev/null 2>&1 || exit 0
 
 ROOT="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
 cd "$ROOT" || exit 0
+ROOT=$(pwd -P)
 
+# a marketplace install can be a symlink pointing back at the source, so both sides resolve first
 PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
+PLUGIN_ROOT=$(cd "$PLUGIN_ROOT" 2>/dev/null && pwd -P || printf '%s' "$PLUGIN_ROOT")
 
 # the repository the issue lands in, read from the manifest rather than restated here
 MANIFEST="$PLUGIN_ROOT/.claude-plugin/plugin.json"
 SLUG=$(jq -r '.repository // .homepage // empty' "$MANIFEST" 2>/dev/null \
   | sed -n 's#^https://github.com/\([^/]*/[^/]*\)$#\1#p')
 SLUG=${SLUG:-MaisonDeVolonte/construct}
-VERSION=$(jq -r '.version // "unknown"' "$MANIFEST" 2>/dev/null)
+VERSION=$(jq -r '.version // empty' "$MANIFEST" 2>/dev/null)
+VERSION=${VERSION:-unknown}
 
 # the marketplace records the commit each install is pinned to, which is the one fact a maintainer
 # cannot recover from a version alone, since a version ships more than once during a day's work
