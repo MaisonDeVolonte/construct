@@ -5,7 +5,7 @@ effort: max
 license: MIT
 compatibility: requires bash, curl, git
 description: turn work into a staged plan with per-stage readiness tables, then validate it (saves plan to .construct/)
-argument-hint: "[--help] <goal|path to a graph spec>"
+argument-hint: "[--help] [--confirm] <goal|path to a spec or brief>"
 disable-model-invocation: true
 metadata:
   kind: trigger
@@ -27,12 +27,15 @@ echo "sidecar exit: $?"
 - it already ran, so there is no command to issue
 - fail (`sidecar exit` > 0) → abort and report the raw terminal error inside a markdown code block
 - `collision: yes` → STOP and name the file already holding that slug; never overwrite a plan
-- `spec: <path>` → the argument was a graph spec; read it whole before step 1 and treat it as the brief
+- `confirm: required` → the argument was a path; `## Confirm` below is the whole turn
+- `spec: <path>` → read that file whole before step 1 and treat it as the brief
+- `spec_kind: graph` → it carried a `GOAL:` line, so the goal and the filename came from it
+- `spec_kind: brief` → any other file, so the goal was derived and the confirmation grades it
 - success (`sidecar exit` = 0) → take `target` from the telemetry and continue to step 1
 
 1. gather what the plan rests on before drafting a line of it
   - read the repo for the motivation, the obstacle, the constraint and the guardrails
-  - with `spec: <path>`, read the spec whole first; its `CONTEXT:` is answered and is never re-asked
+  - with `spec: <path>`, read that file whole first; what it already answers is never re-asked
   - ASK the user for whatever the repo cannot answer, in one round, then WAIT for the answers
   - the round is lettered `a.`, `b.`, `c.`, in one fenced block, with no prose between the rows
   - verify any claim carrying a number before it lands, or leave the number out
@@ -65,18 +68,22 @@ echo "sidecar exit: $?"
     NEVER start stage 1 in the same turn, and never offer to; the plan IS the deliverable
     it gets read, argued with and edited before anything is built against it
 
-## the graph spec
-the argument is a goal in prose OR a path to a `/retardify:graph` spec, and the path form is the
-one `--plan` was written for:
+## the path argument
+the argument is a goal in prose OR a path to any file, and the path form is the one `--plan` was
+written for:
 
 - `/retardify:plan .construct/retardify/graph/2026-08-06-operation-snap-mvp.md` is the whole invocation
-- a spec is recognised by being one argument that resolves to a file, never by its extension
-- the `GOAL:` line inside the spec becomes the goal, so nothing is retyped and nothing drifts
-- the plan inherits the spec's basename, which is the pairing `/retardify:graph --plan` promises
-- a file carrying no `GOAL:` line is refused, since a wrong path would otherwise plan the wrong work
+- a path is recognised by resolving to a file, never by its extension or its directory
+- a `GOAL:` line makes it a `/retardify:graph` spec, and that line becomes the goal verbatim
+- any other file is a brief, and its first `# ` heading becomes the goal instead
+- a brief with no heading falls back to its filename, stripped of the date and the extension
+- the plan inherits the source's basename when that reads `YYYY-MM-DD-operation-<title>.md` already
+- any other source names the plan from its own filename, since an inherited one fails `--check`
+- a path that resolves to nothing is refused, since a typo would otherwise plan the wrong work
+- every path stops on `confirm: required`, since the goal and the filename were derived not typed
 - the spec's `CONTEXT:` answers step 1, so the questions there are asked only about what it omits
 - the spec's `DONE WHEN:` is the readiness table's source, and `FAN OUT:` suggests the stages
-- a spec run still writes a normal plan and still passes `--check`; nothing about the shape changes
+- a path run still writes a normal plan and still passes `--check`; nothing about the shape changes
 
 ## the shape
 > the spec this skill writes against; the validator below grades what landed
@@ -215,6 +222,23 @@ suggested rules to set in order for agents to work reliably:
 3. record what was ruled out and why, so a future reader does not relitigate it
 4. keep each note self-contained, since readers jump here from one line and jump straight back
 5. a note nothing points at is either dead weight or a missing `(see #x)` somewhere
+
+## Confirm
+> IF the telemetry reads `confirm: required`, this section is the whole turn:
+
+```text
+SOURCE: <the `spec` path, then its `spec_kind`>
+GOAL: <the `goal` line, verbatim>
+TARGET: <the `target` path>
+```
+
+- show what was derived BEFORE asking, since the goal and the filename were never typed
+- then ask for a go in one line, and STOP; a wrong source spends the whole write before it reads
+- run no step, write no file, and never fall through to step 1
+- on a go, continue from step 1 with this telemetry, since the sidecar wrote nothing to redo
+- on a corrected goal, run the sidecar again with that goal as prose, so it names the file
+- `--confirm` on the invocation skips this section for anyone who already knows the answer
+- an earlier confirmation never covers a later run
 
 ## Help
 > IF the invocation carries `--help` or `-h`, this section is the whole turn:
