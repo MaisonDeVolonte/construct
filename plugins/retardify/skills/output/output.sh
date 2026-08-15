@@ -5,18 +5,27 @@
 # @description
 # PAIR
 # - sidecar for `/retardify:output` — grades one reply against the Output Style spec
-# - findings carry the spec's own addresses, so a report reads B1, B2, C2 or C8 rather than prose
+# - findings carry the spec's own addresses, so a report reads B1, C2, V2 or F1 rather than prose
 # - a line finding also quotes its line, since the reader of a report no longer holds the reply
-# - B3, F1 to F7, C1, C4 to C7 and every Grounding row stay the agent's job; no grep can judge them
+# - B3, F2 to F4, F6, F7, C1, C4 to C7 and every Grounding row stay the agent's job
 # - reads a file holding the reply text, or stdin when the path is `-`
 # - the stop action `retardify-output.sh` calls it the same way a user does
 # NUMBERS
 # - the width and the ceiling are read from the style copy beside this skill, never restated
 # - the hardcoded constants only hold when that copy is absent, so the spec stays the one source
 # TIERS
-# - HARD findings block a turn: B1 markup, C2 width, C8 ceiling, and B2 once prose mode has won
+# - HARD findings block a turn: B1 markup, C2 width, C8 ceiling, F1 closer, and B2 gone to prose
 # - SOFT findings only ride along with a hard one, since one stray prose line is a nit
 # - B2 stays soft until it passes WRAP_TOLERANCE, which is the line between a nit and paragraphs
+# ACTION
+# - V2, F5 and F1 grade what a reply hands back: a coordinate, a command, and a closing action
+# - they are whole-reply counts rather than per-line tests, which is what keeps them quiet
+# - V2 fires when a reply names files and carries no `path:line` beside any of them
+# - F5 fires when a reply tells the user to run something and carries nothing pasteable
+# - F1 is HARD, since a reply that never lands on an action costs the user another turn to ask
+# - a reply under SIGNAL_FLOOR counted lines is exempt from F1, since C4 caps a yes/no at one line
+# - the counts accumulate before the table and quote exemptions, since findings tables carry them
+# - skipping those rows would read a coordinate-rich table as a reply holding none
 # EXEMPT
 # - C10 names them: code, terminal output, quoted content and tables, plus blank lines from C3
 # - a fence closes only on a delimiter at least as long as the one that opened it
@@ -54,6 +63,26 @@ HARD=0
 SOFT=0
 FINDINGS=''
 WRAPPED=0
+
+# a one-line yes/no answer owes no closing action, since C4 caps that reply at the one line
+SIGNAL_FLOOR=5
+
+# what the reply hands back, counted across the whole of it rather than judged line by line
+NAMED_FILE=0
+NAMED_COORD=0
+NAMED_ACTION=0
+HAS_FENCE=0
+HAS_TICK=0
+LAST_TEXT=''
+LAST_KIND=''
+
+# a file token is judged by its extension, since no test tells a bare word from a path
+FILE_RE='[A-Za-z0-9_.-]+\.(ts|tsx|js|jsx|mjs|cjs|sh|bash|zsh|py|rb|go|rs|json|md|yml|yaml'
+FILE_RE="$FILE_RE|toml|css|scss|html|sql|java|php|vue|svelte)"
+COORD_RE="$FILE_RE:[0-9]"
+
+# the verbs that hand work back to the user; each one owes a command the user can paste
+ACTION_RE='(^|[[:space:]])([Rr]un|[Pp]aste|[Ee]xecute|[Rr]e-run|[Rr]erun|[Ii]nvoke)[[:space:]]'
 
 # the offending line itself, carried so a finding quotes the text rather than only addressing it
 # the reader of a finding no longer holds the reply, so an address alone cannot be repaired
@@ -97,6 +126,8 @@ while IFS= read -r raw; do
   # the delimiter's own length decides the fence: a wider one opens a block a narrower cannot close
   if [[ $text == '```'* ]]; then
     ticks=${text%%[!\`]*}
+    HAS_FENCE=1
+    LAST_KIND=fence
     if [ "$FENCE_LEN" -eq 0 ]; then
       FENCE_LEN=${#ticks}
       case "${text#"$ticks"}" in
@@ -108,10 +139,23 @@ while IFS= read -r raw; do
     if [ "${#ticks}" -ge "$FENCE_LEN" ] && [ -z "${text#"$ticks"}" ]; then FENCE_LEN=0; fi
     continue
   fi
-  if [ "$FENCE_LEN" -ne 0 ]; then continue; fi
+  if [ "$FENCE_LEN" -ne 0 ]; then
+    if [ -n "$text" ]; then LAST_KIND=fence; fi
+    continue
+  fi
 
   if [ -z "$text" ]; then continue; fi
   COUNTED=$((COUNTED + 1))
+  LAST_KIND=text
+  LAST_TEXT=$text
+
+  # counted before the table and quote exemptions below, since a findings table carries coordinates
+  case "$text" in *'`'*) HAS_TICK=1;; esac
+  if [[ $text =~ $FILE_RE ]]; then
+    NAMED_FILE=$((NAMED_FILE + 1))
+    if [[ $text =~ $COORD_RE ]]; then NAMED_COORD=$((NAMED_COORD + 1)); fi
+  fi
+  if [[ $text =~ $ACTION_RE ]]; then NAMED_ACTION=$((NAMED_ACTION + 1)); fi
 
   case "$text" in
     *"$EMOJI_HI"*|*"$EMOJI_MISC"*|*"$EMOJI_MARK"*|*"$EMOJI_WARN"*)
@@ -161,6 +205,23 @@ fi
 # soft findings never block alone, but a reply that has gone fully prose is not a nit any more
 if [ "$WRAPPED" -gt "$WRAP_TOLERANCE" ]; then
   hard B2 0 "$WRAPPED prose lines against a tolerance of $WRAP_TOLERANCE; the reply is paragraphs"
+fi
+
+# V2 wants the coordinate rather than the file name, so a reply naming neither owes nothing here
+if [ "$NAMED_FILE" -gt 0 ] && [ "$NAMED_COORD" -eq 0 ]; then
+  soft V2 0 "$NAMED_FILE file names and no path:line; give the line beside at least one of them"
+fi
+
+# F5 puts a command in a fence, so an action handed back with nothing pasteable is the gap
+if [ "$NAMED_ACTION" -gt 0 ] && [ "$HAS_FENCE" -eq 0 ] && [ "$HAS_TICK" -eq 0 ]; then
+  soft F5 0 "$NAMED_ACTION lines telling the user to act, and nothing fenced or ticked to run"
+fi
+
+# F1 orders a reply as answer then evidence then actions; the last line is where actions land
+# a fenced block closing the reply already IS the action, which is why it satisfies this
+if [ "$COUNTED" -ge "$SIGNAL_FLOOR" ] && [ "$LAST_KIND" != fence ] \
+   && [[ ! $LAST_TEXT =~ ^SIGNAL: ]]; then
+  hard F1 0 "the reply never lands on an action; close on a SIGNAL: line or a pasteable block"
 fi
 
 if [ "$HARD" -eq 0 ] && [ "$SOFT" -eq 0 ]; then exit 0; fi

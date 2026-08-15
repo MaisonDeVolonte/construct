@@ -1,6 +1,6 @@
 # TheConstruct: Secure Agentic Coding Infra
 **Claude Code Plugins: Sandboxed automations, masked credentials, deterministic conventions, and more**
-> known issues (use `/operator:issues` to generate a fresh report):
+> known issues (use `/operator:upstream` to generate a fresh report):
 > go-based clis (`gh`, `terraform`, `kubectl`) cannot reach injectHosts domains on macos
 > [(#26466)](https://github.com/anthropics/claude-code/issues/26466);
 > the sandbox ca never loads and there is no supported fix since `allowMachLookup` is not passed through
@@ -12,17 +12,16 @@
 > and overpermissive
 > [(#81157)](https://github.com/anthropics/claude-code/issues/81157).
 
-&nbsp;
 ```
 TABLE OF CONTENTS
 ├─ Features ─────── operator · gitgud · retardify · hooks
 ├─ Examples ─────── operator:credentials · gitgud:deliver · retardify:graph
 ├─ Setup & Config
 ├─ Installation ─── individual · team · clone
-├─ Sandbox ──────── basic · repo · personal · managed · advanced
+├─ Sandbox ──────── basic · advanced
 ├─ Plugins & Skills
-├─ /operator ────── setup · settings · permissions · scripts · credentials · issues
-├─ /gitgud ──────── audit · backup · continue · deliver · prune · nuke · rerun · ship
+├─ /operator ────── upstream · setup · settings · permissions · scripts · credentials
+├─ /gitgud ──────── audit · issues · backup · continue · deliver · prune · nuke · rerun · ship
 ├─ /retardify ───── file · code · output · plan · graph · quiz · manual · review · log · todo
 ├─ Hooks & Actions
 ├─ /sessionstart ── inject-readme · inject-log · inject-changes · inject-support
@@ -40,14 +39,14 @@ TABLE OF CONTENTS
 | /operator                    | /gitgud                | /retardify         | hooks                           |
 |------------------------------|------------------------|--------------------|---------------------------------|
 | [:setup](#setup)             | [:audit](#audit)       | [:file](#file)     | [sessionstart](#sessionstart)   |
-| [:credentials](#credentials) | [:backup](#backup)     | [:code](#code)     | [stop](#stop)                   |
-| [:permissions](#permissions) | [:continue](#continue) | [:output](#output) | [pretooluse](#pretooluse)       |
-| [:scripts](#scripts)         | [:deliver](#deliver)   | [:plan](#plan)     | [posttooluse](#posttooluse)     |
-| [:settings](#settings)       | [:prune](#prune)       | [:graph](#graph)   | [taskcompleted](#taskcompleted) |
-| [:issues](#issues)           | [:nuke](#nuke)         | [:quiz](#quiz)     |                                 |
-|                              | [:rerun](#rerun)       | [:manual](#manual) |                                 |
-|                              | [:ship](#ship)         | [:review](#review) |                                 |
-|                              |                        | [:log](#log)       |                                 |
+| [:credentials](#credentials) | [:issues](#issues)     | [:code](#code)     | [stop](#stop)                   |
+| [:permissions](#permissions) | [:backup](#backup)     | [:output](#output) | [pretooluse](#pretooluse)       |
+| [:scripts](#scripts)         | [:continue](#continue) | [:plan](#plan)     | [posttooluse](#posttooluse)     |
+| [:settings](#settings)       | [:deliver](#deliver)   | [:graph](#graph)   | [taskcompleted](#taskcompleted) |
+| [:upstream](#upstream)       | [:prune](#prune)       | [:quiz](#quiz)     |                                 |
+|                              | [:nuke](#nuke)         | [:manual](#manual) |                                 |
+|                              | [:rerun](#rerun)       | [:review](#review) |                                 |
+|                              | [:ship](#ship)         | [:log](#log)       |                                 |
 |                              |                        | [:todo](#todo)     |                                 |
 
 ## Examples
@@ -298,110 +297,44 @@ rm -rf ~/Developer/construct
 > [troubleshooting](https://code.claude.com/docs/en/sandboxing#troubleshooting)
 
 <details>
-<summary>1. basic sandbox (local test environment, ~5-10 mins)</summary>
+<summary>1. basic sandbox (recommended, agent containment, ~5-30 mins per scope)</summary>
 
 ```
-# setup local settings file (follow generated instructions)
+# 1. restart code editor and claude tui
+claude
+
+# 2a. local sandbox (test environment, ~5-10 mins)
 /operator:settings --local
-```
-```
-# restart code editor and claude tui
-claude
-```
-```
-# check your live sandbox settings
-/sandbox
-```
-```
-# run operator's full audit (could take a few minutes)
-/operator:setup --audit
-```
-
-</details>
-
-<details>
-<summary>2. repo sandbox (project-wide, ~15-30 mins)</summary>
-
-```
-# setup project settings file (follow generated instructions)
+# 2b. project sandbox (repo-wide, ~15-30 mins)
 /operator:settings --project
-```
-```
-# restart code editor and claude tui
-claude
-```
-```
-# check your live sandbox settings
-/sandbox
-```
-```
-# run operator's full audit (could take a few minutes)
-/operator:setup --audit
-```
-
-</details>
-
-<details>
-<summary>3. personal sandbox (user-wide, ~15-30 mins)</summary>
-
-```
-# setup user settings file (follow generated instructions)
+# 2c. user sandbox (personal account, ~15-30 mins)
 /operator:settings --user
-
-# example instructions:
-# [ ] add: package-manager caches to `sandbox.filesystem.allowWrite`
-```
-```
-# restart code editor and claude tui
-claude
-```
-```
-# check your live sandbox settings
-/sandbox
-```
-```
-# run operator's full audit (could take a few minutes)
-/operator:setup --audit
-```
-
-</details>
-
-<details>
-<summary>4. managed sandbox (machine-wide, ~15-30 mins)</summary>
-
-```
-# setup managed settings file (follow generated instructions)
+# 2d. managed sandbox (machine-wide, ~15-30 mins)
 /operator:settings --managed
-```
-```
-# restart code editor and claude tui
-claude
-```
-```
-# check your live sandbox settings
+
+# 3. check your live sandbox settings
 /sandbox
-```
-```
-# run operator's full audit (could take a few minutes)
+# 4. run operator's full audit (could take a few minutes)
 /operator:setup --audit
 ```
 
 </details>
-
 <details>
-<summary>5. advanced sandbox (masked credentials, ~30-60 mins)</summary>
+<summary>2. advanced sandbox (recommended, masked credentials, ~10 mins per token)</summary>
 
 > requires user sandbox
 ```bash
-# make secure directory in your home directory
+# 1. make secure directory in your home directory
 mkdir -p ~/.operator && chmod 700 ~/.operator
-# make secure file for your masked credentials
+# 2. make secure file for your masked credentials
 touch ~/.operator/.env && chmod 600 ~/.operator/.env
-# append source command to shell config
+# 3. append source command to shell config
 echo '[ -r ~/.operator/.env ] && source ~/.operator/.env' >> ~/.zshrc
 ```
 ```
-# configure advanced settings (follow generated instructions)
+# 4. restart code editor and claude tui
+claude
+# 5. configure advanced settings (follow generated instructions)
 /operator:settings --advanced
 
 # example instructions:
@@ -411,17 +344,10 @@ echo '[ -r ~/.operator/.env ] && source ~/.operator/.env' >> ~/.zshrc
 # [ ] export: non-exposed credentials in `~/.operator/.env` (e.g. `export GH_TOKEN="github_pat_123"`)
 # [ ] mask: exported credentials from `~/.operator/.env` via `sandbox.credentials.envVars` (requires injectHosts)
 # [ ] allow: network access to each masked host via `sandbox.network.allowedDomains`
-```
-```
-# restart code editor and claude tui
-claude
-```
-```
-# check your live sandbox settings
+
+# 6. check your live sandbox settings
 /sandbox
-```
-```
-# run operator's full audit, the credentials probe included (could take a few minutes)
+# 7. run operator's full audit, the credentials probe included (could take a few minutes)
 /operator:setup --audit
 ```
 
@@ -458,7 +384,7 @@ metadata:
 - probes your machine's state and maps out a detailed roadmap all the way through
 - interactive questionnaire helps you decide which sandbox config is right for you
 - ends with a clean `--audit` handoff that makes sure everything is fully secure
-  - runs settings, permissions, scripts, credentials and issues, then keeps each output whole
+  - runs settings, permissions, scripts, credentials and upstream, then keeps each output whole
   - recomputes no verdict; each lens grades itself and this collects what they returned
   - correlates across lenses, which no single lens can do from inside itself
   - takes no lens flag, since one lens belongs to its own skill and its own artifact
@@ -582,24 +508,24 @@ metadata:
 - prints the copy commands for whichever settings scope you name
 - never changes a settings file, it only hands back commands for you to run
 
-#### Issues
+#### Upstream
 ```
-/operator:issues
+/operator:upstream
 ```
 ```yaml
 ---
-name: issues
+name: upstream
 model: opus
 effort: high
 license: MIT
 compatibility: requires bash, jq, curl
-description: search claude-code repo for relevant issues and update status in readme (saves report to .construct/)
+description: search upstream claude-code issues and update the readme banner (saves report to .construct/)
 argument-hint: "[--help] [--tracked] [--sandbox] [--hooks] [--plugins] [--permissions] [--since <days>]"
 disable-model-invocation: true
 disallowed-tools: WebFetch, WebSearch
 metadata:
   kind: trigger
-  artifact: .construct/operator/issues/
+  artifact: .construct/operator/upstream/
 ---
 ```
 **upstream movement since you last looked:** one report instead of a dozen open tabs
@@ -640,6 +566,32 @@ metadata:
 - checks composition, skill pairing, manifest agreement and artifact freshness
 - prices the run against the tracked files it would walk, and asks before spending any of it
 - outputs a numbered list, each finding with the command that shows the detail
+
+#### Issues
+```
+/gitgud:issues
+```
+```yaml
+---
+name: issues
+model: opus
+effort: high
+license: MIT
+compatibility: requires bash, jq, curl, git
+description: triage every open issue on this repo and rank what is cheapest to fix (saves report to .construct/)
+argument-hint: "[--help]"
+disable-model-invocation: true
+disallowed-tools: WebFetch, WebSearch
+metadata:
+  kind: trigger
+  artifact: .construct/gitgud/issues/
+---
+```
+**what your users reported, graded against your own code:** a queue instead of an inbox
+- fetches every open issue on origin with plain curl, since the sandbox breaks `gh` itself
+- reproduces each claim against the tree before it earns a verdict, so a stale report closes
+- ranks the survivors cheapest first, which is the order you would clear them in
+- triages and reports only; the fixing is a separate turn you start yourself
 
 #### Backup
 ```
@@ -995,7 +947,7 @@ metadata:
 ```
 **every reply is linted:** against the output style rules to keep conversations consistent
 - used by the `retardify-output.sh` `stop` hook automatically but can be used manually for debugging
-- grades the mechanically checkable rules: B1 markup, B2 prose, B6 shapes, C2 width, C8 ceiling
+- grades the mechanically checkable rules like markup, constraints, shapes, etc
 - blocks on HARD findings and quotes the offending line so the fix is mechanical
 
 #### Plan
@@ -1010,7 +962,7 @@ effort: max
 license: MIT
 compatibility: requires bash, curl, git
 description: turn work into a staged plan with per-stage readiness tables, then validate it (saves plan to .construct/)
-argument-hint: "[--help] <goal>"
+argument-hint: "[--help] <goal|path to a graph spec>"
 disable-model-invocation: true
 metadata:
   kind: trigger
@@ -1543,7 +1495,7 @@ keep-coding-instructions: true
 
 <formatting>
 
-- [F1] order: answer, evidence, actions
+- [F1] order: answer, evidence, SIGNAL
 - [F2] facts: bulleted list
 - [F3] systems: numbered list
 - [F4] comparisons: table
@@ -1574,6 +1526,8 @@ LABEL:
 | Value      | Value      |
 | Value      | Value      |
 | Value      | Value      |
+
+SIGNAL: `Code & Coordinates` OR `Copy/Paste Commands`
 ```
 
 </schema>
@@ -1880,10 +1834,11 @@ CONSTRAINTS:
 BANNED:
 - [B1] no bold, italics or emoji; a LABEL: carries the emphasis
 - [B2] every line is a LABEL:, a list item, a table row, fenced, or blank
+- [B3] every prose line is a coordinate, telemetry, a command, or an actionable directive
 - [B6] no aphorism or inversion standing in for a plain statement
 
 FORMATTING:
-- [F1] order: answer, evidence, actions
+- [F1] order: answer, evidence, SIGNAL
 - [F2] facts bulleted, [F3] systems numbered, [F4] comparisons tabled
 - [F5] commands fenced, [F6] identifiers ticked, [F7] headings are free-form LABELS
 
