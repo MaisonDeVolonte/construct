@@ -430,6 +430,15 @@ then AUDIT_COUNT=$(grep -c '^## Permissions Audit #' "$AUDIT_ROOT/$TODAYS_AUDIT"
 else AUDIT_COUNT=0; fi
 AUDIT_COUNT=${AUDIT_COUNT:-0}
 
+# the ledger `suggest-allow-rules` appends to: one json line per command shape documented to prompt
+# it is the only view of over-asking either layer has, since a prompt is the harness's to decide
+LEDGER="$AUDIT_ROOT/.construct/operator/permissions/asked.jsonl"
+SUGGESTED=0
+if [ -s "$LEDGER" ]; then
+  SUGGESTED=$(jq -rs 'group_by(.rule) | length' "$LEDGER" 2>/dev/null || echo 0)
+fi
+SUGGESTED=${SUGGESTED:-0}
+
 cat <<EOF
 
 === permissions.sh audit ===
@@ -444,6 +453,7 @@ cases: $CASES
 tier1 replayed: $((T1_PASS + T1_FAIL)) — $T1_PASS held, $T1_FAIL failed
 errors: $ERRORS
 warnings: $WARNINGS
+suggested: $SUGGESTED
 --- findings ---
 EOF
 
@@ -454,6 +464,19 @@ else
     | awk -F'|' '{ printf "%-5s %-22s %-46s %s\n", $1, $2, substr($3, 1, 44), $4 }'
 fi
 
+echo "--- allow rules to add next ---"
+if [ "$SUGGESTED" -eq 0 ]; then
+  echo "none — no command has tripped suggest-allow-rules since the ledger was last cleared"
+else
+  # ranked by how often the shape asked, since the one that costs the most turns is the one to paste
+  RANK='group_by(.rule)'
+  RANK="$RANK"' | map({rule: .[0].rule, reason: .[0].reason, hits: length, last: (map(.ts)|max)})'
+  RANK="$RANK"' | sort_by(-.hits, .rule)[] | [(.hits|tostring), .last, .rule, .reason] | @tsv'
+  jq -rs "$RANK" "$LEDGER" 2>/dev/null \
+    | awk -F'\t' '{ printf "%-5s %-21s %s\n      %s\n", $1 "x", $2, $3, $4 }'
+  echo "  paste each rule into \"allow\" in .claude/settings.json, then clear ${LEDGER#"$AUDIT_ROOT"/}"
+fi
+
 cat <<'EOF'
 --- what this audit cannot tell you ---
 - it never models the permission matcher, so "no deny rule names it" is not "it is allowed"
@@ -461,6 +484,7 @@ cat <<'EOF'
 - neither layer sees inside plugins/*/*.sh, so an allow-listed script bypasses both by design
 - the hook matches command strings, not intent, so it over-blocks a string that merely names a path
 - settings load at session start, so an edited file changes nothing until the session restarts
+- the ledger carries only the shapes the hook knows, so a prompt for any other reason never lands
 - a corpus is only as good as its spellings; add one every time a new bypass turns up
 ============================
 EOF
