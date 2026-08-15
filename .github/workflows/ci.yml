@@ -5,6 +5,8 @@
 # - the repo ships shell scripts that source each other, so ci gates exactly that and no more
 # - `shellcheck -x` lints every sidecar, hook, and validator at warning severity, sourced files too
 # - the shared files are linted directly as well, so a renamed variable fails the build (SC2034)
+# - `validate-skills` walks every pair, and it gates here because a red validator once merged green
+# - `push-release --check` gates the four version files, which ship as one install and must agree
 # - `export-readme` gates every managed region against the readme: skill tops, style, secrets and
 #   readme copies, the last three byte-identical per plugin because an install takes one directory
 # - `sidecars stay read-only` fails the build on an executed mutating git verb outside a handover
@@ -31,6 +33,7 @@ jobs:
     name: verify
     runs-on: ubuntu-latest
     steps:
+      # a shallow checkout is enough: every gate below reads the tree, and none reads the history
       - uses: actions/checkout@v4
 
       # shellcheck ships preinstalled on ubuntu-latest runners
@@ -49,6 +52,16 @@ jobs:
       # an unquoted $ARGUMENTS dies on the apostrophe in "don't", so the quote is a gate
       - name: free-text arguments survive a quote
         run: bash .claude/skills/validate-skills/probe-arguments.sh
+
+      # a red validator merged green once because nothing in ci ran it; the walk is pure and local,
+      # so it costs seconds and gates every skill pair rather than waiting to be typed by hand
+      - name: skill pairs validate
+        run: bash .claude/skills/validate-skills/validate-skills.sh
+
+      # the version is stored in four files and every one of them ships in the same install, so
+      # the gate is that they agree; --check is pure, reaches no network, and writes nothing
+      - name: version files agree
+        run: bash .claude/skills/push-release/push-release.sh --check
 
       # every managed region is one readme section exported per copy, and nothing but this
       # compares them; a detector with no gate is how three identical copies drift apart
