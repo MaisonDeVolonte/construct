@@ -963,7 +963,7 @@ effort: max
 license: MIT
 compatibility: requires bash, curl, git
 description: turn work into a staged plan with per-stage readiness tables, then validate it (saves plan to .construct/)
-argument-hint: "[--help] <goal|path to a graph spec>"
+argument-hint: "[--help] [--confirm] <goal|path to a spec or brief>"
 disable-model-invocation: true
 metadata:
   kind: trigger
