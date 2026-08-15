@@ -1,18 +1,32 @@
 # Contributing
+> strict, atomic, continuously integrated, trunk-based development with release management
 
-This repo carries a permission floor, hooks that block edits, and seven ci gates. Most of what
-follows is not guessable from the tree, which is why it is written down.
+```text
+[atomic prs → ci checks → trunk merge] --> [main:production → deploy → github]
+```
 
-## Branches
+- `main` is the long-lived integration trunk; continuously synced and always releasable
+- `branches` are short-lived, rarely stacked, and cut from a conflict-free trunk
+- `wip` are integrated via runtime feature flags, not long-lived branches
+- `commits` are structured as 'type(scope): title' with '- hyphen-delimited, multiline descriptions'
+- `prs` are autonomously staged, branched, and shipped via [/gitgud:deliver](plugins/gitgud/skills/deliver/SKILL.md)
+- `ci` checks shell, syntax, skills, sidecars, version, and readme before merging
+- `merges` are automatic and ghost branches are pruned via [/gitgud:prune](plugins/gitgud/skills/prune/SKILL.md)
+- `production` is a decoupled release branch used to manage live deployments
+- `deploys` are executed via 'github actions' and triggered via [/push-release](.claude/skills/push-release/SKILL.md)
 
-- branch off `main`, which is the integration trunk and where every pr lands
-- `production` is release-only and never receives a direct commit, since it must stay a
-  fast-forward of `main`; one commit landing there ends every later `merge --ff-only`
-- one pr does one thing; `/gitgud:deliver` reads the working tree and writes the whole sequence
+## Agents
+> the sandbox denies policy edits outright and heavily gates destructive changes 
 
-## The gates
+- `/fewer-permissions-prompts` is a built-in claude code skill that helps identify superfluous prompting
+- `/operator:permissions` is our internal tool that checks permissions against the sandbox policy
+- blocked paths:
+  - `~/.claude/`
+  - `.claude/settings.json` and `.claude/settings.local.json`
+  - `.claude/hooks/**` and `plugins/*/hooks/`
 
-All seven run on the pr, and `gh pr merge --auto` waits for them.
+## Gates
+> all ci gates run on the pr and `gh pr merge --auto` waits for them
 
 | gate | what fails it |
 |---|---|
@@ -24,46 +38,25 @@ All seven run on the pr, and `gh pr merge --auto` waits for them.
 | `readme drift` | an exported region edited in the copy instead of at its source |
 | `sidecars stay read-only` | a bare mutating git verb inside a sidecar |
 
-## Skills
-
-A skill is a pair: `SKILL.md` and a sidecar of the same name as its folder.
-
-- the sidecar measures and hands over; it never mutates the tree, which the last gate enforces
-- a mutating command is emitted through `handover_cmd` for a person to read and paste
-- `metadata.kind` is declared, `trigger` or `spec`, and a trigger sets `disable-model-invocation`
-- run `bash .claude/skills/validate-skills/validate-skills.sh` before opening the pr
-- `.claude/skills/` holds maintainer tools for this repo only; they ship to nobody and the pair
-  checks never walk them, so they are gated by `shellcheck` and `bash -n` alone
-
-## The README
-
-Never edit `plugins/*/README.md`. All three are whole-file copies of the root `README.md`.
-
-- `.claude/skills/export-readme/` owns every managed region and writes all three copies
-- edit the root, run `bash .claude/skills/export-readme/export-readme.sh`, commit what it wrote
-- skill frontmatter, both output styles and the secrets file are exported the same way
-- the `readme drift` gate exists because three identical copies drift apart without one
-
-## What an agent cannot do here
-
-The floor denies some paths outright, so a change to one arrives as a paste rather than an edit.
-
-- `plugins/*/hooks/`, `plugins/operator/settings/` and `plugins/operator/lib/`
-- the five probe skills: `setup`, `credentials`, `permissions`, `scripts`, `settings`
-- `.claude/settings.json` and anything under `~/.claude/`
-- `rm`, `git push`, `git config` and the other destructive verbs
-- this is deliberate; if a change needs one of them, say so in the pr rather than working around it
-
 ## Releases
-
-`.claude/skills/push-release/` is the only thing that writes a version.
+> the `/push-release` skill is the only thing that writes a version
 
 - `MAJOR.MINOR.PATCH`, stored in four files, moved by a person, and `--patch` is the default
 - a merge to `production` is the release, and the bumped version is what fires `/plugin update`
 - release notes generate from the commits, so there is no `CHANGELOG.md` to update
 - read `.claude/skills/push-release/SKILL.md` for the scheme and every preflight it refuses on
 
-## Artifacts
+## Skills
+> all skills are paired with bash sidecars for deterministic output and artifact validation
 
-`.construct/` is gitignored and holds the plans, logs and audits the skills write. Nothing in it is
-required for a pr, and nothing in it should be added to one.
+- a mutating command is emitted through `handover_cmd` for a person to read and paste
+- `metadata.kind` is declared, `trigger` or `spec`, and a trigger sets `disable-model-invocation`
+- run `bash .claude/skills/validate-skills/validate-skills.sh` before opening the pr
+- maintainer tools are stored in the repo root's `.claude/skills/` folder
+
+
+## Docs
+> the root `README.md` is the source of truth and `export-readme` pushes it out to each plugin folder
+
+- plugin readme files, skill frontmatter, and output styles are all exported from the root README.md file
+- `readme drift` gates every pr ensuring all downstream docs are fully in sync
