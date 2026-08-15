@@ -37,10 +37,10 @@ else
   if [ -z "$GOAL" ]; then
     echo "fatal: /write-graph needs a goal, as in: /write-graph import the backend repo" >&2; exit 1; fi
 
-  # the validator accepts letters, digits and hyphens only, so all else collapses to a hyphen;
-  # the length cap keeps a rambling goal from becoming a filename nobody can read back
+  # the validator accepts letters digits and hyphens only, so all else collapses to a hyphen
+  # 36 is the OUTPUT line's leftover: 100 columns less 14 indent, 26 path and 24 name furniture
   SLUG=$(printf '%s' "$GOAL" | tr '[:upper:]' '[:lower:]' \
-    | sed -e 's/[^a-z0-9]/-/g' -e 's/--*/-/g' -e 's/^-//' -e 's/-$//' | cut -c1-60)
+    | sed -e 's/[^a-z0-9]/-/g' -e 's/--*/-/g' -e 's/^-//' -e 's/-$//' | cut -c1-36)
   SLUG=${SLUG%-}
   if [ -z "$SLUG" ]; then
     echo "fatal: the goal has no letters or digits to build a filename from" >&2; exit 1; fi
@@ -299,8 +299,8 @@ check_fanout() {
   fi
 }
 
-# "`--plan` means `.construct/retardify/plan/<same-basename>.md`" — the pairing is the whole reason a spec and
-# the artifact it produces share a name, so a mismatched basename is a broken pair
+# "`--plan` means `.construct/retardify/plan/<same-basename>.md`" — sharing a name IS the pairing
+# so a mismatched basename is a broken pair rather than a cosmetic slip
 check_output() {
   local file=$1 base named
   base=$(basename "$file")
