@@ -425,6 +425,36 @@ check_sidecar_header() {
   fi
 }
 
+# the mode git RECORDS, not the mode on disk: an install copies the tracked bit, so a local chmod
+# that never reached the index leaves every other machine unable to exec the file
+tracked_mode() {
+  git ls-files -s -- "$1" 2>/dev/null | awk '{ print $1; exit }'
+}
+
+# a sidecar is exec'd by its trigger, so 100644 is a permission denied on any machine but the one
+# that authored it; an untracked file has no recorded mode yet and is left alone
+check_mode() {
+  local doc=$1 name sidecar mode
+  name=$(trigger_name "$doc")
+  sidecar="$(dirname "$doc")/$name.sh"
+  if [ ! -f "$sidecar" ]; then return 0; fi
+  mode=$(tracked_mode "$sidecar")
+  if [ -z "$mode" ] || [ "$mode" = '100755' ]; then return 0; fi
+  err "$sidecar" 1 not_executable "tracked $mode; run 'git update-index --chmod=+x $sidecar'"
+}
+
+# hooks pair with no doc, so they never reach the run list above; the harness execs them by path and
+# reports only 'permission denied', which reads as a broken hook rather than a wrong bit
+check_hook_modes() {
+  local hook mode
+  while IFS= read -r hook; do
+    [ -n "$hook" ] || continue
+    mode=$(tracked_mode "$hook")
+    if [ "$mode" = '100755' ]; then continue; fi
+    err "$hook" 1 not_executable "tracked $mode; run 'git update-index --chmod=+x $hook'"
+  done < <(git ls-files -- 'plugins/*/hooks/*.sh' 'plugins/*/hooks/*/*.sh' 2>/dev/null || true)
+}
+
 # "the required check that lets `gh pr merge --auto` engage" runs the same two gates, so a sidecar
 # that fails them locally has already failed ci
 check_sidecar_lint() {
@@ -645,6 +675,7 @@ for pair in "${PAIRS[@]}"; do
   check_doc_wayfinding  "$pair"
   check_sidecar_header  "$pair"
   check_sidecar_lint    "$pair"
+  check_mode            "$pair"
   check_scrub           "$pair"
   check_body            "$pair"
   check_block_name      "$pair"
@@ -664,6 +695,9 @@ for pair in "${PAIRS[@]}"; do
       warn "$pair" 1 no_kind "kind unset, so the trigger checks were skipped; export-readme owns the rule";;
   esac
 done
+
+# the hooks walk is repo-wide rather than per pair, so it runs once after the loop
+check_hook_modes
 
 # ==============
 # TELEMETRY
