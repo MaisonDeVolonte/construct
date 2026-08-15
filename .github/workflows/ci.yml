@@ -74,7 +74,7 @@ jobs:
           # handover_cmd and handover_note carry these verbs as strings, which is the whole design,
           # and settings.sh feeds one to the hook replay; a quoted verb is data, so only bare runs
           if grep -rnE '(^|[[:space:]]|[;&|(])git[[:space:]]+(merge[[:space:]]|pull|checkout|restore|switch|reset|clean|rebase|cherry-pick|revert|commit|am|apply|stash[[:space:]]+(push|pop|apply|drop|clear)|branch[[:space:]]+-[dD]|push|tag)' \
-              plugins/*/skills/*/*.sh plugins/*/shared/*.sh plugins/*/lib/*.sh \
+              plugins/*/skills/*/*.sh plugins/*/shared/*.sh \
               | grep -vE ':[0-9]+:[[:space:]]*#' \
               | grep -vE 'handover_cmd|handover_note|telemetry_line' \
               | grep -vE '["'"'"'`]git[[:space:]]'; then

@@ -50,8 +50,6 @@ PROTECTED="$PROTECTED|plugins/operator/settings$B|plugins/[a-z][a-z-]*/hooks$B"
 
 # the probes read the live gate, so editing one lets an agent fake its own clean bill of health
 PROTECTED="$PROTECTED|plugins/operator/skills/(setup|credentials|permissions|scripts|settings)$B"
-# lib/ carries the suite that drives all five, so it is the same surface one level out
-PROTECTED="$PROTECTED|plugins/operator/lib$B"
 
 # `.claude` is matched whole above, which swept in this repo's own maintainer skills; blanking the
 # token beats an exception, since a command that ALSO names a policy path still earns its deny

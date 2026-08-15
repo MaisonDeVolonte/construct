@@ -35,7 +35,7 @@ echo "sidecar exit: $?"
 - it already ran with whatever flags the invocation carried
 - NO FLAG → the machine was probed; continue to step 1
 - `--roadmap` → a reprint ran and nothing was probed; skip to step 3
-- `--audit --confirm` → the whole suite ran under `lib/suite.sh`; skip to step 4
+- `--audit --confirm` → the whole suite ran, in this sidecar's audit mode; skip to step 4
 - fail (`sidecar exit` > 0) → a preflight refused; report what it named rather than rerunning
 - success (`sidecar exit` = 0) → the run is clean; record it in whichever step the flags selected
 - the `todo` line carries how many steps are still outstanding, so quote it when it is not zero
