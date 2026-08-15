@@ -121,7 +121,7 @@ keep-coding-instructions: true
 
 <formatting>
 
-- [F1] order: answer, evidence, actions
+- [F1] order: answer, evidence, SIGNAL
 - [F2] facts: bulleted list
 - [F3] systems: numbered list
 - [F4] comparisons: table
@@ -152,6 +152,8 @@ LABEL:
 | Value      | Value      |
 | Value      | Value      |
 | Value      | Value      |
+
+SIGNAL: `Code & Coordinates` OR `Copy/Paste Commands`
 ```
 
 </schema>

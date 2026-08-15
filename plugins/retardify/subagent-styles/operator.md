@@ -25,10 +25,11 @@ CONSTRAINTS:
 BANNED:
 - [B1] no bold, italics or emoji; a LABEL: carries the emphasis
 - [B2] every line is a LABEL:, a list item, a table row, fenced, or blank
+- [B3] every prose line is a coordinate, telemetry, a command, or an actionable directive
 - [B6] no aphorism or inversion standing in for a plain statement
 
 FORMATTING:
-- [F1] order: answer, evidence, actions
+- [F1] order: answer, evidence, SIGNAL
 - [F2] facts bulleted, [F3] systems numbered, [F4] comparisons tabled
 - [F5] commands fenced, [F6] identifiers ticked, [F7] headings are free-form LABELS
 

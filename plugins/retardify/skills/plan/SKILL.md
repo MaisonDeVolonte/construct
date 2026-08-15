@@ -5,7 +5,7 @@ effort: max
 license: MIT
 compatibility: requires bash, curl, git
 description: turn work into a staged plan with per-stage readiness tables, then validate it (saves plan to .construct/)
-argument-hint: "[--help] <goal>"
+argument-hint: "[--help] <goal|path to a graph spec>"
 disable-model-invocation: true
 metadata:
   kind: trigger
@@ -27,14 +27,27 @@ echo "sidecar exit: $?"
 - it already ran, so there is no command to issue
 - fail (`sidecar exit` > 0) → abort and report the raw terminal error inside a markdown code block
 - `collision: yes` → STOP and name the file already holding that slug; never overwrite a plan
+- `spec: <path>` → the argument was a graph spec; read it whole before step 1 and treat it as the brief
 - success (`sidecar exit` = 0) → take `target` from the telemetry and continue to step 1
 
 1. gather what the plan rests on before drafting a line of it
   - read the repo for the motivation, the obstacle, the constraint and the guardrails
+  - with `spec: <path>`, read the spec whole first; its `CONTEXT:` is answered and is never re-asked
   - ASK the user for whatever the repo cannot answer, in one round, then WAIT for the answers
+  - the round is lettered `a.`, `b.`, `c.`, in one fenced block, with no prose between the rows
   - verify any claim carrying a number before it lands, or leave the number out
 
-2. write `[target]` in the shape defined under `## the shape` below
+2. release the user before writing a line, in one of these two forms and no other
+  ```text
+  QUESTIONS: a, b, c above are the whole round; answer them and you are free for the rest
+  UNATTENDED: no questions; this runs alone for a few minutes and ends on the saved plan
+  ```
+  - it lands after the question block, or instead of one, and never mid-write
+  - so the user knows whether to stay before the long part starts, rather than after it
+  - past this line nothing else is asked; a gap becomes an `ALERT` row above the checklist
+  - every question this step DID ask is a hole in the spec, recorded as a numbered note
+
+3. write `[target]` in the shape defined under `## the shape` below
   - sections in order: context, goal, solution, risks, checklist, readiness, notes
   - stages are numbered `### <n>. <name>`, run in sequence, and each ships as its own pr
   - risks sort by blast radius and irreversibility, never by likelihood
@@ -42,7 +55,7 @@ echo "sidecar exit: $?"
   - every permission row is quoted exactly from a settings file, or labelled a proposal
   - notes are numbered so every `(see #x)` resolves, and are the only place verbosity belongs
 
-3. validate what landed, then show it and STOP
+4. validate what landed, then show it and STOP
   ```bash
   plugins/retardify/skills/plan/plan.sh --check [target]
   ```
@@ -52,6 +65,19 @@ echo "sidecar exit: $?"
     NEVER start stage 1 in the same turn, and never offer to; the plan IS the deliverable
     it gets read, argued with and edited before anything is built against it
 
+## the graph spec
+the argument is a goal in prose OR a path to a `/retardify:graph` spec, and the path form is the
+one `--plan` was written for:
+
+- `/retardify:plan .construct/retardify/graph/2026-08-06-operation-snap-mvp.md` is the whole invocation
+- a spec is recognised by being one argument that resolves to a file, never by its extension
+- the `GOAL:` line inside the spec becomes the goal, so nothing is retyped and nothing drifts
+- the plan inherits the spec's basename, which is the pairing `/retardify:graph --plan` promises
+- a file carrying no `GOAL:` line is refused, since a wrong path would otherwise plan the wrong work
+- the spec's `CONTEXT:` answers step 1, so the questions there are asked only about what it omits
+- the spec's `DONE WHEN:` is the readiness table's source, and `FAN OUT:` suggests the stages
+- a spec run still writes a normal plan and still passes `--check`; nothing about the shape changes
+
 ## the shape
 > the spec this skill writes against; the validator below grades what landed
 
@@ -60,6 +86,9 @@ echo "sidecar exit: $?"
 - sections run in this order: context, goal, solution, risks, checklist, readiness, notes
 - a completed plan closes with a summary in `notes`; a `## Summary` section breaks that order
 - an unticked box is live work, or an abandoned `~~SKIPPED: <why>~~` that says so outright
+- a question the plan could not close rides in an `ALERT` fence directly above `## Checklist`
+- it sits there because an open question can invalidate every stage under it, so it is read first
+- rows are numbered 1..n with no gap, and the block is omitted whole when nothing is open
 - scrub client names, tokens, and other sensitive detail before it lands in a commit
 
 **the style:** maximally clear, concise, action-oriented language
@@ -100,6 +129,13 @@ sorted by blast radius and irreversibility, never by likelihood
 - `ships silently` next: wrong behavior that nobody notices
 - `costs an hour` last: a red check is an inconvenience, not a risk
 - label each with a noun naming the actual risk, never a category like `edge case`
+
+```
+ALERT: Please answer the following questions to finalize this plan file.
+1. every question the plan could not answer, one per line
+2. asked as a question, never as a statement of the gap
+3. omitted entirely when nothing is open
+```
 
 ## Checklist
 

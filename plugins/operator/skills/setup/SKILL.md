@@ -16,7 +16,7 @@ metadata:
 - probes your machine's state and maps out a detailed roadmap all the way through
 - interactive questionnaire helps you decide which sandbox config is right for you
 - ends with a clean `--audit` handoff that makes sure everything is fully secure
-  - runs settings, permissions, scripts, credentials and issues, then keeps each output whole
+  - runs settings, permissions, scripts, credentials and upstream, then keeps each output whole
   - recomputes no verdict; each lens grades itself and this collects what they returned
   - correlates across lenses, which no single lens can do from inside itself
   - takes no lens flag, since one lens belongs to its own skill and its own artifact

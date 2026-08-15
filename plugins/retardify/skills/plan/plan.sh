@@ -33,25 +33,38 @@ else
   VALIDATOR="plugins/retardify/skills/plan/plan.sh --check"
   TODAY=$(date +%Y-%m-%d)
 
+  # a graph spec already names this plan's target as its own basename, so a spec path is an
+  # argument rather than a goal: the goal is read out of the file and the filename is inherited
+  SPEC=none
+  if [ "$#" -eq 1 ] && [ -f "$1" ]; then SPEC="$1"; fi
+
   GOAL="$*"
+  if [ "$SPEC" != none ]; then
+    GOAL=$(sed -n 's/^GOAL:[[:space:]]*//p' "$SPEC" | head -n 1)
+    if [ -z "$GOAL" ]; then
+      echo "fatal: $SPEC carries no GOAL: line, so it is not a graph spec" >&2; exit 1; fi
+  fi
   if [ -z "$GOAL" ]; then
     echo "fatal: /write-plan needs a goal, as in: /write-plan split the settings floor" >&2; exit 1; fi
 
-  # the validator accepts letters, digits and hyphens only, so all else collapses to a hyphen;
-  # the length cap keeps a rambling goal from becoming a filename nobody can read back
+  # the validator accepts letters digits and hyphens only, so all else collapses to a hyphen
+  # 36 matches the graph cap, so a plan named here can still pair with a spec naming it there
   SLUG=$(printf '%s' "$GOAL" | tr '[:upper:]' '[:lower:]' \
-    | sed -e 's/[^a-z0-9]/-/g' -e 's/--*/-/g' -e 's/^-//' -e 's/-$//' | cut -c1-60)
+    | sed -e 's/[^a-z0-9]/-/g' -e 's/--*/-/g' -e 's/^-//' -e 's/-$//' | cut -c1-36)
   SLUG=${SLUG%-}
   if [ -z "$SLUG" ]; then
     echo "fatal: the goal has no letters or digits to build a filename from" >&2; exit 1; fi
 
   mkdir -p "$ARTIFACTS"
   TARGET="$ARTIFACTS/$TODAY-operation-$SLUG.md"
+  # the spec owns the pairing, so its basename wins over today's date and the derived slug
+  if [ "$SPEC" != none ]; then TARGET="$ARTIFACTS/$(basename "$SPEC")"; fi
   if [ -e "$TARGET" ]; then COLLISION=yes; else COLLISION=no; fi
   EXISTING=$(find "$ARTIFACTS" -maxdepth 1 -type f -name '*.md' | wc -l | tr -d ' ')
 
   echo "=== /write-plan telemetry ==="
   echo "goal: $GOAL"
+  echo "spec: $SPEC"
   echo "slug: $SLUG"
   echo "target: $TARGET"
   echo "collision: $COLLISION"
@@ -325,11 +338,17 @@ check_fences() {
 # the body carries one clause per line, so a bare continuation line means a bullet wrapped
 # the template allows a single description line under the heading, before the bullets start
 check_clauses() {
-  local file=$1 name lineno text started
+  local file=$1 name lineno text started fenced
   for name in Context Solution Risks; do
     started=0
+    fenced=0
     while IFS=$'\t' read -r lineno text; do
       if [ -z "$text" ]; then continue; fi
+      # the ALERT block closes the risks section, so its rows are fenced content rather than clauses
+      case "$text" in
+        '```'*) fenced=$((1 - fenced)); continue;;
+      esac
+      if [ "$fenced" -eq 1 ]; then continue; fi
       case "$text" in
         "- "*) started=1; continue;;
       esac
@@ -596,6 +615,30 @@ check_notes() {
 }
 
 
+# an unanswered question is the one thing that can invalidate every stage below it, so it rides in
+# a fence directly above the checklist rather than in a note the reader reaches after the work
+check_alert() {
+  local file=$1 open lineno text expected=1 asked=0
+  open=$(grep -nE '^ALERT: ' "$file" | head -n 1 || true)
+  if [ -z "$open" ]; then return 0; fi
+  lineno=${open%%:*}
+  if [ -z "$(sed -n "$((lineno - 1))p" "$file" | grep -E '^```')" ]; then
+    err "$file" "$lineno" alert_unfenced 'the ALERT block opens on a code fence, or it reads as prose'
+  fi
+  while IFS= read -r text; do
+    case "$text" in '```'*) break;; esac
+    if [ -z "$text" ]; then continue; fi
+    asked=$((asked + 1))
+    if [ "$text" != "$(printf '%s' "$text" | sed -n "s/^$expected\\. .*/&/p")" ]; then
+      err "$file" "$((lineno + asked))" alert_numbering "row $asked must open '$expected. '"
+    fi
+    expected=$((expected + 1))
+  done < <(tail -n "+$((lineno + 1))" "$file")
+  if [ "$asked" -eq 0 ]; then
+    err "$file" "$lineno" alert_empty "an ALERT with no questions is a plan claiming to be blocked"
+  fi
+}
+
 # --- run list (add new checks here) ---
 for plan in "${PLANS[@]}"; do
   check_filename "$plan"
@@ -606,6 +649,7 @@ for plan in "${PLANS[@]}"; do
   check_clauses  "$plan"
   check_goal     "$plan"
   check_risks    "$plan"
+  check_alert    "$plan"
   check_checklist "$plan"
   check_skips    "$plan"
   check_readiness "$plan"

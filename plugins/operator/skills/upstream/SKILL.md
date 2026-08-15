@@ -1,16 +1,16 @@
 ---
-name: issues
+name: upstream
 model: opus
 effort: high
 license: MIT
 compatibility: requires bash, jq, curl
-description: search claude-code repo for relevant issues and update status in readme (saves report to .construct/)
+description: search upstream claude-code issues and update the readme banner (saves report to .construct/)
 argument-hint: "[--help] [--tracked] [--sandbox] [--hooks] [--plugins] [--permissions] [--since <days>]"
 disable-model-invocation: true
 disallowed-tools: WebFetch, WebSearch
 metadata:
   kind: trigger
-  artifact: .construct/operator/issues/
+  artifact: .construct/operator/upstream/
 ---
 **upstream movement since you last looked:** one report instead of a dozen open tabs
 - fetches every cited claude-code issue with plain curl, since the sandbox breaks `gh` itself
@@ -21,7 +21,7 @@ metadata:
 
 ## Telemetry
 ```!
-"${CLAUDE_PLUGIN_ROOT}"/skills/issues/issues.sh $ARGUMENTS
+"${CLAUDE_PLUGIN_ROOT}"/skills/upstream/upstream.sh $ARGUMENTS
 echo "sidecar exit: $?"
 ```
 - `help: requested` → the run was refused before it started; `## Help` below is the whole turn
@@ -42,7 +42,7 @@ echo "sidecar exit: $?"
   - a `*` after a topic row marks an already-tracked issue, so it is movement wearing a search hit
 
 2. append one entry to `[audit_file]`, in the shape defined under `## the shape` below
-  - the heading reads `## Issues Report #[next_report]: [timestamp]`, both from the telemetry
+  - the heading reads `## Upstream Report #[next_report]: [timestamp]`, both from the telemetry
   - `state` is the run as hyphen bullets: window, auth, scope, and the counts
   - `tracked` leads with what moved, one block each, saying what the movement means HERE
   - `findings` is one table across the topics searched, naming each row's topic, hits worth a click
@@ -61,7 +61,7 @@ echo "sidecar exit: $?"
     drop a caveat whose issue closed fixed, keep every one still open, add one only for a finding
     that changes how the plugins survive the sandbox
   - keep the banner's own form: one clause per caveat with its linked issue number, the workaround
-    leading where one exists, and the `/operator:issues` pointer intact
+    leading where one exists, and the `/operator:upstream` pointer intact
   - present the replacement block fenced, then one bullet per caveat kept, added, or dropped, naming
     the report line that justifies it
   - the user confirms, edits, or rejects: apply exactly what came back, and NOTHING without an answer
@@ -70,16 +70,16 @@ echo "sidecar exit: $?"
 ## the shape
 > the artifact this skill appends to; the next run reads its date as the window's floor
 
-# .construct/operator/issues/YYYY-MM-DD.md
+# .construct/operator/upstream/YYYY-MM-DD.md
 one file per day, appended to by every deliberate run:
 
-- the heading reads `## Issues Report #[next_report]: [timestamp]`, both from the telemetry
+- the heading reads `## Upstream Report #[next_report]: [timestamp]`, both from the telemetry
 - a report captures upstream at a moment in time, so it is never edited after the fact
 - carry an unresolved finding forward by restating it, never by editing the older report
 - lines are hyphen bullets holding a single clause, capped at 100 characters
 - excerpts stay redacted exactly as the sidecar printed them, since issue threads carry pasted keys
 
-## Issues Report #1: YYYY-MM-DD HH:MM
+## Upstream Report #1: YYYY-MM-DD HH:MM
 
 ### state
 the run as hyphen bullets: window, auth, scope, and the counts
@@ -120,14 +120,14 @@ the sidecar's whole output, fenced and unedited, so every claim above can be che
 
 *example:*
 > ```text
-> === issues.sh sidecar ===
+> === upstream.sh sidecar ===
 > window: updated since 2026-08-06 (last report)
 > auth: anonymous (rate: 41/60 core, 10/10 search)
 > errors: 0
 > warnings: 1
 > ```
 
-## Issues Report #2: repeat the above format for each deliberate run on the same day
+## Upstream Report #2: repeat the above format for each deliberate run on the same day
 never edit an earlier report; a finding that stays unresolved is signal about how long it sat
 
 ## Help
