@@ -38,12 +38,12 @@ TABLE OF CONTENTS
 
 | /operator                    | /gitgud                | /retardify         | hooks                           |
 |------------------------------|------------------------|--------------------|---------------------------------|
-| [:setup](#setup)             | [:audit](#audit)       | [:file](#file)     | [sessionstart](#sessionstart)   |
-| [:credentials](#credentials) | [:issues](#issues)     | [:code](#code)     | [stop](#stop)                   |
-| [:permissions](#permissions) | [:backup](#backup)     | [:output](#output) | [pretooluse](#pretooluse)       |
-| [:scripts](#scripts)         | [:continue](#continue) | [:plan](#plan)     | [posttooluse](#posttooluse)     |
-| [:settings](#settings)       | [:deliver](#deliver)   | [:graph](#graph)   | [taskcompleted](#taskcompleted) |
-| [:upstream](#upstream)       | [:prune](#prune)       | [:quiz](#quiz)     |                                 |
+| [:upstream](#upstream)       | [:audit](#audit)       | [:file](#file)     | [sessionstart](#sessionstart)   |
+| [:setup](#setup)             | [:issues](#issues)     | [:code](#code)     | [stop](#stop)                   |
+| [:settings](#settings)       | [:backup](#backup)     | [:output](#output) | [pretooluse](#pretooluse)       |
+| [:permissions](#permissions) | [:continue](#continue) | [:plan](#plan)     | [posttooluse](#posttooluse)     |
+| [:scripts](#scripts)         | [:deliver](#deliver)   | [:graph](#graph)   | [taskcompleted](#taskcompleted) |
+| [:credentials](#credentials) | [:prune](#prune)       | [:quiz](#quiz)     |                                 |
 |                              | [:nuke](#nuke)         | [:manual](#manual) |                                 |
 |                              | [:rerun](#rerun)       | [:review](#review) |                                 |
 |                              | [:ship](#ship)         | [:log](#log)       |                                 |
