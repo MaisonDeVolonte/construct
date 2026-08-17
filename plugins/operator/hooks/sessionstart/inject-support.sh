@@ -7,12 +7,11 @@
 # - branches on where the plugin tree sits, since that decides who owns the file being edited
 # - resolves both paths first, since a symlinked install otherwise reads as a stranded copy
 # - inside the project root it is the user's own source, so the block is a one-line nudge
-# - anywhere else it is an install, and a local patch is stranded rather than reverted on update
-# - a marketplace install is version-pinned, so an update writes a new directory beside the patch
-# - carries the repo slug, the plugin version and the pinned commit, so a report needs no digging
-# - the patch is never forbidden; the issue is what makes the patch reach the next release
+# - anywhere else an update installs beside the patch, stranding it rather than reverting it
+# - carries the slug, the version and the pinned commit, so a report needs no digging
+# - the install path is the one unbounded input, so PATH_BUDGET clamps it and the payload is bounded
 # - self-contained on purpose: a manual install copies this one file and registers it
-# @see plugins/operator/hooks/hooks.json, plugins/operator/skills/upstream/SKILL.md
+# @see plugins/operator/hooks/hooks.json, plugins/operator/skills/context/SKILL.md, plugins/operator/skills/upstream/SKILL.md
 
 command -v jq >/dev/null 2>&1 || exit 0
 
@@ -20,55 +19,46 @@ ROOT="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}
 cd "$ROOT" || exit 0
 ROOT=$(pwd -P)
 
+# the longest install path this prints; a deeper one keeps its tail, which is the telling half
+PATH_BUDGET=60
+
 # a marketplace install can be a symlink pointing back at the source, so both sides resolve first
 PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 PLUGIN_ROOT=$(cd "$PLUGIN_ROOT" 2>/dev/null && pwd -P || printf '%s' "$PLUGIN_ROOT")
 
-# the repository the issue lands in, read from the manifest rather than restated here
-MANIFEST="$PLUGIN_ROOT/.claude-plugin/plugin.json"
-SLUG=$(jq -r '.repository // .homepage // empty' "$MANIFEST" 2>/dev/null \
-  | sed -n 's#^https://github.com/\([^/]*/[^/]*\)$#\1#p')
+# one read of the manifest, which owns both the repo the issue lands in and the version it names
+{ read -r REPO; read -r VERSION; } < <(jq -r \
+  '(.repository // .homepage // ""), (.version // "")' \
+  "$PLUGIN_ROOT/.claude-plugin/plugin.json" 2>/dev/null)
+SLUG=$(printf '%s' "$REPO" | sed -n 's#^https://github.com/\([^/]*/[^/]*\)$#\1#p')
 SLUG=${SLUG:-MaisonDeVolonte/construct}
-VERSION=$(jq -r '.version // empty' "$MANIFEST" 2>/dev/null)
 VERSION=${VERSION:-unknown}
 
-# the marketplace records the commit each install is pinned to, which is the one fact a maintainer
-# cannot recover from a version alone, since a version ships more than once during a day's work
-LEDGER="$HOME/.claude/plugins/installed_plugins.json"
-SHA=$(jq -r --arg p "$PLUGIN_ROOT" '
-  [ .plugins[]?[]?
-    | select(type == "object")
-    | select(.installPath != null)
-    | . as $entry
-    | select($p | startswith($entry.installPath))
-    | .gitCommitSha // empty ]
-  | first // empty' "$LEDGER" 2>/dev/null)
+# the commit an install is pinned to is the one fact a version cannot recover, since a version
+# ships more than once in a day; `empty` skips an entry with no sha so `first` keeps looking
+SHA=$(jq -r --arg p "$PLUGIN_ROOT" 'first(.plugins[]?[]?
+  | select(type == "object" and .installPath and ($p | startswith(.installPath)))
+  | .gitCommitSha // empty) // empty' "$HOME/.claude/plugins/installed_plugins.json" 2>/dev/null)
 SHA=${SHA:-unrecorded}
 
 # a plugin tree under the project root is the user's own source; anything else is an installed copy
 case "$PLUGIN_ROOT/" in
-  "$ROOT"/*) MODE=source;; *) MODE=install;;
-esac
-
-if [ "$MODE" = source ]; then
-  BODY="the plugin tree at $PLUGIN_ROOT sits inside this project, so it is this user's own source
-edit it directly; that is what a maintainer's checkout is for
-if a defect you fix here came from upstream, say so in one line at the end of your reply
-and offer the user a \`gh issue create -R $SLUG\` command, since upstream cannot see this fix"
-else
-  BODY="the plugin tree at $PLUGIN_ROOT is an installed copy, version $VERSION, pinned at $SHA
-patch it when a session needs the fix now; a patch here is never forbidden
-but an update installs a new version directory beside this one, so the patch is not reverted,
-it is stranded, and the user silently stops running the code they fixed
-so whenever you patch, or find a defect you cannot patch, close your reply with one fenced
-\`gh issue create\` command for the user to paste, filled in, never a placeholder:
+  "$ROOT"/*)
+    # relative to the root the agent already stands in, which is shorter and no less specific
+    BODY="\`${PLUGIN_ROOT#"$ROOT"/}\` is this user's own source: edit it directly
+if the defect came from upstream, close your reply offering
+\`gh issue create -R $SLUG\`, since upstream cannot see a fix made here";;
+  *)
+    WHERE=$PLUGIN_ROOT
+    [ ${#WHERE} -gt "$PATH_BUDGET" ] && WHERE="...${WHERE: -$PATH_BUDGET}"
+    BODY="$WHERE is an installed copy: version $VERSION, commit $SHA
+patch it if this session needs the fix, then close your reply with one filled-in fenced command:
 \`\`\`bash
-gh issue create -R $SLUG --title \"<the file and the symptom, one line>\" --body \"...\"
+gh issue create -R $SLUG --title \"<file>: <symptom>\" --body \"<version, commit, platform, cmd, output>\"
 \`\`\`
-the body carries the version, the commit, the platform, the command that failed and its output
-add the url form under it for a user without gh: https://github.com/$SLUG/issues/new
-say filing is optional and that it is what gets the fix into the next release"
-fi
+an update installs beside this directory, so an unfiled patch is stranded rather than reverted
+without gh: https://github.com/$SLUG/issues/new — filing is optional and is what ships the fix";;
+esac
 
 jq -n --arg ctx "## reporting a defect in these plugins
 
