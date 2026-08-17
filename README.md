@@ -806,20 +806,21 @@ model: opus
 effort: high
 license: MIT
 compatibility: requires bash, curl, git
-description: bucket uncommitted work into atomic, single-purpose PRs, gate the plan, then hand back every block of it
-argument-hint: "[--help] [--debug] [--finished] [guidance]"
+description: bucket uncommitted work into atomic, single-purpose PRs, gate the plan, then drain the tree
+argument-hint: "[--help] [--debug] [--finished] [--handover] [guidance]"
 disable-model-invocation: true
 metadata:
   kind: trigger
 ---
 ```
-**a messy tree becomes single-purpose PRs:** bucketed, ordered and written, ready to paste
+**a messy tree becomes single-purpose PRs:** bucketed, ordered, then drained one at a time
 - bucketing, ordering and message drafting are the reasoning it does for you
-- each bucket: branch, commit, push, PR, auto-merge, then back to the trunk
+- each bucket: one branch, one commit, one PR, auto-merge armed, then the next
 - free text after the flags is bucketing guidance, as in `keep the readme out of the hook bucket`
 - an apostrophe in that guidance is safe, since the invocation quotes it
-- guidance narrows how work groups; it never authorizes running a block
-- runs none of it; every bucket is a block you paste into your own terminal
+- two gates stand before anything moves: the bucketing plan, then your `go` on the whole drain
+- writes run over `api.github.com`, since a sandboxed push cannot authenticate
+- `--handover` emits the git and gh commands instead, for a terminal that can push
 
 #### Prune
 ```
