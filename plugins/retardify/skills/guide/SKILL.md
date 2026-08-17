@@ -1,15 +1,15 @@
 ---
-name: manual
+name: guide
 model: fable
 effort: max
 license: MIT
 compatibility: requires bash, git
-description: distill a completed plan into a perfect-world build manual, then validate it (saves manual to .construct/)
+description: distill a completed plan into a perfect-world build guide, then validate it (saves guide to .construct/)
 argument-hint: "[--help] <plan>"
 disable-model-invocation: true
 metadata:
   kind: trigger
-  artifact: .construct/retardify/manual/
+  artifact: .construct/retardify/guide/
 ---
 **the messy build rewritten as the ideal path:** every dead end stays back in the plan
 - distills a closed plan into the build as it goes when every step lands clean
@@ -20,14 +20,14 @@ metadata:
 
 ## Telemetry
 ```!
-"${CLAUDE_PLUGIN_ROOT}"/skills/manual/manual.sh "$ARGUMENTS"
+"${CLAUDE_PLUGIN_ROOT}"/skills/guide/guide.sh "$ARGUMENTS"
 echo "sidecar exit: $?"
 ```
 - `help: requested` → the run was refused before it started; `## Help` below is the whole turn
 - it already ran, so there is no command to issue
 - fail (`sidecar exit` > 0) → abort and report the raw terminal error inside a markdown code block
-- `completed: no` → STOP and name the open boxes; a manual distills finished work only
-- `collision: yes` → a manual already covers this plan; ASK whether to replace it, then WAIT
+- `completed: no` → STOP and name the open boxes; a guide distills finished work only
+- `collision: yes` → a guide already covers this plan; ASK whether to replace it, then WAIT
 - success (`sidecar exit` = 0) → take `target` from the telemetry and continue to step 1
 
 1. read the whole source plan, notes included, and extract the straight path
@@ -43,25 +43,25 @@ echo "sidecar exit: $?"
 
 3. validate what landed, then show it and STOP
   ```bash
-  plugins/retardify/skills/manual/manual.sh --check [target]
+  plugins/retardify/skills/guide/guide.sh --check [target]
   ```
-  - FIX every ERROR and re-run; a manual that fails its own validator is not saved work
-  - show the saved manual inline, then STOP
+  - FIX every ERROR and re-run; a guide that fails its own validator is not saved work
+  - show the saved guide inline, then STOP
 
     NEVER carry a caveat over from the plan, and never invent one
-    the plan records the real run; the manual states the ideal one
+    the plan records the real run; the guide states the ideal one
 
 ## the shape
 > the spec this skill writes against; the validator below grades what landed
 
-**the file:** `.construct/retardify/manual/<title>.md`, kebab-case, named by the plan it distills
+**the file:** `.construct/retardify/guide/<title>.md`, kebab-case, named by the plan it distills
 - one per completed plan, replaced rather than dated, since the ideal path has no history
 - sections run in this order: requires, steps, done
 - maximally concise: every line moves the build forward, or it goes
 - no risks, no notes, no readiness, no alternatives; all superfluous under ideal conditions
 - scrub client names, tokens, and other sensitive detail before it lands in a commit
 
-# MANUAL: Short Title
+# GUIDE: Short Title
 one line: what exists when the last step is done
 
 ## Requires
