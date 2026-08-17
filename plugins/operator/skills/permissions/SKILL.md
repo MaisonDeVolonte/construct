@@ -114,9 +114,13 @@ the sidecar's whole output, fenced and unedited, so every claim above can be che
 > === permissions.sh audit ===
 > cases: 78
 > tier1 replayed: 38 - 38 held, 0 failed
+> refusals: block-protected-paths 21, block-destructive-git 9 - 30 refusals over 29 commands
 > errors: 0
 > warnings: 32
 > ```
+
+- `refusals` names the action behind each block, since `tier1 replayed` only says how many held
+- its total runs ahead of its command count whenever two actions refuse the same command
 
 ## Permissions Audit #2: repeat the above format for each deliberate run on the same day
 never edit an earlier audit; a stale finding is signal about how long it went unresolved
