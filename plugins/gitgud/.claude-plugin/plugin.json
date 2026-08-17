@@ -1,7 +1,7 @@
 {
   "name": "gitgud",
   "description": "The whole git dance: atomic delivery, branch triage, backup, sync and release.",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "author": {
     "name": "MaisonDeVolonte",
     "url": "https://github.com/MaisonDeVolonte"
