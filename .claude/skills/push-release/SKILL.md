@@ -33,6 +33,8 @@ carries the field. The install a user gets is one directory, so all four move to
 `production` has to stay a fast-forward of the trunk, and the sidecar refuses when it is not:
 
 - a commit landing on `production` directly ends every later `merge --ff-only`
+- a trunk rule requiring a pull request rejects the bump push, so the sidecar reads that rule first
+- under that rule the bump branches before it commits, and the tag waits for the merged sha
 - so the bump is authored on the trunk, before the promotion, never by a workflow reacting to it
 - nothing is deployed by the push; users pull, so the promotion IS the release
 - the release notes generate from the commits, which is why no CHANGELOG is written here
@@ -43,6 +45,7 @@ carries the field. The install a user gets is one directory, so all four move to
 - a bare run means `--patch`; `--minor` and `--major` differ only in the number they compute
 - the write is a `sed` on the version line, so every hand-formatted object survives it
 - the commit, the tag, both pushes, the ff-merge and the release call are emitted, never run
+- `trunk gate` in the telemetry says which sequence you got: `direct` or `pull request required`
 
 ## Verify
 > not part of the tool; these run after a bump or before any release claim
