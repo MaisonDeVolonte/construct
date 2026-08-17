@@ -18,6 +18,17 @@
 - the working floor for every repo on this disk
 - a fix needs an editor rather than sudo, so values run clean here before promoting to managed
 
+## outputStyle
+```json
+"outputStyle": "operator",
+```
+- names the style this suite answers in; unset is the harness default, not a fallback to `operator`
+- the value is the style's frontmatter `name`, never the filename or a path
+- resolves against `~/.claude/output-styles/`, so `setup.sh` must install the style before this key reads
+- sits in user scope so every repo on this disk answers in one shape
+- the `Stop` hook grades each reply against these same rules, so an unset key fails the gate every turn
+- a copy of this file that drops the key silently disarms the style; the gate is what makes that visible
+
 ## sandbox
 ```json
 "enabled": true,
@@ -90,7 +101,7 @@
     { "path": "~/.kube",                  "mode": "deny" },
     { "path": "~/.netrc",                 "mode": "deny" },
     { "path": "~/.npmrc",                 "mode": "deny" },
-    { "path": "~/.operator/.env",         "mode": "deny" },
+    { "path": "~/.construct/.env",         "mode": "deny" },
     { "path": "~/.ssh",                   "mode": "deny" },
     { "path": "~/.zsh_history",           "mode": "deny" }
   ],
@@ -118,7 +129,7 @@
 - a masked name must never also be denied, since deny wins in every scope
 - every injectHosts entry must also sit in allowedDomains, or the mask fails closed
 - an entry with an empty path or name is stripped with a warning at startup
-- `~/.operator/.env` is doubled by the `.env*` permission deny, so either regression still holds
+- `~/.construct/.env` is doubled by the `.env*` permission deny, so either regression still holds
 - `~/.operator` must be chmod 700 on creation; umask gives 755
 - `IGCLI_SERP_KEY` came from probing the environment rather than any list
 - `NPM_TOKEN` is publish-only; installs are unaffected
@@ -126,7 +137,7 @@
 
 ## keys
 > one token per machine, named for the machine, so revoking it tells you exactly what breaks
-- a fine-grained pat in `~/.operator/.env`, one export per service
+- a fine-grained pat in `~/.construct/.env`, one export per service
 - a lost laptop revokes one credential instead of every project's access
 - user-owned throughout: no sudo to read, edit or rotate
 - mask stops the token leaving, never stops it being spent; the pat's scope is the real limit
@@ -140,7 +151,7 @@ every token inherits the same layers; the axis is the layer, never the token
 | `~/.operator` at 700 | every other account on the machine  |
 | `Read(//**/.env*)`   | the Read tool, and sandboxed bash   |
 | `credentials.files`  | sandboxed bash reading the file     |
-| `block-policy-edits` | bash writes naming a protected path |
+| `block-protected-paths` | bash writes naming a protected path |
 | `mask`               | the real value entering the sandbox |
 
 ### github
@@ -201,7 +212,7 @@ every token inherits the same layers; the axis is the layer, never the token
 - `xargs` and `tee` are absent for the same reason, and both take their payload from elsewhere
 - `curl` and `wget` are absent because `-o` writes files, though the pipe-to-shell forms are denied
 - `mkdir`, `touch` and `cp` are here because the sandbox already confines writes to cwd, and
-  the `block-policy-edits` hook refuses any of them that names a protected path
+  the `block-protected-paths` hook refuses any of them that names a protected path
 
 ### toolchain — build, typecheck, test
 ```json
@@ -297,27 +308,19 @@ every token inherits the same layers; the axis is the layer, never the token
 - the settings and the code enforcing them together; gating one leaves the rules protected and the enforcement editable
 - deny until 2026-08-04, and deny broke git rather than the agent: the projected deny refused the unlink a checkout needs
 - ask is the honest trade: the threat is an agent rewriting policy on its own initiative, and a prompt stops exactly that
-- the `block-policy-edits` hook refuses bash writes into all three, so the prompt is the second layer rather than the only one
+- the `block-protected-paths` hook refuses bash writes into all three, so the prompt is the second layer rather than the only one
 - it had covered `.claude/` alone until 2026-08-04, leaving the AGENTS paths on the prompt by itself
 
-### runners — one-shot remote execution
+### runners — local source, run in place
 ```json
-"Bash(npx*)",
-"Bash(bunx*)", "Bash(uvx*)",
-"Bash(pnpm dlx*)", "Bash(pnpm -* dlx*)",
-"Bash(yarn dlx*)", "Bash(yarn -* dlx*)",
-"Bash(bun x*)", "Bash(bun -* x*)",
-"Bash(pipx run*)", "Bash(pipx -* run*)",
-"Bash(uv tool run*)", "Bash(uv -* tool run*)",
 "Bash(deno run*)", "Bash(deno -* run*)",
 "Bash(go run*)", "Bash(go -* run*)",
 ```
-- each fetches code from a registry and executes it in one command
-- the sandbox contains the filesystem, never the credential: a masked token is unreadable and still spendable
-- cwd stays writable, so a package can edit the repo and wait for you to commit it
-- ask beats allow from any scope, overriding every project's npx allow
+- both usually run a file already in the repo, so a prompt fits where a refusal would not
+- `deno run` also accepts a url, which is the registry-fetching shape the deny block now holds
 - the interposed twin is `-*`, never a bare `*`, so the wildcard covers flags rather than subcommands
 - install-time scripts are deliberately absent: a prompt per install trains click-through, and `--ignore-scripts` is the real control
+- the package runners left on 2026-08-16, since ask is a verdict this repo no longer trusts
 
 ### find — arbitrary execution, ordinary work
 ```json
@@ -354,10 +357,10 @@ grouped most-destructive-first; any scope may add a deny, none may remove anothe
 - a hook is protected as a folder because `hooks.json` is the pointer: leave the registration
   writable and an agent aims `PreToolUse` at its own script without touching any blocker
 - what a hook currently does is irrelevant; every one of them is a slot the harness executes,
-  and `block-policy-edits.sh` says it plainly — neither the deny list nor the hook sees inside a `.sh`
+  and `block-protected-paths.sh` says it plainly — neither the deny list nor the hook sees inside a `.sh`
 - `.mcp.json` earns the same rule for the same reason: a server definition is a command
 - `plugins/*/hooks/**` covers the cloned-repo install; the marketplace install sits under `~/.claude/`
-- the last four are other agents' policy directories, and they are here because `block-policy-edits.sh`
+- the last four are other agents' policy directories, and they are here because `block-protected-paths.sh`
   already named them: the two gates are one policy, so a path in either belongs in both
 - anchored on the dot-directory, never on `hooks`: `**/hooks/**` reads as a source folder in most
   repos, and a deny cannot be waived for a session, so it would make `src/hooks/` hand-edit only
@@ -383,6 +386,25 @@ grouped most-destructive-first; any scope may add a deny, none may remove anothe
 "Bash(*fs.rm*)", "Bash(*fs.unlink*)", "Bash(*fs.rmdir*)", "Bash(*rimraf*)",
 ```
 - a string is not reviewable before it runs, which is the whole objection
+
+### runners — one-shot remote execution
+```json
+"Bash(npx*)",
+"Bash(bunx*)", "Bash(uvx*)",
+"Bash(pnpm dlx*)", "Bash(pnpm -* dlx*)",
+"Bash(yarn dlx*)", "Bash(yarn -* dlx*)",
+"Bash(bun x*)", "Bash(bun -* x*)",
+"Bash(pipx run*)", "Bash(pipx -* run*)",
+"Bash(uv tool run*)", "Bash(uv -* tool run*)",
+```
+- each fetches code from a registry and executes it in one command, with no reviewable step between
+- the sandbox contains the filesystem, never the credential: a masked token is unreadable and still spendable
+- cwd stays writable, so a package can edit the repo and wait for you to commit it
+- these sat on ask until 2026-08-16, and ask is the verdict #77212 shows auto-approving under bypassPermissions
+- a static ask rule also stops the hook firing once the session approves it, per #62437
+- the refusal hands the command back, and the operator runs it in a plain terminal when they mean to
+- `npm run`, `npm test` and a direct `node_modules/.bin/` path all stay on allow, and none of them fetches
+- no allowlist of vetted packages exists here, since `npx -p evil-pkg tsc` names a safe binary and fetches anything
 
 ### remote — repo, identity and secrets on the server
 ```json

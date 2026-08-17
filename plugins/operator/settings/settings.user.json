@@ -1,4 +1,5 @@
 {
+  "outputStyle": "operator",
   "sandbox": {
     "enabled": true,
     "failIfUnavailable": true,
@@ -28,7 +29,7 @@
         { "path": "~/.kube",                  "mode": "deny" },
         { "path": "~/.netrc",                 "mode": "deny" },
         { "path": "~/.npmrc",                 "mode": "deny" },
-        { "path": "~/.operator/.env",         "mode": "deny" },
+        { "path": "~/.construct/.env",        "mode": "deny" },
         { "path": "~/.ssh",                   "mode": "deny" },
         { "path": "~/.zsh_history",           "mode": "deny" }
       ],
@@ -124,13 +125,6 @@
 
       "Bash(git mv *)", "Bash(git rm *)",
 
-      "Bash(npx*)",
-      "Bash(bunx*)", "Bash(uvx*)",
-      "Bash(pnpm dlx*)", "Bash(pnpm -* dlx*)",
-      "Bash(yarn dlx*)", "Bash(yarn -* dlx*)",
-      "Bash(bun x*)", "Bash(bun -* x*)",
-      "Bash(pipx run*)", "Bash(pipx -* run*)",
-      "Bash(uv tool run*)", "Bash(uv -* tool run*)",
       "Bash(deno run*)", "Bash(deno -* run*)",
       "Bash(go run*)", "Bash(go -* run*)",
       "Bash(find * -exec *)"
@@ -141,9 +135,11 @@
 
       "Write(.claude/settings.json)", "Edit(.claude/settings.json)",
       "Write(.claude/settings.local.json)", "Edit(.claude/settings.local.json)",
-      "Write(.claude/hooks/**)", "Edit(.claude/hooks/**)",
 
+      "Write(.claude/hooks/**)", "Edit(.claude/hooks/**)",
       "Write(plugins/*/hooks/**)", "Edit(plugins/*/hooks/**)",
+
+      "Write(construct.config.json)", "Edit(construct.config.json)",
 
       "Write(.mcp.json)", "Edit(.mcp.json)",
       "Write(.husky/**)", "Edit(.husky/**)",
@@ -163,6 +159,15 @@
       "Bash(perl -e *)", "Bash(ruby -e *)",
       "Bash(curl * | bash)", "Bash(curl * | sh)", "Bash(curl * | python*)",
       "Bash(wget * | bash)", "Bash(wget * | sh)", "Bash(wget * | python*)",
+
+      "Bash(npx*)",
+      "Bash(bunx*)", "Bash(uvx*)",
+      "Bash(pnpm dlx*)", "Bash(pnpm -* dlx*)",
+      "Bash(yarn dlx*)", "Bash(yarn -* dlx*)",
+      "Bash(bun x*)", "Bash(bun -* x*)",
+      "Bash(pipx run*)", "Bash(pipx -* run*)",
+      "Bash(uv tool run*)", "Bash(uv -* tool run*)",
+
       "Bash(*fs.rm*)", "Bash(*fs.unlink*)", "Bash(*fs.rmdir*)", "Bash(*rimraf*)",
 
       "Bash(git -c *)", "Bash(git -C *)", "Bash(git --exec-path*)",
