@@ -12,14 +12,14 @@
 # - named demand rather than synthesize, since the agent is what writes; this file only asks
 # - anchors to the project root first, since a subdirectory cwd would read a stray log
 # - #1: a missing file used to read as infinitely stale and demand a full pass on a fresh project
-# @see plugins/retardify/skills/log/SKILL.md, plugins/operator/hooks/hooks.json, plugins/operator/hooks/stop/retardify-output.sh
+# @see plugins/operator/skills/logs/SKILL.md, plugins/operator/hooks/hooks.json, plugins/operator/hooks/stop/retardify-output.sh
 
 # hooks inherit the session's cwd, so anchor first; every path below stays relative to the root
 cd "${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}" || exit 0
 
 command -v jq >/dev/null 2>&1 || exit 0
 
-TODAYS_LOG=".construct/retardify/log/$(date +%Y-%m-%d).md"
+TODAYS_LOG=".construct/operator/logs/$(date +%Y-%m-%d).md"
 
 # seconds between full passes, which is the backstop rather than the main trigger
 UPDATE_INTERVAL=3600
@@ -33,9 +33,9 @@ NOW=$(date +%s)
 LAST_MODIFIED=$(stat -f %m "$TODAYS_LOG" 2>/dev/null || stat -c %Y "$TODAYS_LOG" 2>/dev/null || echo "$NOW")
 ELAPSED_TIME=$((NOW - LAST_MODIFIED))
 
-NOTES_TASK="append notes to the end of $TODAYS_LOG (see /retardify:log)"
+NOTES_TASK="append notes to the end of $TODAYS_LOG (see /operator:logs)"
 PROMPTS_TASK="append any uncaptured prompts to their thread's PROMPTS block in $TODAYS_LOG"
-SYNTHESIZE_TASK="synthesize $TODAYS_LOG (see /retardify:log): incorporate notes \
+SYNTHESIZE_TASK="synthesize $TODAYS_LOG (see /operator:logs): incorporate notes \
 into thread prose, and prune each thread's prompts without turning them into prose"
 
 REASON=''
@@ -44,8 +44,8 @@ REASON=''
 if [ "$ELAPSED_TIME" -gt "$UPDATE_INTERVAL" ]; then
   REASON="$NOTES_TASK; $PROMPTS_TASK; $SYNTHESIZE_TASK"
 else
-  # the cheap check: the log skill owns the byte cap, so ask rather than keep a second copy
-  LOG_SKILL="$(dirname "${BASH_SOURCE[0]}")/../../../retardify/skills/log/log.sh"
+  # the cheap check: the logs skill owns the byte cap, so ask rather than keep a second copy
+  LOG_SKILL="$(dirname "${BASH_SOURCE[0]}")/../../skills/logs/logs.sh"
   THREAD_MAX_BYTES=$(bash "$LOG_SKILL" --budget 2>/dev/null | sed -n 's/^thread_max_bytes: //p')
   THREAD_MAX_BYTES=${THREAD_MAX_BYTES:-5000}
 
@@ -66,7 +66,7 @@ else
   # the debounce is the only thing standing between a stubborn thread and an ask on every turn
   if { [ "$PENDING_NOTES" -gt 0 ] || [ -n "$WIDEST" ]; } \
     && [ "$ELAPSED_TIME" -ge "$SYNTH_DEBOUNCE" ]; then
-    REASON="synthesize $TODAYS_LOG (see /retardify:log)"
+    REASON="synthesize $TODAYS_LOG (see /operator:logs)"
     if [ "$PENDING_NOTES" -gt 0 ]; then
       REASON="$REASON: incorporate the $PENDING_NOTES pending note(s) into thread prose \
 and delete them"

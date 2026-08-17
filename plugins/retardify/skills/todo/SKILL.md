@@ -39,7 +39,7 @@ echo "sidecar exit: $?"
   - **AGENTS.md** — do its prose rules still hold (naming, css, imports, mirroring, etc.)?
   - **plugins/\*/** — does each skill's doc still match its own sidecar's flags and behavior?
 
-2. read the 5 most recent agent logs in `.construct/retardify/log/`, the shape `/retardify:log` defines
+2. read the 5 most recent agent logs in `.construct/operator/logs/`, the shape `/operator:logs` defines
   - extract observations, pain points, unfinished tasks, recurring bugs, or architectural ideas
 
 3. merge all three streams, dedupe, and evaluate against the urgent/important matrix:

@@ -1,23 +1,23 @@
 #!/bin/bash
 # ==========================================
-# @file log.sh - agent log validator sidecar
+# @file logs.sh - agent log validator sidecar
 # ==========================================
 # @description
 # PAIR
-# - sidecar for `/retardify:log` — asserts a day's log matches the shape its SKILL.md documents
+# - sidecar for `/operator:logs` — asserts a day's log matches the shape its SKILL.md documents
 # - the doc carries threads, notes and prompts; this file carries what a script can judge
 # ARTIFACT
-# - `.construct/retardify/log/YYYY-MM-DD.md`, one file per day, holding work and its prompts
+# - `.construct/operator/logs/YYYY-MM-DD.md`, one file per day, holding work and its prompts
 # - gitignored in this repo; host projects decide for themselves whether to track it
 # - `inject-log.sh` creates the day's file and `synthesize-log.sh` gates the session on it
 # - no trigger wraps it: a thread, a note or a synthesis is asked for in plain words
 # - a thread groups work by task or topic; notes and prompts append under the thread they belong to
 # - notes get absorbed into the thread's prose on synthesis; prompts stay a list and get pruned
 # RUN
-# - defaults to every file in `.construct/retardify/log/`; pass files or a directory to scope it
+# - defaults to every file in `.construct/operator/logs/`; pass files or a directory to scope it
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
 # - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
-# @see plugins/retardify/skills/log/SKILL.md, plugins/operator/hooks/sessionstart/inject-log.sh, plugins/operator/hooks/stop/synthesize-log.sh, .construct/retardify/log/, plugins/retardify/shared/secrets.sh
+# @see plugins/operator/skills/logs/SKILL.md, plugins/operator/hooks/sessionstart/inject-log.sh, plugins/operator/hooks/stop/synthesize-log.sh, .construct/operator/logs/, plugins/operator/shared/secrets.sh
 
 set -euo pipefail
 
@@ -44,8 +44,8 @@ if [ -n "$UTF8_LOCALE" ]; then export LC_ALL="$UTF8_LOCALE"; fi
 MAX_WIDTH=100
 STRICT=0
 KEEP=0
-TEMPLATE="plugins/retardify/skills/log/SKILL.md"
-ARTIFACTS=".construct/retardify/log"
+TEMPLATE="plugins/operator/skills/logs/SKILL.md"
+ARTIFACTS=".construct/operator/logs"
 
 # the subsections every thread carries, which is the one thing every thread must agree on
 EXPECTED_SECTIONS=$'context\nchanges\ninsights\nadvice'
@@ -57,7 +57,9 @@ MAX_PROSE_LINES=50
 # govern how a thread reads, bytes govern what it costs a session to carry, and the two agree at
 # roughly this ratio today. `--budget` prints both for the hooks, which own neither
 THREAD_MAX_BYTES=5000
-INJECT_THREADS=4
+# 2 rather than 4: a third thread puts the batch at 11558 chars against a 9500 injector budget
+# so the injector already dropped back to 2 every run; asking for 2 skips two wasted collections
+INJECT_THREADS=2
 
 # "`notes` are appended after taskcomplete or every 30 minutes, limited to 5 bullets"
 MAX_NOTE_BULLETS=5
@@ -411,7 +413,7 @@ SECRETS=$(grep -c '|secret|' "$FINDINGS" || true)
 
 cat <<EOF
 
-=== log.sh sidecar ===
+=== logs.sh sidecar ===
 template: $TEMPLATE
 scanned: ${#LOGS[@]} log file(s)
 width_cap: $MAX_WIDTH chars
