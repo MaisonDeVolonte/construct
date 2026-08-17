@@ -11,7 +11,7 @@
 # - no flag runs the trigger half, so every existing invocation is unchanged
 # - `--check [paths]` runs the validator half; with no paths it grades the whole artifact dir
 # - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
-# @see plugins/retardify/skills/todo/SKILL.md, plugins/retardify/skills/log/SKILL.md, .construct/retardify/todo/, .construct/retardify/log/, plugins/retardify/skills/todo/todo.sh, plugins/retardify/shared/secrets.sh
+# @see plugins/retardify/skills/todo/SKILL.md, plugins/operator/skills/logs/SKILL.md, .construct/retardify/todo/, .construct/operator/logs/, plugins/retardify/skills/todo/todo.sh, plugins/retardify/shared/secrets.sh
 
 set -euo pipefail
 

@@ -14,7 +14,7 @@
 # - `--confirm` on the invocation skips that stop for anyone who already knows the answer
 # - `--check [paths]` runs the validator half; with no paths it grades the whole artifact dir
 # - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
-# @see plugins/retardify/skills/plan/SKILL.md, .construct/retardify/plan/, plugins/retardify/skills/graph/SKILL.md, plugins/retardify/skills/log/SKILL.md, plugins/retardify/shared/secrets.sh
+# @see plugins/retardify/skills/plan/SKILL.md, .construct/retardify/plan/, plugins/retardify/skills/graph/SKILL.md, plugins/operator/skills/logs/SKILL.md, plugins/retardify/shared/secrets.sh
 
 set -euo pipefail
 

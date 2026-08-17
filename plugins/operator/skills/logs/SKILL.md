@@ -1,20 +1,20 @@
 ---
-name: log
+name: logs
 license: MIT
 compatibility: requires bash, git
 description: "the shape of a daily agent log: threads carrying their own notes and prompts (saves log to .construct/)"
 argument-hint: "[--help]"
-when_to_use: "Writing to .construct/retardify/log/, which the taskcompleted and stop hooks both demand before a turn closes. Also when asked to log, note or record what happened, or to recap the day's threads."
+when_to_use: "Writing to .construct/operator/logs/, which the taskcompleted and stop hooks both demand before a turn closes. Also when asked to log, note or record what happened, or to recap the day's threads."
 metadata:
   kind: spec
-  artifact: .construct/retardify/log/
+  artifact: .construct/operator/logs/
 ---
 **today's work, shaped for tomorrow's session:** the next agent reads it instead of asking you
 - threads group work by topic, carrying their own notes and prompts
 - `inject-log` carries the four most recent threads forward across days
 - the stop hook demands it, so a turn cannot close on an unwritten day
 
-# .construct/retardify/log/YYYY-MM-DD.md
+# .construct/operator/logs/YYYY-MM-DD.md
 one file per day, holding both the work and the prompts that drove it:
 
 - gitignored in this repo; host projects decide for themselves whether to track it
@@ -118,7 +118,7 @@ synthesize pending notes when creating a new thread, and prune that thread's pro
 - keep the prompt that changed direction, dropped a constraint, or corrected a wrong assumption
 
 ## Verify
-- RUN `plugins/retardify/skills/log/log.sh` after closing a thread, adding a note, or synthesizing
+- RUN `plugins/operator/skills/logs/logs.sh` after closing a thread, adding a note, or synthesizing
 - FIX every ERROR, since each one breaks a rule this spec states outright
 - STOP on a `secret` finding and ask the user before truncating it; the key needs rotating first
 - JUSTIFY or fix every WARN; the sidecar tolerates them, the next reader may not

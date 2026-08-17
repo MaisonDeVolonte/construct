@@ -5,28 +5,28 @@
 # @description
 # - fires at session start: injects the newest log threads under a `## recent threads` heading
 # - stubs today's log file when none exists, the one action that still does (see #1)
-# - reads its thread count from the log skill's own budget, defaulting to 4 when it is absent
+# - reads its thread count from the logs skill's own budget, defaulting to 4 when it is absent
 # - the harness caps one payload at 10000 characters, so oldest threads drop until the batch fits
 # - no threads at all injects nothing, so a fresh project pays nothing
 # - anchors to the project root first, since a subdirectory cwd stubs a stray log and injects it
 # - #1: the demand actions treat a missing log as nothing, so the stub they rely on lives here
-# @see plugins/retardify/skills/log/, plugins/operator/hooks/hooks.json, .construct/retardify/log/
+# @see plugins/operator/skills/logs/, plugins/operator/hooks/hooks.json, .construct/operator/logs/
 
 command -v jq >/dev/null 2>&1 || exit 0
 
 # hooks inherit the session's cwd, so anchor first; every path below stays relative to the root
 cd "${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}" || exit 0
 
-TODAY_LOG=".construct/retardify/log/$(date +%Y-%m-%d).md"
+TODAY_LOG=".construct/operator/logs/$(date +%Y-%m-%d).md"
 # the 10000-char harness cap, with headroom so the heading and seams never spill over it
 PAYLOAD_BUDGET=9500
 
 # stub today's log file if one doesn't exist
 if [ ! -f "$TODAY_LOG" ];
-then mkdir -p .construct/retardify/log; echo "# $TODAY_LOG" > "$TODAY_LOG"; fi
+then mkdir -p .construct/operator/logs; echo "# $TODAY_LOG" > "$TODAY_LOG"; fi
 
-# the log skill owns its own budget; a missing log skill falls back rather than injecting nothing
-LOG_SKILL="$(dirname "${BASH_SOURCE[0]}")/../../../retardify/skills/log/log.sh"
+# the logs skill owns its own budget; it ships in this plugin, and a missing one still falls back
+LOG_SKILL="$(dirname "${BASH_SOURCE[0]}")/../../skills/logs/logs.sh"
 INJECT_THREADS=$(bash "$LOG_SKILL" --budget 2>/dev/null | sed -n 's/^inject_threads: //p')
 INJECT_THREADS=${INJECT_THREADS:-4}
 
@@ -34,7 +34,7 @@ INJECT_THREADS=${INJECT_THREADS:-4}
 # threads begin at the `## Thread` heading to the line before the next one
 all_threads() {
   local file total
-  for file in $(ls -1 .construct/retardify/log/*.md 2>/dev/null | sort); do
+  for file in $(ls -1 .construct/operator/logs/*.md 2>/dev/null | sort); do
     [ -e "$file" ] || continue
     total=$(wc -l < "$file" | tr -d ' ')
     awk -v f="$file" -v total="$total" '
