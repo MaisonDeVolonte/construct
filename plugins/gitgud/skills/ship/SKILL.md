@@ -11,7 +11,7 @@ metadata:
   kind: trigger
 ---
 **abort beats a bad bump:** every release precondition checked before the version moves
-- aborts on a dirty tree, detached HEAD, stale trunk or missing production
+- aborts on a dirty tree, detached HEAD, stale trunk, missing production or drifted docs
 - computes the next version rather than applying it, since `npm version` commits
 - releases nothing; the bump, push and promote are handed over
 
