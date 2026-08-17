@@ -156,8 +156,8 @@ emit_scopes() {
   cat <<EOF
 --- beyond the copies (masked credentials) ---
 keys       mkdir -p ~/.operator && chmod 700 ~/.operator
-env        write each token into ~/.operator/.env as: export GH_TOKEN="..."
-shell      append to ~/.zshrc: [ -r ~/.operator/.env ] && source ~/.operator/.env
+env        write each token into ~/.construct/.env as: export GH_TOKEN="..."
+shell      append to ~/.zshrc: [ -r ~/.construct/.env ] && source ~/.construct/.env
 rules      add one {"name":"GH_TOKEN","mode":"mask"} per token to sandbox.credentials.envVars
 restart    restart the editor, then start a new claude session
 EOF
@@ -208,11 +208,11 @@ advanced_state() {
   if [ -n "$masked" ] && [ "$gap" -eq 0 ]; then
     printf 'domains    every injected host is in allowedDomains\n'
   fi
-  if jq -e '.sandbox.credentials.files[]? | select(.path|test("\\.operator/\\.env$"))' \
+  if jq -e '.sandbox.credentials.files[]? | select(.path|test("\\.construct/\\.env$"))' \
     "$installed" >/dev/null 2>&1; then
     printf 'deny       the env file is denied, so no agent reads it back\n'
   else
-    printf 'deny       NO deny rule for ~/.operator/.env, so step 3 comes before any token\n'
+    printf 'deny       NO deny rule for ~/.construct/.env, so step 3 comes before any token\n'
   fi
 }
 
@@ -235,8 +235,8 @@ emit_advanced() {
   cat <<'EOF'
 --- steps, in this order (each one is yours to run) ---
 1  keydir    mkdir -p ~/.operator && chmod 700 ~/.operator
-2  envfile   touch ~/.operator/.env && chmod 600 ~/.operator/.env
-3  deny      add {"path":"~/.operator/.env","mode":"deny"} to sandbox.credentials.files
+2  envfile   touch ~/.construct/.env && chmod 600 ~/.construct/.env
+3  deny      add {"path":"~/.construct/.env","mode":"deny"} to sandbox.credentials.files
              this lands BEFORE any token does, so the file is never briefly readable
 4  unset     add {"name":"<VAR>","mode":"deny"} per exposed credential to
              sandbox.credentials.envVars, which removes the variable rather than hiding it
@@ -245,7 +245,7 @@ emit_advanced() {
 7  mask      add {"name":"GH_TOKEN","mode":"mask","injectHosts":["api.github.com"]} to
              sandbox.credentials.envVars, naming every host that token authenticates against
 8  domains   add each injectHosts host to sandbox.network.allowedDomains
-9  shell     append to ~/.zshrc: [ -r ~/.operator/.env ] && source ~/.operator/.env
+9  shell     append to ~/.zshrc: [ -r ~/.construct/.env ] && source ~/.construct/.env
 10 restart   restart the editor, then start a new claude session
 11 prove     run /operator:credentials, which spends each token and then tries to read it back
 --- needs a human (rules no script can judge) ---
@@ -472,7 +472,7 @@ check_guard() {
     | select(test("plugins/(operator/(settings|hooks)|\\*\\*)"))] | length' "$project")
   # the hook is the layer a settings edit cannot switch off, so report it as its own finding
   hooked=0
-  if grep -q 'plugins/operator/settings\|/hooks' "$ROOT/plugins/operator/hooks/pretooluse/block-policy-edits.sh" 2>/dev/null; then
+  if grep -q 'plugins/operator/settings\|/hooks' "$ROOT/plugins/operator/hooks/pretooluse/block-protected-paths.sh" 2>/dev/null; then
     hooked=1
   fi
   if [ "$guarded" -eq 0 ] && [ "$hooked" -eq 0 ]; then
