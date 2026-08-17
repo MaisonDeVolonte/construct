@@ -1,0 +1,16 @@
+{
+  "github": {
+    "api_base":                  "https://api.github.com",
+    "remote":                    "origin",
+    "main_branch":               "main",
+    "production_branch":         "production",
+    "staging_branch":            "",
+    "commit_types":              [ "new", "fix", "improve", "update", "debug", "test" ],
+    "commit_scopes":             [ "docs", "tools", "skills", "hooks", "styles", "config" ],
+    "branch_pattern":            "{type}/{scope}/{slug}",
+    "merge_method":              "rebase",
+    "auto_merge":                true,
+    "handback_destructive_git":  false,
+    "guarded_paths":             [ "webflow" ]
+  }
+}

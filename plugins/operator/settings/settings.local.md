@@ -40,7 +40,7 @@
   ] }],
   "PreToolUse": [{ "matcher": "Bash", "hooks": [
     { "type": "command", "command": "plugins/operator/hooks/pretooluse/block-destructive-git.sh" },
-    { "type": "command", "command": "plugins/operator/hooks/pretooluse/block-policy-edits.sh" },
+    { "type": "command", "command": "plugins/operator/hooks/pretooluse/block-protected-paths.sh" },
     { "type": "command", "command": "plugins/operator/hooks/pretooluse/block-outside-moves.sh" }
   ] }],
   "PostToolUse": [{ "matcher": "Write|Edit", "hooks": [
