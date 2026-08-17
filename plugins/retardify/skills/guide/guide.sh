@@ -1,17 +1,17 @@
 #!/bin/bash
 # =================================================================================
-# @file manual.sh - build manual sidecar: names the target, then grades what landed
+# @file guide.sh - build guide sidecar: names the target, then grades what landed
 # =================================================================================
 # @description
 # PAIR
-# - the only sidecar for `/retardify:manual`, which owns both halves of its own artifact
+# - the only sidecar for `/retardify:guide`, which owns both halves of its own artifact
 # - the doc carries the shape; this file names where it lands and grades what landed there
-# - the input is a completed `/retardify:plan` file; the output is the ideal-path manual
+# - the input is a completed `/retardify:plan` file; the output is the ideal-path guide
 # RUN
-# - no flag runs the trigger half: it grades the source plan and names the manual target
+# - no flag runs the trigger half: it grades the source plan and names the guide target
 # - `--check [paths]` runs the validator half; with no paths it grades the whole artifact dir
 # - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
-# @see plugins/retardify/skills/manual/SKILL.md, .construct/retardify/manual/, plugins/retardify/skills/plan/SKILL.md, plugins/retardify/shared/secrets.sh
+# @see plugins/retardify/skills/guide/SKILL.md, .construct/retardify/guide/, plugins/retardify/skills/plan/SKILL.md, plugins/retardify/shared/secrets.sh
 
 set -euo pipefail
 
@@ -28,25 +28,25 @@ else
     echo "fatal: not a git repository" >&2; exit 1; fi
   cd "$(git rev-parse --show-toplevel)"
 
-  ARTIFACTS=".construct/retardify/manual"
-  TEMPLATE="plugins/retardify/skills/manual/SKILL.md"
-  VALIDATOR="plugins/retardify/skills/manual/manual.sh --check"
+  ARTIFACTS=".construct/retardify/guide"
+  TEMPLATE="plugins/retardify/skills/guide/SKILL.md"
+  VALIDATOR="plugins/retardify/skills/guide/guide.sh --check"
 
   PLAN="${1:-}"
   if [ -z "$PLAN" ]; then
-    echo "fatal: /retardify:manual needs a plan, as in: /retardify:manual .construct/retardify/plan/<plan>.md" >&2
+    echo "fatal: /retardify:guide needs a plan, as in: /retardify:guide .construct/retardify/plan/<plan>.md" >&2
     exit 1
   fi
   if [ ! -f "$PLAN" ]; then
     echo "fatal: no such plan: $PLAN" >&2; exit 1; fi
 
-  # an unchecked box is unfinished work, and a manual distilled from it narrates a build that
+  # an unchecked box is unfinished work, and a guide distilled from it narrates a build that
   # never happened; the doc reads `completed: no` and stops
   OPEN=$(grep -c '^- \[ \]' "$PLAN" || true)
   OPEN=${OPEN:-0}
   if [ "$OPEN" -eq 0 ]; then COMPLETED=yes; else COMPLETED=no; fi
 
-  # the slug is the plan's own, minus the date and the operation prefix, so the manual carries
+  # the slug is the plan's own, minus the date and the operation prefix, so the guide carries
   # its source in its name; `-DONE` is the closed-plan suffix and never part of a title
   SLUG=$(basename "$PLAN" .md \
     | sed -E 's/^[0-9]{4}-[0-9]{2}-[0-9]{2}-//; s/^operation-//; s/-DONE$//' \
@@ -59,23 +59,23 @@ else
   if [ -e "$TARGET" ]; then COLLISION=yes; else COLLISION=no; fi
   EXISTING=$(find "$ARTIFACTS" -maxdepth 1 -type f -name '*.md' | wc -l | tr -d ' ')
 
-  echo "=== /retardify:manual telemetry ==="
+  echo "=== /retardify:guide telemetry ==="
   echo "source: $PLAN"
   echo "open_boxes: $OPEN"
   echo "completed: $COMPLETED"
   echo "slug: $SLUG"
   echo "target: $TARGET"
   echo "collision: $COLLISION"
-  echo "existing_manuals: $EXISTING"
+  echo "existing_guides: $EXISTING"
   echo "template: $TEMPLATE"
   echo "validator: $VALIDATOR"
   if [ "$COMPLETED" = no ]; then
     echo "--- stop ---"
-    echo "$OPEN open box(es); a manual distills finished work, so close the plan first"
+    echo "$OPEN open box(es); a guide distills finished work, so close the plan first"
   fi
   if [ "$COLLISION" = yes ]; then
     echo "--- stop ---"
-    echo "a manual already covers this plan; replacing it is the user's call, never the default"
+    echo "a guide already covers this plan; replacing it is the user's call, never the default"
   fi
   echo "==================================="
   exit 0
@@ -93,53 +93,53 @@ if [ ! -f "$SHARED/secrets.sh" ]; then
 . "$SHARED/secrets.sh"
 
 # character counts, not byte counts: bash's ${#var} is multibyte-aware under a utf-8 locale, and
-# every em dash in a manual is 3 bytes — a byte count would flag lines legally under the cap
+# every em dash in a guide is 3 bytes — a byte count would flag lines legally under the cap
 UTF8_LOCALE=$(locale -a 2>/dev/null | grep -iE '^(C|en_US)\.(utf-?8)$' | head -n 1 || true)
 if [ -n "$UTF8_LOCALE" ]; then export LC_ALL="$UTF8_LOCALE"; fi
 
 MAX_WIDTH=100
 STRICT=0
 KEEP=0
-TEMPLATE="plugins/retardify/skills/manual/SKILL.md"
+TEMPLATE="plugins/retardify/skills/guide/SKILL.md"
 
-# the template's own section order, which is the one thing every manual must agree on
+# the template's own section order, which is the one thing every guide must agree on
 EXPECTED_SECTIONS=$'Requires\nSteps\nDone'
 
-# the words a perfect-world manual has no use for: each one writes for a failure the ideal run
+# the words a perfect-world guide has no use for: each one writes for a failure the ideal run
 # never meets, so a hit is an error rather than a style note
 HEDGES='should|would|could|might|maybe|probably|optionally|otherwise|in case|edge case'
 HEDGES="$HEDGES|if needed|if necessary|be careful|watch out|beware|warning|caveat"
 HEDGES="$HEDGES|troubleshoot|workaround|fall ?back|roll ?back|retry|revert"
 
-MANUALS=()
+GUIDES=()
 for arg in "$@"; do
   case "$arg" in
     --strict) STRICT=1;;
     --keep) KEEP=1;;
     -*) echo "fatal: unknown flag $arg" >&2; exit 1;;
-    *) MANUALS+=("$arg");;
+    *) GUIDES+=("$arg");;
   esac
 done
 
 # no paths given: scan the whole artifact directory, anchored to the repo root so the default
 # works from any subdirectory — same posture as the plan sidecar
-if [ ${#MANUALS[@]} -eq 0 ]; then
+if [ ${#GUIDES[@]} -eq 0 ]; then
   if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     echo "fatal: not a git repository, and no paths given" >&2; exit 1; fi
   cd "$(git rev-parse --show-toplevel)"
-  if [ ! -d .construct/retardify/manual ]; then echo "fatal: no .construct/retardify/manual/ to scan" >&2; exit 1; fi
-  MANUALS=(.construct/retardify/manual/*.md)
+  if [ ! -d .construct/retardify/guide ]; then echo "fatal: no .construct/retardify/guide/ to scan" >&2; exit 1; fi
+  GUIDES=(.construct/retardify/guide/*.md)
 fi
 
-# a directory argument expands to the manuals inside it
+# a directory argument expands to the guides inside it
 EXPANDED=()
-for path in "${MANUALS[@]}"; do
+for path in "${GUIDES[@]}"; do
   if [ -d "$path" ]; then
     for nested in "$path"/*.md; do [ -f "$nested" ] && EXPANDED+=("$nested"); done
   elif [ -f "$path" ]; then EXPANDED+=("$path")
-  else echo "fatal: no such manual: $path" >&2; exit 1; fi
+  else echo "fatal: no such guide: $path" >&2; exit 1; fi
 done
-MANUALS=("${EXPANDED[@]}")
+GUIDES=("${EXPANDED[@]}")
 
 # repo-local scratch: the sandbox denies writes outside cwd, and macos mktemp ignores TMPDIR
 TMPROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tmp"
@@ -167,10 +167,10 @@ section() {
 
 # ==============
 # CHECKS
-#   each takes a manual path and appends findings; to add one, write a function and list it below
+#   each takes a guide path and appends findings; to add one, write a function and list it below
 # ==============
 
-# "`.construct/retardify/manual/<title>.md`, kebab-case, named by the plan it distills"
+# "`.construct/retardify/guide/<title>.md`, kebab-case, named by the plan it distills"
 check_filename() {
   local file=$1 base dir
   base=$(basename "$file")
@@ -179,20 +179,20 @@ check_filename() {
     err "$file" 1 filename "expected kebab-case <title>.md"
   fi
   case "$dir" in
-    .construct/retardify/manual|./.construct/retardify/manual|*/.construct/retardify/manual) ;;
-    *) warn "$file" 1 location "one manual per file, all of them in .construct/retardify/manual/";;
+    .construct/retardify/guide|./.construct/retardify/guide|*/.construct/retardify/guide) ;;
+    *) warn "$file" 1 location "one guide per file, all of them in .construct/retardify/guide/";;
   esac
 }
 
-# "# MANUAL: Short Title" then "one line: what exists when the last step is done"
+# "# GUIDE: Short Title" then "one line: what exists when the last step is done"
 check_header() {
   local file=$1 title summary blank
   title=$(sed -n '1p' "$file")
   summary=$(sed -n '2p' "$file")
   blank=$(sed -n '3p' "$file")
   case "$title" in
-    "# MANUAL: "*) ;;
-    *) err "$file" 1 title "line 1 must read '# MANUAL: <title>'";;
+    "# GUIDE: "*) ;;
+    *) err "$file" 1 title "line 1 must read '# GUIDE: <title>'";;
   esac
   if [ -z "$summary" ] || [ "${summary:0:1}" = "#" ]; then
     err "$file" 2 summary "line 2 states what exists when the last step is done"
@@ -222,7 +222,7 @@ check_width() {
   done < "$file"
 }
 
-# a stray fence swallows the rest of the manual when rendered, so it is never cosmetic
+# a stray fence swallows the rest of the guide when rendered, so it is never cosmetic
 check_fences() {
   local file=$1 count
   count=$(grep -cE '^[[:space:]]*```' "$file" || true)
@@ -288,7 +288,7 @@ check_steps() {
   fi
 }
 
-# the one rule that makes a manual a manual: it writes for the likely case as fact, so a hedge
+# the one rule that makes a guide a guide: it writes for the likely case as fact, so a hedge
 # is carried-over failure planning rather than a word choice
 check_hedges() {
   local file=$1 lineno=0 line infence=0
@@ -297,22 +297,22 @@ check_hedges() {
     if printf '%s' "$line" | grep -qE '^[[:space:]]*```'; then infence=$((1 - infence)); continue; fi
     if [ "$infence" -eq 1 ]; then continue; fi
     if printf '%s' "$line" | grep -qiE "(^|[^a-z-])($HEDGES)([^a-z-]|$)"; then
-      err "$file" "$lineno" hedge "a perfect-world manual states the likely case, never the failure"
+      err "$file" "$lineno" hedge "a perfect-world guide states the likely case, never the failure"
     fi
   done < "$file"
 }
 
 # --- run list (add new checks here) ---
-for manual in "${MANUALS[@]}"; do
-  check_filename "$manual"
-  check_header   "$manual"
-  check_sections "$manual"
-  check_width    "$manual"
-  check_fences   "$manual"
-  check_bullets  "$manual"
-  check_steps    "$manual"
-  check_hedges   "$manual"
-  scan_secrets   "$manual"
+for guide in "${GUIDES[@]}"; do
+  check_filename "$guide"
+  check_header   "$guide"
+  check_sections "$guide"
+  check_width    "$guide"
+  check_fences   "$guide"
+  check_bullets  "$guide"
+  check_steps    "$guide"
+  check_hedges   "$guide"
+  scan_secrets   "$guide"
 done
 
 # ==============
@@ -324,9 +324,9 @@ SECRETS=$(grep -c '|secret|' "$FINDINGS" || true)
 
 cat <<EOF
 
-=== manual.sh sidecar ===
+=== guide.sh sidecar ===
 template: $TEMPLATE
-scanned: ${#MANUALS[@]} manual(s)
+scanned: ${#GUIDES[@]} guide(s)
 width_cap: $MAX_WIDTH chars
 errors: $ERRORS
 warnings: $WARNINGS
