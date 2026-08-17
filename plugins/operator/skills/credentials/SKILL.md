@@ -26,11 +26,17 @@ echo "sidecar exit: $?"
 ```
 - `help: requested` → the run was refused before it started; `## Help` below is the whole turn
 - it already ran, so there is no command to issue
-- fail (`sidecar exit` > 0) → abort and report the raw terminal error inside a markdown code block
+- fail (`sidecar exit` > 0) with NO `worst verdict:` line → abort and report the raw terminal error
+  inside a markdown code block, since the run died before it graded anything
+- fail (`sidecar exit` > 0) with `gate: strict` and a `worst verdict:` above `ok` → the run graded
+  fine and the gate tripped; report the breach as a finding, never as a crash
 - `credential layer active: no` → say so and STOP; it ran outside the sandbox and every verdict
 
     there is meaningless, so report nothing as passing or failing
-  - success (`sidecar exit` = 0) → continue to step 1
+  - `mode: quick` → it graded the gate and the rules and wrote NOTHING; report the worst verdict,
+    the unruled count, its three tables (masked, denied, unruled) and the sidecar's own
+    `RECOMMENDED:` line verbatim, then STOP
+  - `mode: full` and success (`sidecar exit` = 0) → continue to step 1
 
 1. write the report to `.construct/operator/credentials/YYYY-MM-DD.md`, following `plugins/operator/skills/credentials/SKILL.md`
   - NEVER quote, echo or paste a credential value into the report, the chat, or anywhere else
