@@ -198,6 +198,15 @@ EOF
 printf '\n%-46s %-10s %s\n' 'FILE' 'WAS' 'NOW'
 for m in $FILES; do printf '%-46s %-10s %s\n' "$m" "$CURRENT" "$(read_version "$m")"; done
 
+# a trunk rule requiring a pull request rejects step 4 below, and the tag exists by then, so the
+# release ends up on a sha the trunk never keeps; the rule is read rather than assumed
+TRUNK_GATE=direct
+if curl -sS --max-time 15 -H "Authorization: Bearer $GH_TOKEN" \
+  "https://api.github.com/repos/$REPO_SLUG/rules/branches/$TRUNK" 2>/dev/null \
+  | jq -e 'any(.[]?; .type == "pull_request")' >/dev/null 2>&1; then
+  TRUNK_GATE="pull request required"; fi
+printf '\ntrunk gate: %s\n' "$TRUNK_GATE"
+
 # ==============
 # HANDOVER
 # ==============
@@ -206,6 +215,10 @@ for m in $FILES; do printf '%-46s %-10s %s\n' "$m" "$CURRENT" "$(read_version "$
 cat <<EOF
 
 === /push-release handover ===
+EOF
+
+if [ "$TRUNK_GATE" = direct ]; then
+cat <<EOF
 # 1. stage the four version files this run wrote, and nothing else
 git add $MANIFESTS $MARKETPLACE
 
@@ -217,6 +230,31 @@ git tag -a v$NEXT -m "Release v$NEXT"
 
 # 4. push the trunk with its tag
 git push origin $TRUNK --follow-tags
+EOF
+else
+cat <<EOF
+# 1. branch FIRST: the trunk requires a pull request, so a commit on it strands the local trunk
+git switch -c release/$NEXT $TRUNK
+
+# 2. stage and commit the four version files this run wrote, and nothing else
+git add $MANIFESTS $MARKETPLACE
+git commit -m "release: $NEXT"
+
+# 3. open the pull request and let the required check merge it
+git push -u origin release/$NEXT
+gh pr create --base $TRUNK --fill
+gh pr merge --auto --rebase
+
+# 4. ONCE it shows merged, tag the sha the rebase actually left on the trunk
+git switch $TRUNK
+git pull --ff-only origin $TRUNK
+git branch -D release/$NEXT
+git tag -a v$NEXT -m "Release v$NEXT"
+git push origin v$NEXT
+EOF
+fi
+
+cat <<EOF
 
 # 5. promote, which is the push that actually releases to every install
 git switch $PRODUCTION_BRANCH
