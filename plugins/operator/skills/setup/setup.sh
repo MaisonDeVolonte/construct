@@ -19,8 +19,9 @@
 # - a lens that fails to complete is an ERROR, never a zero: silence is the fault it looks for
 # - counts are read from the telemetry a lens prints; a lens that prints none reads as ungraded
 # LENSES
-# - `settings` files, `permissions` gate, `scripts` commands, `credentials` masks, `upstream` feed
-# - every run is all five in that order, since the lenses build on each other as they read
+# - `settings` files, `permissions` gate, `hooks` registration, `scripts` commands
+# - then `credentials` masks, `context` boundary, `upstream` feed
+# - every run is all seven in that order, since the lenses build on each other as they read
 # - no flag narrows it: one lens belongs to its own skill, under its own artifact
 # PREFLIGHT
 # - install stays with the reader: a skill cannot install the plugin that carries it
@@ -70,7 +71,7 @@ HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || true)
 
 # fixed and complete: a lens flag here would run a sibling's sidecar under this skill's artifact,
 # filing a narrower report than `/operator:<lens>` under a heading that claims the whole stack
-LENSES=(settings permissions scripts credentials upstream)
+LENSES=(settings permissions hooks scripts credentials context upstream)
 LENS_STATUS=()
 LENS_SECONDS=()
 
@@ -518,10 +519,10 @@ state_creds() {
     masked=$(jq '[.sandbox.credentials.envVars[]?|select(.mode=="mask")]|length' "$USER_SCOPE" 2>/dev/null || echo 0)
   fi
   printf 'masked     %s credential(s) masked in the user scope\n' "$masked"
-  if jq_query "$USER_SCOPE" '.sandbox.credentials.files[]?|select(.path|test("\\.operator/\\.env$"))'; then
+  if jq_query "$USER_SCOPE" '.sandbox.credentials.files[]?|select(.path|test("\\.construct/\\.env$"))'; then
     printf 'deny       the env file is denied, so no agent reads it back\n'
   else
-    printf 'deny       NO deny rule for ~/.operator/.env, which lands before any token does\n'
+    printf 'deny       NO deny rule for ~/.construct/.env, which lands before any token does\n'
   fi
 }
 

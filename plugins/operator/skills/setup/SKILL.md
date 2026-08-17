@@ -16,7 +16,7 @@ metadata:
 - probes your machine's state and maps out a detailed roadmap all the way through
 - interactive questionnaire helps you decide which sandbox config is right for you
 - ends with a clean `--audit` handoff that makes sure everything is fully secure
-  - runs settings, permissions, scripts, credentials and upstream, then keeps each output whole
+  - runs settings, permissions, hooks, scripts, credentials, context and upstream, keeping each whole
   - recomputes no verdict; each lens grades itself and this collects what they returned
   - correlates across lenses, which no single lens can do from inside itself
   - takes no lens flag, since one lens belongs to its own skill and its own artifact
@@ -142,7 +142,7 @@ one file per day, appended to by every confirmed `--audit` run:
 - `state` is the counts as hyphen bullets: lenses run, seconds spent, errors and warnings
 - `findings` name the lens they came from, as `- **Lens/Label** — what it hit`
 - `resolutions` are checkboxes, one per finding, in the same order, naming the command that resolves it
-- `telemetry` is `#### <lens>` then that lens's whole block, fenced and unedited, all five every time
+- `telemetry` is `#### <lens>` then that lens's whole block, fenced and unedited, all seven each time
 
 | label | what it found |
 |---|---|
