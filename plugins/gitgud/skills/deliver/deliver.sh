@@ -6,20 +6,21 @@
 # PAIR
 # - sidecar for `/gitgud:deliver` — proves auth and state, then hands the prep commands over
 # - the trigger drains uncommitted work in atomic `type(scope)` buckets, one pr per bucket
-# - a bucket runs branch, commit, push, pr, auto-merge on green, then back to the trunk
+# - a bucket is one branch, one commit, one pr and auto-merge, all written by `shared/pipeline.sh`
 # - the reasoning is the automation: bucketing, ordering and message drafting are what it does
 # GATE
 # - it plans EVERY bucket first and stops there, since a wrong bucket is free to fix before a branch
-# - `--debug` plans everything the same way, but emits only the first block
+# - the drain is a second gate: nothing is written until the user answers the plan with `go`
+# - `--debug` plans everything the same way, but drains only the first bucket
 # - `--finished` buckets only work that reads as finished, leaving unfinished files in the tree
-# - gated: it never delivers, and every block is the user's to paste in the order given
+# - `--handover` emits the git and gh commands instead of writing, for a terminal that can push
 # SIDECAR
 # - read-only: switch, merge and restore are denied, so the preflight measures rather than moves
 # - github auth preflights through curl + bearer, since gh cannot verify tls in the sandbox
-# - github's git endpoints take only basic auth, which base64s past the proxy, so push needs a tty
+# - the writes go through the rest api, the one path a masked bearer token authenticates on
 # - every open issue on origin is printed, so a bucket that fixes one can close it on merge
 # - a delivered `.claude/settings.json` strands its checkout, so the pull after needs the hatch
-# @see plugins/gitgud/skills/deliver/SKILL.md, plugins/gitgud/skills/rerun/SKILL.md, plugins/gitgud/shared/handover.sh, .claude/skills/validate-skills/SKILL.md
+# @see plugins/gitgud/skills/deliver/SKILL.md, plugins/gitgud/shared/pipeline.sh, plugins/gitgud/shared/handover.sh, .claude/skills/validate-skills/SKILL.md
 
 set -euo pipefail
 
@@ -34,7 +35,7 @@ ARGV=()
 if [ -n "$*" ]; then read -ra ARGV <<< "$*"; fi
 for word in ${ARGV[@]+"${ARGV[@]}"}; do
   case "$word" in
-    --debug|--finished|--help|-h) continue;;
+    --debug|--finished|--handover|--help|-h) continue;;
     *) GUIDANCE="${GUIDANCE:+$GUIDANCE }$word";;
   esac
 done
@@ -135,6 +136,11 @@ telemetry_line "trunk ahead of origin" "$AHEAD"
 telemetry_line "touches .claude/settings.json" "$TOUCHES_SETTINGS"
 telemetry_line "guidance" "${GUIDANCE:-none}"
 
+# the drain needs the writer; without it the trigger falls back to emitting commands
+WRITER="$SHARED/pipeline.sh"
+if [ -f "$WRITER" ]; then telemetry_line "writer" "pipeline.sh (api.github.com)"
+else telemetry_line "writer" "none found — handover only"; fi
+
 # one row per open issue, so the trigger can offer a link and the user can veto it at the gate
 if [ "$ISSUES_CODE" != 200 ]; then
   telemetry_line "open issues" "unreadable ($ISSUES_CODE)"
@@ -163,7 +169,8 @@ else
   if [ "$BEHIND" -gt 0 ]; then
     handover_cmd "git merge --ff-only origin/$DEFAULT_BRANCH"
   fi
-  # the loop stages each bucket itself, so anything already staged would contaminate bucket one
+  # the drain reads the worktree and never the index, so a staged file is a half-done action the
+  # user still owns; clearing it keeps what the api commits and what git reports in agreement
   if [ "$STAGED_FILES" -gt 0 ]; then
     handover_cmd "git restore --staged :/"
   fi
