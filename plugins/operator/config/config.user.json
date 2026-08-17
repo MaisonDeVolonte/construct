@@ -1,0 +1,10 @@
+{
+  "github": {
+    "commit_author_email":       "contact@willwong.me",
+    "commit_author_username":    "MaisonDeVolonte",
+    "pr_author_email":           "operator@willwong.me",
+    "pr_author_username":        "MaisonDeVolonte-Operator",
+    "co_author_email":           "operator@willwong.me",
+    "co_author_username":        "MaisonDeVolonte-Operator"
+  }
+}

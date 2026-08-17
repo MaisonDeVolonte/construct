@@ -1,5 +1,5 @@
 ---
-name: block-policy-edits
+name: block-protected-paths
 description: denies bash writers, heredocs and redirects aimed at settings, hooks and other policy paths
 ---
 

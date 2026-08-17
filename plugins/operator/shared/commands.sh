@@ -9,7 +9,7 @@
 # - `tr '&|;'` split inside quotes once, and a pipe-delimited sed tore its own command in half
 # - the interpreter landed in one segment and its policy path in another, and neither test fired
 # - a `|` delimiter is the idiomatic sed choice exactly when the strings rewritten are paths
-# @see plugins/operator/hooks/pretooluse/block-policy-edits.sh, plugins/operator/hooks/pretooluse/block-outside-moves.sh, plugins/operator/shared/corpus.tsv
+# @see plugins/operator/hooks/pretooluse/block-protected-paths.sh, plugins/operator/hooks/pretooluse/block-outside-moves.sh, plugins/operator/shared/corpus.tsv
 
 if [ "${BASH_SOURCE[0]}" = "$0" ]; then
   echo "fatal: source this file from a hook, do not run it" >&2; exit 1
