@@ -9,6 +9,10 @@
 # - a line finding also quotes its line, since the reader of a report no longer holds the reply
 # - B3, F2 to F4, F6, F7, C1, C4 to C7 and every Grounding row stay the agent's job
 # - reads a file holding the reply text, or stdin when the path is `-`
+# - a plain run with no path grades this session's own last reply, read from its transcript
+# - that means the LAST ASSISTANT TEXT, since a plain run always arrives with a user turn on top
+# - the stop action reads the last MESSAGE instead, so it can skip a turn still being written
+# - the two extractions stay separate for that reason; collapsing them would break the mid-turn skip
 # - the stop action `retardify-output.sh` calls it the same way a user does
 # NUMBERS
 # - the width and the ceiling are read from the style copy beside this skill, never restated
@@ -52,11 +56,33 @@ MAX_LINES=${MAX_LINES:-30}
 WRAP_TOLERANCE=3
 
 SOURCE=${1:-}
-if [ -z "$SOURCE" ]; then echo "usage: output.sh <file>|-" >&2; exit 2; fi
+
+# a plain run means "grade what you just said", so the reply is fetched rather than demanded
+last_reply() {
+  local transcript projects="$HOME/.claude/projects"
+  [ -n "${CLAUDE_CODE_SESSION_ID:-}" ] || return 0
+  [ -d "$projects" ] || return 0
+  command -v jq >/dev/null 2>&1 || return 0
+  transcript=$(find "$projects" -maxdepth 2 -name "$CLAUDE_CODE_SESSION_ID.jsonl" -type f \
+    2>/dev/null | head -1 || true)
+  [ -n "$transcript" ] || return 0
+  jq -rs '[ .[]
+    | select(.isSidechain != true)
+    | select(.type == "assistant")
+    | [ .message.content[]? | select(.type == "text") | .text ] | join("\n")
+    | select(length > 0) ] | last // ""' "$transcript" 2>/dev/null || true
+}
 
 # an unreadable path grades as an empty reply, since strict mode would otherwise exit 1 here and
 # a bare exit 1 reads as hard findings to the stop action that calls this
-BODY=$(if [ "$SOURCE" = "-" ]; then cat; else cat "$SOURCE" 2>/dev/null || true; fi)
+if [ -n "$SOURCE" ]; then
+  BODY=$(if [ "$SOURCE" = "-" ]; then cat; else cat "$SOURCE" 2>/dev/null || true; fi)
+else
+  BODY=$(last_reply)
+  # no session and no path is the one case with nothing to grade, so it still refuses rather than
+  # waiting on a stdin nobody is going to write
+  if [ -z "$BODY" ]; then echo "usage: output.sh <file>|- (no reply reachable)" >&2; exit 2; fi
+fi
 if [ -z "$BODY" ]; then exit 0; fi
 
 HARD=0

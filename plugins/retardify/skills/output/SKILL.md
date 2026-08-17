@@ -3,14 +3,15 @@ name: output
 model: opus
 effort: high
 license: MIT
-compatibility: requires bash, git
-description: output style linter run by the stop hook or via <path> argument
-argument-hint: "[--help] <path>|-"
+compatibility: requires bash, jq, git
+description: output style linter run by the stop hook, on the last reply, or via <path> argument
+argument-hint: "[--help] [<path>|-]"
 disable-model-invocation: true
 metadata:
   kind: trigger
 ---
 **every reply is linted:** against the output style rules to keep conversations consistent
+- a plain run grades the last reply, read from this session's own transcript
 - used by the `retardify-output.sh` `stop` hook automatically but can be used manually for debugging
 - grades the mechanically checkable rules like markup, constraints, shapes, etc
 - blocks on HARD findings and quotes the offending line so the fix is mechanical
@@ -19,12 +20,13 @@ metadata:
 
 ## Telemetry
 ```!
-if [ -n "$ARGUMENTS" ];
-then "${CLAUDE_PLUGIN_ROOT}"/skills/output/output.sh $ARGUMENTS; echo "sidecar exit: $?"
-else echo "no path given, so nothing ran; pass a reply file, or - to grade stdin"; fi
+"${CLAUDE_PLUGIN_ROOT}"/skills/output/output.sh $ARGUMENTS
+echo "sidecar exit: $?"
 ```
 - `help: requested` → the run was refused before it started; `## Help` below is the whole turn
-- this already ran; never re-issue it, and never a bare `output.sh`, which waits on stdin forever
+- this already ran; never re-issue it, and never pipe a reply you retyped rather than one it read
+- no path → it graded the last reply from this session's transcript, which is what a plain run means
+- `usage: ... (no reply reachable)` → no path and no session id, so there was nothing to grade
 - `fail (sidecar exit > 0)` → HARD findings: report them, fix the reply's shape, then regrade
 - `success (sidecar exit = 0)` → clean or SOFT-only; note any SOFT findings and move on
 
