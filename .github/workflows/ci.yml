@@ -7,8 +7,9 @@
 # - the shared files are linted directly as well, so a renamed variable fails the build (SC2034)
 # - `validate-skills` walks every pair, and it gates here because a red validator once merged green
 # - `push-release --check` gates the four version files, which ship as one install and must agree
-# - `export-readme` gates every managed region against the readme: skill tops, style, secrets and
-#   readme copies, the last three byte-identical per plugin because an install takes one directory
+# - `export-readme` is NOT gated here, and neither is the readme index `validate-skills` warns on
+# - both describe a whole tree, and a pull request carries a subset, so both dragged docs into it
+# - `/gitgud:ship` runs the exporter and `validate-skills --strict` against a clean tree instead
 # - `sidecars stay read-only` fails the build on an executed mutating git verb outside a handover
 # - it exists because `prune.sh` ran one for five deliveries and the sandbox half-applied each merge
 # - references are NOT gated here: `todo.sh` ranks opportunities, it never graded them
@@ -49,24 +50,20 @@ jobs:
         run: |
           find plugins .claude/skills -name '*.sh' -print0 | xargs -0 -n1 bash -n
 
-      # an unquoted $ARGUMENTS dies on the apostrophe in "don't", so the quote is a gate
-      - name: free-text arguments survive a quote
-        run: bash .claude/skills/validate-skills/probe-arguments.sh
-
-      # a red validator merged green once because nothing in ci ran it; the walk is pure and local,
-      # so it costs seconds and gates every skill pair rather than waiting to be typed by hand
+      # a red validator merged green once because nothing in ci ran it; the walk is local and gates
+      # every skill pair, including the apostrophe probe that used to run as its own step
       - name: skill pairs validate
         run: bash .claude/skills/validate-skills/validate-skills.sh
+
+      # one matcher of the wrong type discards a whole hooks file, silently under -p (#75081); ci
+      # is the only gate a shipped hooks.json passes, since a user's own scope is never seen here
+      - name: hooks register and resolve
+        run: bash plugins/operator/skills/hooks/hooks.sh --quick
 
       # the version is stored in four files and every one of them ships in the same install, so
       # the gate is that they agree; --check is pure, reaches no network, and writes nothing
       - name: version files agree
         run: bash .claude/skills/push-release/push-release.sh --check
-
-      # every managed region is one readme section exported per copy, and nothing but this
-      # compares them; a detector with no gate is how three identical copies drift apart
-      - name: readme drift
-        run: bash .claude/skills/export-readme/export-readme.sh --check
 
       # a sidecar measures and hands over; it never mutates the tree itself
       - name: sidecars stay read-only

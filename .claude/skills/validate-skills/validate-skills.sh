@@ -22,6 +22,9 @@
 # - defaults to every pair in `plugins/*/skills/`; pass a doc, a sidecar, or a directory to scope it
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
 # - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
+# - every check reads, except the free-text probe, which runs those sidecars on an apostrophe goal
+# - that probe was probe-arguments.sh until it folded in here, so ci runs one gate instead of two
+# - a readme listing describes a whole tree, so `unindexed` warns and `/gitgud:ship` gates it
 # @see .claude/skills/validate-skills/SKILL.md, .claude/skills/export-readme/export-readme.sh, plugins/gitgud/shared/handover.sh, plugins/, plugins/operator/shared/secrets.sh, .github/workflows/ci.yml
 
 set -euo pipefail
@@ -109,9 +112,30 @@ EOF
 
 CONFIRM_GUARD='case " $* " in *" --confirm "*) ;; *) echo "confirm: required"; exit 0;; esac'
 
+# every skill whose argument is prose a human types, rather than a path or a flag; the list is
+# written out, since nothing in a doc says which of the two kinds a skill takes
+FREE_TEXT="
+plugins/retardify/skills/plan
+plugins/retardify/skills/graph
+plugins/retardify/skills/quiz
+plugins/retardify/skills/guide
+plugins/gitgud/skills/deliver
+"
+
+# only the skills that mint a new artifact from prose can be run with an arbitrary goal; guide
+# resolves an existing plan and deliver needs a dirty tree, so both exit for real reasons
+NO_RUN='guide deliver'
+
+# the apostrophe is the whole probe: an unquoted expansion splits on it and the sidecar dies
+APOSTROPHE="don't split the readme"
+PROBED=0
+
 PAIRS=()
 for arg in "$@"; do
   case "$arg" in
+    # a bare invocation passes one empty string, and keeping it would make PAIRS non-empty and
+    # defeat the whole-tree default below, so the run would grade a path named ""
+    "") continue;;
     --strict) STRICT=1;;
     --keep) KEEP=1;;
     -*) echo "fatal: unknown flag $arg" >&2; exit 1;;
@@ -255,6 +279,13 @@ check_invocation() {
   if ! grep -qE '^```!' "$doc"; then
     warn "$doc" 1 invocation "run the sidecar from a \`\`\`! block, so it lands before the model reads"
   fi
+  # a bang fence anywhere but the start of a line still opens a block for the harness, so a doc that
+  # merely DESCRIBES the convention executes its own prose and the skill emits nothing at all
+  while IFS= read -r hit; do
+    [ -n "$hit" ] || continue
+    err "$doc" "${hit%%:*}" inline_bang \
+      "a bang fence mid-line opens a block; say 'bang block' in prose instead"
+  done < <(grep -n '```!' "$doc" | grep -v ':```!$' || true)
 }
 
 # "fail: outputs raw terminal errors" and "success: evaluates telemetry and executes subsequent
@@ -555,6 +586,28 @@ check_verify() {
   fi
 }
 
+# a free-text skill takes prose a human types, and an unquoted $ARGUMENTS splits on the apostrophe
+# in "don't"; the quote is proven by running the sidecar with one, not by reading the line
+check_arguments() {
+  local doc=$1 name home sidecar
+  name=$(trigger_name "$doc")
+  home=$(dirname "$doc"); home=${home#./}
+  case "$FREE_TEXT" in *$'\n'"$home"$'\n'*) ;; *) return 0;; esac
+  PROBED=$((PROBED + 1))
+  sidecar="$home/$name.sh"
+  if ! grep -qF -- "$name.sh \"\$ARGUMENTS\"" "$doc"; then
+    err "$doc" "$(where "$doc" "$name\.sh")" unquoted_arguments \
+      "the doc runs $name.sh with an unquoted \$ARGUMENTS, which dies on an apostrophe"
+  fi
+  [ -f "$sidecar" ] || return 0
+  # the two that exit for real reasons are read rather than run, so a real refusal never reads as
+  # a quoting fault; every other free-text sidecar mints from prose and survives any goal
+  case " $NO_RUN " in *" $name "*) return 0;; esac
+  if ! bash "$sidecar" "$APOSTROPHE" >/dev/null 2>&1; then
+    err "$sidecar" 1 apostrophe "exits nonzero on an apostrophe goal, so its \$ARGUMENTS split"
+  fi
+}
+
 # every skill answers --help the same way, so the block is compared whole rather than looked for:
 # a doc that customised a field is a doc whose help output no longer matches its siblings', and a
 # doc missing one is a paste that dropped it
@@ -639,8 +692,8 @@ check_confirm() {
   fi
 }
 
-# a trigger the index never lists is a trigger nobody discovers, and one listed without its posture
-# is one nobody can judge the blast radius of before running it
+# a trigger the index never lists is a trigger nobody discovers, and one listed without a posture
+# is one nobody can judge before running; both WARN, since `--strict` at release is what gates them
 check_index() {
   local doc=$1 name plugin entry
   name=$(trigger_name "$doc")
@@ -652,7 +705,7 @@ check_index() {
   if grep -qE "^/$plugin:${name}[[:space:]]*$" "$INDEX"; then return 0; fi
   entry=$(grep -nE "\(plugins/[a-z]+/skills/$name/SKILL\.md\)" "$INDEX" | head -n 1 || true)
   if [ -z "$entry" ]; then
-    err "$doc" 1 unindexed "$INDEX does not list /$plugin:$name; nobody will find it"
+    warn "$doc" 1 unindexed "$INDEX does not list /$plugin:$name; nobody will find it"
     return 0
   fi
   if ! printf '%s' "$entry" | grep -qE "($POSTURES)"; then
@@ -706,6 +759,7 @@ for pair in "${PAIRS[@]}"; do
   check_voice           "$pair"
   check_telemetry       "$pair"
   check_verify          "$pair"
+  check_arguments       "$pair"
   check_help            "$pair"
   check_confirm         "$pair"
   case "$(skill_kind "$pair")" in
@@ -735,6 +789,7 @@ cat <<EOF
 === /validate-skills telemetry ===
 template: $TEMPLATE
 scanned: ${#PAIRS[@]} pair(s)
+probed: $PROBED free-text skill(s)
 index: ${INDEX:-none found}
 errors: $ERRORS
 warnings: $WARNINGS

@@ -39,18 +39,25 @@ a doc that runs a sidecar opens its body with one, in this shape and no other:
 ```text
 ## Telemetry
 ```!
-<the sidecar call, and `echo "sidecar exit: $?"`>
+.claude/skills/validate-skills/validate-skills.sh "$ARGUMENTS"
+echo "sidecar exit: $?"
 ```
 - it already ran, so there is no command to issue
-- fail (`sidecar exit` > 0) → what to report
-- success (`sidecar exit` = 0) → what to read, and where to continue
+- no argument scans `plugins/` whole; a path argument grades that pair alone
+- `scanned: N pair(s)` → what the run actually covered, which is never the maintainer skills
+- `probed: N free-text skill(s)` → the pairs run on an apostrophe goal, the one check that executes
+- `secrets:` above 0 → STOP and ask before touching the match; a committed key is already leaked
+- fail (`sidecar exit` > 0) → an ERROR landed, or a WARN did under `--strict`; quote the findings
+  table verbatim inside a markdown code block, and fix nothing until the user has read it
+- success (`sidecar exit` = 0) → report `errors`, `warnings` and `secrets`, then work the findings
+  list top to bottom; `none — every machine-checkable rule holds` is the clean result
 ```
 
-- the heading opens straight onto the ```! block, since a blank line there reads as a gap
+- the heading opens straight onto the bang block, since a blank line there reads as a gap
 - the bullets close it flush, and each names one branch the sidecar can actually report
 - a sidecar call under any other heading is an ERROR; unlabelled telemetry is telemetry nobody reads
 - numbered steps start AFTER the block, at 1, since reading the output is not a step
-- a spec that runs nothing carries no telemetry section at all, and `log` is the one example
+- a spec that runs nothing carries no telemetry section at all, and `logs` is the one example
 - an auto-loading spec guards the call on `$ARGUMENTS`, since a bare load must run nothing
 
 ## the help section
@@ -62,11 +69,11 @@ directly above `## Output Style`, and this doc's own `## Help` below is the cano
 - `HELP_BLOCK` in the sidecar is the source, and the doc is compared to it whole
 - every field prints on every run, and one with nothing to say prints `none`
 - each value is copied from the source named beside it, so two runs of one skill agree
-- the sidecar carries the matching guard, since the ```! block runs before the doc is read
+- the sidecar carries the matching guard, since the bang block runs before the doc is read
 - a help invocation refused only in prose has already paid for the run it was refusing
 - the guard prints `help: requested` and exits 0, so the doc branches on a line rather than silence
 - that marker earns a telemetry bullet, since a bare exit 0 otherwise reads as a clean run
-- a doc that runs no sidecar carries the section anyway, and `log` is the one example
+- a doc that runs no sidecar carries the section anyway, and `logs` is the one example
 
 ## the subagent style
 the output style is opt-in and a subagent never inherits one, so the LAST body heading of every

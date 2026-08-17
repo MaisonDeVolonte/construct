@@ -6,6 +6,9 @@
 # PAIR
 # - sidecar for `/gitgud:ship` — verifies every release precondition, then hands the sequence over
 # - it aborts on any failed preflight: dirty tree, detached head, unsynced trunk, no production
+# - readme drift and an unindexed skill abort it too, since both describe a whole clean tree
+# - a pull request only ever carries part of one, which is why ci gates neither of them
+# - both checks are maintainer tooling, so an install without them skips rather than fails
 # SIDECAR
 # - read-only: the bump, both pushes and the promotion merge are all denied as tool calls
 # - computes the next version from `package.json` rather than running `npm version` to learn it
@@ -15,7 +18,7 @@
 # - it bumps, pushes `main` with tags, fast-forwards `production`, pushes, then calls the release
 # - `deploy.yml` listens for that `production` push, so the push is what actually ships
 # - the release api call comes last, since the tag has to reach origin before it resolves
-# @see plugins/gitgud/skills/ship/SKILL.md, plugins/gitgud/shared/handover.sh, .github/workflows/deploy.yml, .claude/skills/validate-skills/SKILL.md
+# @see plugins/gitgud/skills/ship/SKILL.md, plugins/gitgud/shared/handover.sh, .github/workflows/deploy.yml, .claude/skills/validate-skills/SKILL.md, .claude/skills/export-readme/export-readme.sh
 
 set -euo pipefail
 
@@ -68,6 +71,21 @@ if [ "$CURRENT_BRANCH" != "$DEFAULT_BRANCH" ]; then
   echo "fatal: must be on default branch ($DEFAULT_BRANCH) to release" >&2; exit 1; fi
 if git_is_dirty; then
   echo "fatal: working tree has uncommitted changes; run /gitgud:deliver first" >&2; exit 1; fi
+
+# the whole-tree docs invariants: the readme copies ship inside one install directory, and the
+# readme index is what makes a skill discoverable; the tree is clean by the check above
+EXPORTER="$ROOT/.claude/skills/export-readme/export-readme.sh"
+if [ -f "$EXPORTER" ] && ! DOCS=$(bash "$EXPORTER" --check 2>&1); then
+  echo "fatal: readme drift; run $EXPORTER, then commit what it wrote" >&2
+  printf '%s\n' "$DOCS" >&2
+  exit 1
+fi
+VALIDATOR="$ROOT/.claude/skills/validate-skills/validate-skills.sh"
+if [ -f "$VALIDATOR" ] && ! DOCS=$(bash "$VALIDATOR" --strict 2>&1); then
+  echo "fatal: a skill pair fails --strict; every warning gates the release" >&2
+  printf '%s\n' "$DOCS" >&2
+  exit 1
+fi
 
 if ! git show-ref --verify --quiet "refs/heads/$PRODUCTION_BRANCH" \
   && ! git ls-remote --exit-code --heads origin "$PRODUCTION_BRANCH" >/dev/null 2>&1; then
