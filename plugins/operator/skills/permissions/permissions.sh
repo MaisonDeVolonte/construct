@@ -80,15 +80,31 @@ rules_of deny  > "$SCRATCH/deny"
 rules_of allow > "$SCRATCH/allow"
 rules_of ask   > "$SCRATCH/ask"
 
-# an action answers in json or says nothing at all, and silence from every one is the allow case
 # the harness runs the event's actions in parallel and one deny blocks the call; this mirrors that
+# only `permissionDecision: deny` scores, so an advisory action's prose is never read as a block
 hook_verdict() {
-  local cmd=$1 action out
+  local cmd=$1 action out decision denied=0
   for action in "$HOOKS"/*.sh; do
     out=$(jq -n --arg c "$cmd" '{tool_input:{command:$c}}' | bash "$action" 2>/dev/null || true)
-    if [ -n "$out" ]; then printf 'deny'; return; fi
+    if [ -z "$out" ]; then continue; fi
+    decision=$(printf '%s' "$out" | jq -r '.hookSpecificOutput.permissionDecision // empty' 2>/dev/null || true)
+    if [ "$decision" != "deny" ]; then continue; fi
+    # the loop runs past the first deny, since two actions can refuse the same command
+    printf '%s\t%s\n' "$(basename "$action" .sh)" "$cmd" >> "$SCRATCH/refusals"
+    denied=1
   done
-  printf 'silent'
+  if [ "$denied" -eq 1 ]; then printf 'deny'; else printf 'silent'; fi
+}
+
+# which action refused what, since the tier1 count alone cannot say who did the work
+refusals_by_action() {
+  local total commands
+  if [ ! -s "$SCRATCH/refusals" ]; then printf 'none'; return; fi
+  total=$(wc -l < "$SCRATCH/refusals" | tr -d ' ')
+  commands=$(cut -f2 "$SCRATCH/refusals" | sort -u | wc -l | tr -d ' ')
+  cut -f1 "$SCRATCH/refusals" | sort | uniq -c | sort -rn \
+    | awk -v t="$total" -v c="$commands" \
+        '{ printf "%s%s %s", sep, $2, $1; sep = ", " } END { printf " — %s refusals over %s commands\n", t, c }'
 }
 
 # two tokens for a tool that takes a subcommand, one token for everything else
@@ -178,12 +194,16 @@ check_named() {
 }
 
 # the hook keeps its own copy of the protected paths, and nothing keeps the two lists in step
-# the paths live in one action, block-policy-edits.sh, so drift reads that file and no sibling
+# the paths live in one action, block-protected-paths.sh, so drift reads that file and no sibling
+# only the compiled-in array is read: `github.guarded_paths` is the operator's own extension, and a
+# settings rule is not expected to mirror it (see the CONFIGURED block in that hook)
 check_drift() {
   local path
-  grep -E '^PROTECTED=' "$HOOKS/block-policy-edits.sh" \
-    | sed -E "s/^PROTECTED=[\"']?//; s/[\"']$//; s/\\\$PROTECTED//" \
-    | tr '|' '\n' \
+  awk '/^DEFAULT_PROTECTED_PATHS=\(/ { inside = 1; next } inside && /^\)/ { inside = 0 } inside' \
+    "$HOOKS/block-protected-paths.sh" \
+    | sed -E 's/#.*$//' \
+    | tr ' ' '\n' \
+    | sed -E 's/^"//; s/"$//; s/\$B$//' \
     | sed -E 's/\\//g; s/[()^$]//g; s/\[.*\]//g; s#/$##' \
     | grep -E '^[a-zA-Z.]' | sort -u > "$SCRATCH/hookpaths"
   # ask counts as a guard here, exactly as it does in settingsaudit.sh: a tracked path cannot be
@@ -451,6 +471,7 @@ settings: ${SETTINGS[*]:-none found}
 hooks: $HOOKS
 cases: $CASES
 tier1 replayed: $((T1_PASS + T1_FAIL)) — $T1_PASS held, $T1_FAIL failed
+refusals: $(refusals_by_action)
 errors: $ERRORS
 warnings: $WARNINGS
 suggested: $SUGGESTED
