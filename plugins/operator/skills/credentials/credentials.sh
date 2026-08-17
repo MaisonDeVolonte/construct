@@ -24,6 +24,18 @@ case " $* " in *" --help "*|*" -h "*) echo "help: requested"; exit 0;; esac
 if [ "${1:-}" = "--check" ]; then
   shift
 else
+  # `--quick` grades every ruled variable by shell expansion and stops there
+  # it writes NO report, since a dated artifact must never record a run that skipped its probes
+  QUICK=0
+  case " $* " in *" --quick "*) QUICK=1;; esac
+
+  # `--strict` turns the report into a gate: an exit code is the only verdict a caller can read
+  STRICT_RUN=0
+  case " $* " in *" --strict "*) STRICT_RUN=1;; esac
+
+  # the worst finding across every probe, since one breach anywhere is the run's verdict
+  WORST=ok
+
   # ==============
   # PREFLIGHT
   # ==============
@@ -57,6 +69,10 @@ else
   }
   MASKED=$(rules_by_mode mask)
   DENIED=$(rules_by_mode deny)
+
+  # `sort -u` returns one name per LINE, so a space-delimited membership test matches only the
+  # first and last entry; flattening once here is what makes the unruled filter see every rule
+  RULED=" $(printf '%s\n%s' "$MASKED" "$DENIED" | tr '\n' ' ') "
 
   denied_files() {
     local file
@@ -106,11 +122,14 @@ else
   fi
 
   printf '\n=== /operator:credentials telemetry ===\n'
+  if [ "$QUICK" -eq 1 ]; then printf 'mode: quick (gate only, no report written)\n'
+  else printf 'mode: full (every vector, report written)\n'; fi
   printf 'credential layer active: %s\n' "$LAYER_ACTIVE"
   printf 'witness: %s\n' "${GATE_WITNESS:-none}"
   printf 'settings scopes read: %s\n' "${#SETTINGS[@]}"
   printf 'masked rules: %s\n' "$(printf '%s' "$MASKED" | grep -c . || true)"
   printf 'denied rules: %s\n' "$(printf '%s' "$DENIED" | grep -c . || true)"
+  if [ "$STRICT_RUN" -eq 1 ]; then printf 'gate: strict (exit 1 on any breach)\n'; fi
 
   if [ "$LAYER_ACTIVE" = no ]; then
     printf 'verdict: UNGRADED — no denied variable is unset and no mask sentinel is present\n'
@@ -125,11 +144,12 @@ else
   # UNRULED — the worklist
   #   a credential-shaped variable that no rule names is exposed to every sandboxed command
   # ==============
-  printf '\n--- unruled ---\n'
   UNRULED=0
+  # rows are buffered rather than printed, since quick prints this section last and full first
+  UNRULED_ROWS=()
   while IFS= read -r name; do
     [ -n "$name" ] || continue
-    case " $MASKED $DENIED " in *" $name "*) continue;; esac
+    case "$RULED" in *" $name "*) continue;; esac
     value=${!name:-}
     [ -n "$value" ] || continue
     # the sandbox injects its own proxy and agent sockets; those are plumbing it set, not secrets
@@ -142,16 +162,69 @@ else
     shaped=no
     if printf '%s' "$name" | grep -qiE '(key|token|secret|password|passwd|credential|auth)'; then shaped=yes; fi
     if printf '%s' "$value" | grep -qE "$SECRET_PATTERNS"; then shaped=live; fi
+    [ "$shaped" = no ] || UNRULED=$((UNRULED + 1))
     case "$shaped" in
-      live) printf 'unruled: %s | %s | provably a credential | needs a rule AND a rotation\n' \
-              "$name" "$(fingerprint "$value")"
-            UNRULED=$((UNRULED + 1));;
-      yes)  printf 'unruled: %s | %s | named like a credential | confirm, then rule it\n' \
-              "$name" "$(fingerprint "$value")"
-            UNRULED=$((UNRULED + 1));;
+      live) UNRULED_ROWS+=("$name|$(fingerprint "$value")|provably a credential|needs a rule AND a rotation");;
+      yes)  UNRULED_ROWS+=("$name|$(fingerprint "$value")|named like a credential|confirm, then rule it");;
     esac
   done < <(env | cut -d= -f1 | sort -u)
-  if [ "$UNRULED" -eq 0 ]; then printf 'none — every credential-shaped variable carries a rule\n'; fi
+
+  # quick renders every section as a table, so the three grades read in one shape
+  print_unruled() {
+    printf '\n--- unruled ---\n'
+    if [ "$UNRULED" -eq 0 ]; then
+      printf 'none — every credential-shaped variable carries a rule\n'
+      return
+    fi
+    if [ "$QUICK" -eq 1 ]; then
+      printf '| variable | fingerprint | evidence | action |\n|---|---|---|---|\n'
+    fi
+    for row in "${UNRULED_ROWS[@]}"; do
+      IFS='|' read -r n f e a <<< "$row"
+      if [ "$QUICK" -eq 1 ]; then printf '| %s | %s | %s | %s |\n' "$n" "$f" "$e" "$a"
+      else printf 'unruled: %s | %s | %s | %s\n' "$n" "$f" "$e" "$a"; fi
+    done
+  }
+
+  # full leads with the worklist; quick closes with it, since quick asks if the rules still hold
+  if [ "$QUICK" -eq 0 ]; then print_unruled; fi
+
+  # ==============
+  # QUICK EXIT
+  #   one expansion per ruled variable answers "is the boundary up right now"
+  # ==============
+  if [ "$QUICK" -eq 1 ]; then
+    printf '\n--- masked (shell expansion only) ---\n'
+    printf '| variable | fingerprint | shell | verdict |\n|---|---|---|---|\n'
+    for name in $MASKED; do
+      grade=$(classify "${!name:-}")
+      verdict=ok
+      if [ "$grade" = leaked ]; then verdict=LEAKED; WORST=LEAKED; fi
+      printf '| %s | %s | %s | %s |\n' "$name" "$(fingerprint "${!name:-}")" "$grade" "$verdict"
+    done
+
+    printf '\n--- denied (shell expansion only) ---\n'
+    printf '| variable | fingerprint | shell | verdict |\n|---|---|---|---|\n'
+    for name in $DENIED; do
+      verdict=ok
+      if [ -n "${!name:-}" ]; then verdict=PRESENT; fi
+      if [ "$verdict" = PRESENT ] && [ "$WORST" = ok ]; then WORST=PRESENT; fi
+      printf '| %s | %s | %s | %s |\n' \
+        "$name" "$(fingerprint "${!name:-}")" "$(classify "${!name:-}")" "$verdict"
+    done
+
+    print_unruled
+    printf '\nworst verdict: %s\n' "$WORST"
+    printf 'unruled count: %s\n' "$UNRULED"
+
+    printf '\n=== /operator:credentials handover ===\n'
+    printf '# quick mode wrote NO report: it graded the gate and the rules, nothing else\n'
+    printf '# the vector sweep, the file denies and the dated artifact need the full run\n'
+    printf 'RECOMMENDED: run a full credentials scan and generated report with `/operator:credentials`\n'
+    printf '=====================\n'
+    if [ "$STRICT_RUN" -eq 1 ] && [ "$WORST" != ok ]; then exit 1; fi
+    exit 0
+  fi
 
   # ==============
   # VECTORS
@@ -195,6 +268,7 @@ else
       if [ -n "${!name:-}" ]; then verdict=PRESENT; fi
     fi
     printf '%-22s %s\n' "verdict" "$verdict"
+    if [ "$verdict" != ok ] && [ "$WORST" = ok ]; then WORST=$verdict; fi
   }
 
   TMPROOT="$(git rev-parse --show-toplevel)/tmp"
@@ -217,20 +291,24 @@ else
     # permissions say; and when the sandbox denies the stat too, absent and denied are the same
     # answer from in here, which is the property working rather than a gap in the report
     if [ -d "$expanded" ]; then
-      if ls "$expanded" >/dev/null 2>&1; then printf '%-34s READABLE\n' "$path"
+      if ls "$expanded" >/dev/null 2>&1; then printf '%-34s READABLE\n' "$path"; WORST=READABLE
       else printf '%-34s denied\n' "$path"; fi
     elif [ -f "$expanded" ]; then
-      if cat "$expanded" >/dev/null 2>&1; then printf '%-34s READABLE\n' "$path"
+      if cat "$expanded" >/dev/null 2>&1; then printf '%-34s READABLE\n' "$path"; WORST=READABLE
       else printf '%-34s denied\n' "$path"; fi
     else
       printf '%-34s unreadable (absent or denied at stat)\n' "$path"
     fi
   done < <(denied_files)
 
+  printf '\nworst verdict: %s\n' "$WORST"
+  printf 'unruled count: %s\n' "$UNRULED"
+
   printf '\n=== /operator:credentials handover ===\n'
   printf '# nothing to run: this trigger measures and the report is the deliverable\n'
   printf '# every LEAKED or PRESENT verdict names a credential to rotate, then rule\n'
   printf '=====================\n'
+  if [ "$STRICT_RUN" -eq 1 ] && [ "$WORST" != ok ]; then exit 1; fi
   exit 0
 fi
 
