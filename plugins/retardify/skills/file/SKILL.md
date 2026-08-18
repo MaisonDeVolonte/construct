@@ -3,61 +3,12 @@ name: file
 license: MIT
 compatibility: requires bash, git
 description: file-shape linter run by PostToolUse or via <path> argument (saves audits to .construct/)
-argument-hint: "[--help] <path> [--test]"
+argument-hint: "[--help] [--quick] [--strict] [--warn] [--keep] <path> [--test]"
 when_to_use: "editing files, PostToolUse warnings, or when asked to review files"
 paths: "**/*.ts, **/*.tsx, **/*.js, **/*.jsx, **/*.mjs, **/*.cjs, **/*.sh, **/*.py, **/*.rb, **/*.go, **/*.rs"
 metadata:
   artifact: .construct/retardify/file/
 ---
-
-**validated file shapes:** keep tokens aimed at logic instead of conventions
-- `shape-only` refactors since `/retardify:code` already owns the logic inside it
-- `file name` casing is configured and enforced mechanistically
-- `wayfinders` improve code orientation and help keep inline comments to a minimum
-- `module` organization is standardized for maximum scannability
-- `inline comments` are continually synthesized to ensure they're accurate and legible
-- `configured` in the skill doc and enforced by the bash sidecar
-
-<details>
-<summary>example:</summary>
-
-```typescript
-/**
- * =================================================
- * @file widget.ts - generic stateful execution unit
- * =================================================
- * @description
- * - wraps arbitrary payloads into standard lifecycle hooks (init, tick, dispose)
- * - NOTES:
- *   - #1: mutations funnel through internal queue to ensure deterministic ticks
- * @see core/runner.ts
- */
-
-import { fetchFooCache } from "some-library";
-import type { FooConfig } from "some-library";
-
-import { getFoo } from "@/utilities/foo";
-import type { FooBarShape } from "@/utilities/foobar";
-import { FOO_URL, FOO_API_KEY } from "@/config/foobar";
-import FooWidget from "@/modules/foo/Widget";
-import "@/modules/foo/Widget.css";
-
-export { helperFn } from "@/utilities/shared";
-
-export const FOO_TAG = "foo-tag";
-export const FOO_LIST = ["a", "b", "c"];
-
-const FOO_TIMER = 3600;
-
-export type FooNode = { path: string; type: string };
-
-export async function getFoo(): Promise<FooNode[]> { return []; }
-
-// full-line comments only, closed with a type hint when helpful – boolean
-// comments that span more than 2 consecutive lines belong in the wayfinder
-```
-
-</details>
 
 # Instructions
 

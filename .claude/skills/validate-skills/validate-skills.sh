@@ -22,6 +22,7 @@
 # RUN
 # - defaults to every pair in `plugins/*/skills/`; pass a doc, a sidecar, or a directory to scope it
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
+# - `--quick` reports inline and names no audit file, which is what a ci run wants
 # - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
 # - every check reads, except the free-text probe, which runs those sidecars on an apostrophe goal
 # - that probe was probe-arguments.sh until it folded in here, so ci runs one gate instead of two
@@ -58,6 +59,7 @@ if [ ! -f "$SHARED/secrets.sh" ]; then
 . "$SHARED/secrets.sh"
 
 STRICT=0
+QUICK=0
 KEEP=0
 TEMPLATE=".claude/skills/validate-skills/SKILL.md"
 TRIGGERS="plugins"
@@ -150,6 +152,7 @@ for arg in "$@"; do
     # defeat the whole-tree default below, so the run would grade a path named ""
     "") continue;;
     --strict) STRICT=1;;
+    --quick) QUICK=1;;
     --keep) KEEP=1;;
     -*) echo "fatal: unknown flag $arg" >&2; exit 1;;
     *) PAIRS+=("$arg");;
@@ -875,14 +878,20 @@ then AUDIT_COUNT=$(grep -c '^## Validate Audit #' "$TODAYS_AUDIT" || true)
 else AUDIT_COUNT=0; fi
 AUDIT_COUNT=${AUDIT_COUNT:-0}
 
+# a ci runner has no agent to append an audit, so quick names none and the doc skips that step
+if [ "$QUICK" -eq 1 ];
+then MODE="quick — report inline, write nothing"; AUDIT_FILE=none
+else MODE="audit — append to audit_file"; AUDIT_FILE=$TODAYS_AUDIT; fi
+
 cat <<EOF
 
 === /validate-skills telemetry ===
 template: $TEMPLATE
+mode: $MODE
 scanned: ${#PAIRS[@]} pair(s)
 probed: $PROBED free-text skill(s)
 index: ${INDEX:-none found}
-audit_file: $TODAYS_AUDIT
+audit_file: $AUDIT_FILE
 audit_count: $AUDIT_COUNT
 next_audit: $((AUDIT_COUNT + 1))
 timestamp: $(date '+%Y-%m-%d %H:%M')

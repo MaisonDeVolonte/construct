@@ -16,6 +16,9 @@
 # - defaults to every tracked eligible file; pass files or a directory to scope it
 # - a scoped run answers about those paths only, so the artifact sweep is a bare-run check
 # - `--strict` promotes warnings to errors, `--keep` preserves scratch; exits 1 on any error
+# - `--warn` is its inverse: every finding reports and the run exits 0, which is how ci reads it
+# - passing both is refused, since one bar has to answer for the exit code
+# - `--quick` names no audit file, since a ci runner has no agent to append one
 # - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
 # - a broken `@see` only warns, since nothing gates references; `/retardify:todo` reports repo-wide
 # @see plugins/retardify/skills/file/SKILL.md, plugins/retardify/skills/todo/todo.sh, plugins/operator/hooks/posttooluse/retardify-file.sh, plugins/retardify/shared/secrets.sh, .construct/retardify/file/
@@ -49,6 +52,8 @@ if [ -n "$UTF8_LOCALE" ]; then export LC_ALL="$UTF8_LOCALE"; fi
 MAX_WIDTH=100
 STRICT=0
 KEEP=0
+QUICK=0
+WARN_ONLY=0
 TEMPLATE="plugins/retardify/skills/file/SKILL.md"
 
 # "a comment past 2 consecutive lines belongs in the wayfinding header instead"
@@ -93,10 +98,16 @@ for arg in "$@"; do
   case "$arg" in
     --strict) STRICT=1;;
     --keep) KEEP=1;;
+    --quick) QUICK=1;;
+    --warn) WARN_ONLY=1;;
     -*) echo "fatal: unknown flag $arg" >&2; exit 1;;
     *) TARGETS+=("$arg"); SCOPED=1;;
   esac
 done
+
+# refused rather than ordered by precedence, since a silent winner hides the typo in a ci step
+if [ "$STRICT" -eq 1 ] && [ "$WARN_ONLY" -eq 1 ]; then
+  echo "fatal: --strict and --warn are opposites; pass one" >&2; exit 1; fi
 
 # no paths given: every tracked source file, anchored to the repo root so the default works from
 # any subdirectory — same posture as the gitgud sidecars
@@ -137,8 +148,8 @@ mkdir -p "$TMPROOT"
 # findings collect as "SEV|file|line|category|detail" — line is its own field so the report can
 # sort numerically; joining it to the path first sorts 121 above 31. the run fails on ERROR only
 FINDINGS=$(mktemp "$TMPROOT/$TMPTAG-findings.XXXXXX")
-# a failed run leaves scratch behind to read; --keep does the same after a clean one
-cleanup() { st=$?; if [ "$KEEP" -eq 0 ] && [ "$st" -eq 0 ]; then rm -f "$FINDINGS"; fi; }
+# a failed run leaves scratch behind to read; a clean run sweeps every stale pair unless kept
+cleanup() { st=$?; if [ "$KEEP" -eq 0 ] && [ "$st" -eq 0 ]; then bash "${TMPROOT%/tmp}/plugins/retardify/shared/clean-tmp.sh" "$TMPTAG"; fi; }
 trap cleanup EXIT
 
 err()  { printf 'ERROR|%s|%s|%s|%s\n' "$1" "$2" "$3" "$4" >> "$FINDINGS"; }
@@ -537,6 +548,26 @@ check_block() {
   done < <(comment_lines "$file" "$marker" "$skip")
 }
 
+# "never wrapping" applies past the wayfinder too: two plain comment lines back to back, neither
+# a bullet, almost always means one sentence got split across them instead of shortened to fit
+check_wrap() {
+  local file=$1 marker=$2 skip=$3 lineno line body prev=0 run=0
+  while IFS=$'\t' read -r lineno line; do
+    body=$(body_of "$line")
+    if exempt "$body"; then prev=0; run=0; continue; fi
+    case "$body" in "-"*|"* "*) prev=0; run=0; continue;; esac
+    if [ "$prev" -ne 0 ] && [ "$lineno" -eq $((prev + 1)) ]; then
+      run=$((run + 1))
+    else
+      run=1
+    fi
+    if [ "$run" -eq 2 ]; then
+      warn "$file" "$lineno" wrapped "reads as one clause split across two lines, shorten it instead"
+    fi
+    prev=$lineno
+  done < <(comment_lines "$file" "$marker" "$skip")
+}
+
 # "#1: use numbered citations" paired with a "(see #1)" pointer; the pair holds only when both do
 # a file defining no note opts out, which keeps a github ref like (see #127) out of this check
 check_citations() {
@@ -619,6 +650,7 @@ for file in ${FILES[@]+"${FILES[@]}"}; do
     check_comment_casing "$file" "$MARKER" "$SKIP"
     check_clause         "$file" "$MARKER" "$SKIP"
     check_block          "$file" "$MARKER" "$SKIP"
+    check_wrap           "$file" "$MARKER" "$SKIP"
     check_block_comment  "$file" "$MARKER" "$SKIP"
   fi
 
@@ -808,10 +840,22 @@ then AUDIT_COUNT=$(grep -c '^## Files Audit #' "$AUDIT_ROOT/$TODAYS_AUDIT" || tr
 else AUDIT_COUNT=0; fi
 AUDIT_COUNT=${AUDIT_COUNT:-0}
 
+# a ci runner has no agent to append an audit, so quick names none and the doc skips that step
+if [ "$QUICK" -eq 1 ];
+then MODE="quick — report inline, write nothing"; AUDIT_FILE=none
+else MODE="audit — append to audit_file"; AUDIT_FILE=$TODAYS_AUDIT; fi
+
+# the bar the exit code answers to, printed so a ci log says which one this run was held to
+if [ "$STRICT" -eq 1 ]; then SEVERITY="strict — a warning fails the run"
+elif [ "$WARN_ONLY" -eq 1 ]; then SEVERITY="warn — every finding reports, nothing fails the run"
+else SEVERITY="default — an error fails the run, a warning does not"; fi
+
 cat <<EOF
 
 === file.sh sidecar ===
-audit_file: $TODAYS_AUDIT
+mode: $MODE
+severity: $SEVERITY
+audit_file: $AUDIT_FILE
 audit_count: $AUDIT_COUNT
 next_audit: $((AUDIT_COUNT + 1))
 timestamp: $(date '+%Y-%m-%d %H:%M')
@@ -857,6 +901,7 @@ cat <<'EOF'
 ========================
 EOF
 
+if [ "$WARN_ONLY" -eq 1 ]; then exit 0; fi
 if [ "$ERRORS" -gt 0 ]; then exit 1; fi
 if [ "$STRICT" -eq 1 ] && [ "$WARNINGS" -gt 0 ]; then exit 1; fi
 exit 0
