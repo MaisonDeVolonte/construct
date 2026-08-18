@@ -3,16 +3,11 @@ name: push-release
 license: MIT
 compatibility: requires bash, jq, git, curl
 description: bumps the four version files, then hands over the tag and the promotion (saves report to .construct/)
-argument-hint: "[--help] [--check] [--patch] [--minor] [--major] [--test]"
+argument-hint: "[--help] [--check] [--quick] [--strict] [--patch] [--minor] [--major] [--test]"
 when_to_use: "Cutting a release, promoting main to production, or answering what version this repo ships. Also when ci fails on the version files disagreeing."
 metadata:
   artifact: .construct/maintainer/push-release/
 ---
-**the version is stored, never derived:** four files say it, and one run moves all four
-- `main` is the integration trunk and reaches no user, since the marketplace ref is `production`
-- it reads the trunk's own ruleset, so the emitted steps branch before committing when a pr is required
-- it writes the version lines and nothing else: it never commits, never merges and never pushes
-- `--check` is the pure gate ci runs, so that mode reaches no network and writes no artifact
 
 # Instructions
 
@@ -49,6 +44,9 @@ carries the field. The install a user gets is one directory, so all four move to
 
 ## the run
 - `--check` is the read-only gate: the four files agree and every value parses as semver
+- `--quick` is that same gate under the name every other ci sidecar answers to
+- `--strict` promotes the warning tier to a failure; a plugin the marketplace never lists is one
+- IF `--quick`, STOP after the inline report; `audit_file: none` confirms it, and nothing is appended
 - ci runs that flag and nothing else, since it is pure, reaches no network, and writes nothing
 - a bare run means `--patch`; `--minor` and `--major` differ only in the number they compute
 - the write is a `sed` on the version line, so every hand-formatted object survives it

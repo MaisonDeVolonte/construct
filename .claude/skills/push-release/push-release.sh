@@ -14,7 +14,9 @@
 # - no marketplace entry carries one: `plugin.json` outranks it, so a drifted pair reads silently
 # - no CHANGELOG is written; the github release generates its notes from the commits
 # RUN
-# - `--check` is the read-only gate ci runs: the four files agree and every value parses as semver
+# - `--check` is the read-only gate: the four files agree and every value parses as semver
+# - `--quick` is the same gate under the name every other ci sidecar answers to
+# - `--strict` promotes the warning tier to a failure, which is how ci runs it
 # - `--patch` (the default), `--minor` and `--major` each preflight, write the four, then hand over
 # SIDECAR
 # - read-only apart from the four version lines: it never commits, never merges, and never pushes
@@ -23,7 +25,7 @@
 # ARTIFACT
 # - `.construct/maintainer/push-release/YYYY-MM-DD.md`, one file per day, appended by the agent
 # - reported, never created: this names the path and the count, and the doc says what to write
-# - `--check` returns before the telemetry, so that mode names no artifact at all
+# - `--check` and `--quick` return before the telemetry, so both name `audit_file: none`
 # @see .claude/skills/push-release/SKILL.md, .claude-plugin/marketplace.json, .github/workflows/ci.yml, plugins/gitgud/skills/ship/SKILL.md, .construct/maintainer/push-release/
 set -euo pipefail
 
@@ -48,10 +50,16 @@ SEMVER='^[0-9]+\.[0-9]+\.[0-9]+$'
 # 2. hoisted state
 KIND="patch"
 CHECK=0
+STRICT=0
+QUICK=0
+WARNINGS=0
 
 for arg in "$@"; do
   case "$arg" in
     --check) CHECK=1 ;;
+    # quick is check by another name: both refuse to cut a release and both write nothing
+    --quick) CHECK=1; QUICK=1 ;;
+    --strict) STRICT=1 ;;
     --patch) KIND="patch" ;;
     --minor) KIND="minor" ;;
     --major) KIND="major" ;;
@@ -120,7 +128,26 @@ if [ "$CHECK" = "1" ]; then
     for m in $FILES; do printf '  %-46s %s\n' "$m" "$(read_version "$m")" >&2; done
     exit 1
   fi
-  echo "all $COUNT version files read $CURRENT"
+
+  # a plugin nobody lists installs from a clone and from nowhere else, which reads as a missing
+  # plugin rather than a missing listing, so it warns here instead of surfacing at install time
+  for m in $MANIFESTS; do
+    plugin=$(basename "$(dirname "$(dirname "$m")")")
+    jq -e --arg n "$plugin" 'any(.plugins[]?; .name == $n)' "$MARKETPLACE" >/dev/null 2>&1 && continue
+    echo "WARN  $MARKETPLACE lists no plugin named '$plugin', so it ships only to a clone"
+    WARNINGS=$((WARNINGS + 1))
+  done
+
+  if [ "$QUICK" -eq 1 ];
+  then MODE="quick — report inline, write nothing"; AUDIT_FILE=none
+  else MODE="check — report inline, write nothing"; AUDIT_FILE=none; fi
+
+  echo "mode: $MODE"
+  echo "audit_file: $AUDIT_FILE"
+  echo "scanned: $COUNT version file(s), all reading $CURRENT"
+  echo "errors: 0"
+  echo "warnings: $WARNINGS"
+  if [ "$STRICT" -eq 1 ] && [ "$WARNINGS" -gt 0 ]; then exit 1; fi
   exit 0
 fi
 

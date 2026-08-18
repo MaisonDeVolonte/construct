@@ -3,18 +3,11 @@ name: validate-skills
 license: MIT
 compatibility: requires bash, jq, git
 description: the shape every skill pair must hold: the doc, its sidecar, its frontmatter (saves report to .construct/)
-argument-hint: "[--help] [--strict] [--keep] <path> [--test]"
+argument-hint: "[--help] [--quick] [--strict] [--keep] <path> [--test]"
 when_to_use: "Authoring or editing any SKILL.md or its sidecar, adding a skill to a plugin, or deciding whether a skill is a trigger or a spec. Also when a listing looks truncated or a skill fails to load."
 metadata:
   artifact: .construct/maintainer/validate-skills/
 ---
-**a skill is one folder holding exactly two files:** this grades the pair they have to make
-- `export-readme` owns every frontmatter rule; this owns the body, the sidecar and the pairing
-- `disable-model-invocation` decides the rest: set means user-invoked, absent means model-invocable
-- ERROR breaks a rule the doc states outright, and WARN names a smell the doc tolerates
-- the free-text probe runs those sidecars on an apostrophe, since an unquoted expansion splits on it
-- a doc may chain sibling sidecars in its telemetry fence: read-only planners, same skills root
-- chained notes name who runs what, every line echoes its exit, and the owning sidecar runs last
 
 # Instructions
 
@@ -61,6 +54,8 @@ echo "sidecar exit: $?"
   table verbatim inside a markdown code block, and fix nothing until the user has read it
 - success (`sidecar exit` = 0) → report `errors`, `warnings` and `secrets`, then work the findings
   list top to bottom; `none — every machine-checkable rule holds` is the clean result
+- `--quick` reports inline and writes nothing, `--strict` promotes warnings, `--keep` holds scratch
+- IF `--quick`, STOP after the inline report; `audit_file: none` confirms it, and nothing is appended
 ```
 
 - the heading opens straight onto the bang block, since a blank line there reads as a gap

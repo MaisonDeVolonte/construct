@@ -3,91 +3,12 @@ name: code
 license: MIT
 compatibility: requires bash, git
 description: code-legibility linter run by PostToolUse or via <path> argument (saves audits to .construct/)
-argument-hint: "[--help] <path> [--test]"
+argument-hint: "[--help] [--quick] [--strict] [--warn] <path> [--test]"
 when_to_use: "editing code, PostToolUse warnings, or when asked to review code"
 paths: "**/*.ts, **/*.tsx, **/*.js, **/*.jsx, **/*.mjs, **/*.cjs, **/*.sh, **/*.py, **/*.rb, **/*.go, **/*.rs"
 metadata:
   artifact: .construct/retardify/code/
 ---
-
-**maximally legible code:** ensures you're able to keep up with the codebase
-- `logic-only` refactors since `/retardify:file` already owns the frame around it
-- `retard-maxxes` like a jr-engineer who does everything the long, extremely boring way
-- `simplifies` logic instead of advanced, deeply nested, or overly efficient abstractions
-- `separates` files or functions that do more than one thing, where practical
-- `sequences` logic from top to bottom in order of state, definitions, guards, then execution
-- `names` things using clear, concise, intuitively understood language
-- `linebreaks` separate distinct conceptual blocks, not single-line statements
-- `first principles` such as DRY, SoC, POLA, etc are a vibe; RDD, WTF, WET, etc are not a vibe
-
-<details>
-<summary>example:</summary>
-
-```typescript
-// 1. global constants
-const IS_AGENT = true;
-
-type Requirement = {
-  rawCode: string;
-  badHabits: string[];
-  nestingDepth: number;
-  isDuplicated: boolean;
-  isSurprising: boolean;
-};
-
-export function writeCode(requirements: Requirement[], request: string) {
-  // 2. hoisted state
-  const maxNesting = 2;
-  let finalSolution = "";
-
-  // 3. defined helpers
-  function keepItSimple(req: Requirement) {
-    if (req.rawCode.includes("?")) {
-      const ternaryCount = (req.rawCode.match(/\?/g) || []).length;
-      if (ternaryCount > 1) throw new Error("use an if-statement");
-    }
-    if (req.rawCode.includes(".reduce(")) throw new Error("use a for/forEach loop");
-    if (req.rawCode.includes("\n\n\n")) throw new Error("use empty lines sparingly");
-    if (req.nestingDepth > maxNesting) throw new Error("are you building a pyramid?");
-
-    return true;
-  }
-
-  function respectFirstPrinciples(req: Requirement) {
-    if (req.isDuplicated) throw new Error("extract to a helper");
-    if (req.isSurprising) throw new Error("make it boring and obvious");
-  }
-
-  function punishAgent(variables: string[]) {
-    if (!IS_AGENT) return;
-
-    variables.forEach(variableName => {
-      if (["e", "idx", "el", "cb"].includes(variableName)) {
-        throw new Error("i get it, just spell it out please");
-      }
-      const charCount = variableName.length;
-      const wordCount = variableName.split(/(?=[A-Z])/).length;
-      if (charCount > 25 || wordCount > 4) {
-        throw new Error(`'${variableName}' is not very helpful`);
-      }
-    });
-  }
-
-  // 4. main logic & execution
-  if (!request) return finalSolution;
-
-  requirements.forEach(req => {
-    punishAgent(req.badHabits);
-    respectFirstPrinciples(req);
-
-    if (keepItSimple(req)) finalSolution += req.rawCode;
-  });
-
-  return finalSolution;
-}
-```
-
-</details>
 
 # Instructions
 

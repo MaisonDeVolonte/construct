@@ -13,11 +13,16 @@
 # - t1 answers: `--help` prints its marker and exits 0, and an unknown flag is refused
 # - t2 resolves: the sidecar's own `# shellcheck source=`, `@see` and `command -v` lines, statically
 # - t3 loads: `--test` prints `test: ok` and exits 0, which proves the guards above it returned
+# - t4 stays read-only: no bare mutating git verb, since a sidecar measures and hands over instead
+# - a verb quoted into `handover_cmd` is data the user runs, so only an executed one is a finding
+# - t4 is static and runs BEFORE t1/t3, since those execute the file and a probed flag runs the body
+# - that order is load-bearing: a probe once executed a fixture's live reset and flattened the tree
 # - a tier only runs when the one before it passed, so one failure reports once rather than four
 # - t2 is a static read, so a broken reference is named without the sidecar running at all
 # RUN
 # - defaults to every pair under `plugins/*/skills/` and `.claude/skills/`; pass a path to scope it
 # - `--strict` promotes warnings to errors; exits 1 on any error either way
+# - `--quick` reports inline and names no audit file, which is what a ci run wants
 # - every invocation is capped by `perl -e alarm`, since macos ships no `timeout`
 # - a sidecar with no `--test` case is a WARN, so the contract can land skill by skill
 # ARTIFACT
@@ -54,6 +59,7 @@ if [ ! -f "$SHARED/handover.sh" ]; then
 if ! command -v perl >/dev/null 2>&1; then echo "fatal: perl is required and not installed" >&2; exit 1; fi
 
 STRICT=0
+QUICK=0
 TARGETS=()
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -61,6 +67,7 @@ while [ $# -gt 0 ]; do
     # defeat the whole-tree default below, so the run would grade a path named ""
     "") ;;
     --strict) STRICT=1;;
+    --quick) QUICK=1;;
     -*) echo "fatal: unknown flag $1" >&2; exit 1;;
     *) TARGETS+=("$1");;
   esac
@@ -104,6 +111,24 @@ warn() {
 pass() {
   ROWS="${ROWS}$1|$2|ok|$3
 "
+}
+
+# the git verbs that write to history, to the index, to the worktree or to a remote
+MUTATING_GIT='(^|[[:space:]]|[;&|(])git[[:space:]]+(merge[[:space:]]|pull|checkout|restore|switch|reset|clean|rebase|cherry-pick|revert|commit|am|apply|stash([[:space:]]+(push|pop|apply|drop|clear)|[[:space:]]*($|[;&|]))|branch[[:space:]]+-[dD]|push|tag)'
+
+# a verb inside a comment is prose, one passed to a handover emitter is the string a user runs,
+# and a quoted one is data; what is left is a line the shell would execute, which is the finding
+mutating_git() {
+  awk '
+    /^[[:space:]]*<?<?[A-Z]+$/ && inheredoc && $1 == tag { inheredoc = 0; next }
+    !inheredoc && match($0, /<<-?'"'"'?[A-Z]+/) {
+      tag = substr($0, RSTART, RLENGTH); gsub(/[<'"'"'-]/, "", tag); inheredoc = 1; next }
+    !inheredoc { print FNR ": " $0 }
+  ' "$1" 2>/dev/null \
+    | grep -E "$MUTATING_GIT" \
+    | grep -vE '^[0-9]+:[[:space:]]*#' \
+    | grep -vE 'handover_cmd|handover_note|telemetry_line' \
+    | grep -vE '["'"'"'`]git[[:space:]]' || true
 }
 
 # ==============
@@ -177,6 +202,15 @@ for dir in "${DIRS[@]}"; do
   mode=$(git ls-files -s "$sidecar" 2>/dev/null | awk '{print $1}')
   if [ -n "$mode" ] && [ "$mode" != "100755" ]; then
     fail "$invocation" "t0-mode" "$mode, repair: git update-index --chmod=+x $sidecar"
+  fi
+
+  # ---- t4: it stays read-only (runs FIRST: nothing below may execute a sidecar that mutates) ----
+  # t1 and t3 both run the file, and an unrefused flag runs its whole body; this scan is the one
+  # proof the body is safe to invoke, so it gates every probe rather than reporting after them
+  hits=$(mutating_git "$sidecar")
+  if [ -n "$hits" ]; then
+    fail "$invocation" "t4-readonly" "$(printf '%s' "$hits" | head -1 | cut -c1-60)"
+    continue
   fi
 
   # ---- t1: it answers ----
@@ -272,6 +306,19 @@ EOF
   pass "$invocation" "t3-test" "${checks} reference(s) resolved, ${notes} unwritten"
 done
 
+# the shared files carry no SKILL.md, so the loop above never reaches one, and a sidecar sourcing
+# a shared file inherits whatever it runs; a scoped run answers about its paths only
+if [ ${#TARGETS[@]} -eq 0 ]; then
+  for shared in plugins/*/shared/*.sh; do
+    [ -f "$shared" ] || continue
+    SCANNED=$((SCANNED + 1))
+    hits=$(mutating_git "$shared")
+    if [ -n "$hits" ];
+    then fail "$(echo "$shared" | cut -d/ -f2):shared" "t4-readonly" "$(basename "$shared"): $(printf '%s' "$hits" | head -1 | cut -c1-40)"
+    else pass "$(echo "$shared" | cut -d/ -f2):shared" "t4-readonly" "$(basename "$shared") mutates nothing"; fi
+  done
+fi
+
 # ==============
 # TELEMETRY
 # ==============
@@ -283,12 +330,18 @@ then AUDIT_COUNT=$(grep -c '^## Smoke Audit #' "$TODAYS_AUDIT" || true)
 else AUDIT_COUNT=0; fi
 AUDIT_COUNT=${AUDIT_COUNT:-0}
 
+# a ci runner has no agent to append an audit, so quick names none and the doc skips that step
+if [ "$QUICK" -eq 1 ];
+then MODE="quick — report inline, write nothing"; AUDIT_FILE=none
+else MODE="audit — append to audit_file"; AUDIT_FILE=$TODAYS_AUDIT; fi
+
 telemetry_open "test-skills"
 telemetry_line "scanned" "$SCANNED sidecar(s)"
 telemetry_line "adopted" "$(printf '%s' "$ROWS" | grep -c 't3-case' | tr -d ' ') without a --test case"
 telemetry_line "errors" "$ERRORS"
 telemetry_line "warnings" "$WARNINGS"
-telemetry_line "audit_file" "$TODAYS_AUDIT"
+telemetry_line "mode" "$MODE"
+telemetry_line "audit_file" "$AUDIT_FILE"
 telemetry_line "audit_count" "$AUDIT_COUNT"
 telemetry_line "next_audit" "$((AUDIT_COUNT + 1))"
 telemetry_line "timestamp" "$(date '+%Y-%m-%d %H:%M')"
