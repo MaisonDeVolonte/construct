@@ -61,7 +61,7 @@ TMPTAG=$(basename "${BASH_SOURCE[0]}" .sh)
 mkdir -p "$TMPROOT"
 FINDINGS=$(mktemp "$TMPROOT/$TMPTAG-findings.XXXXXX")
 SCRATCH=$(mktemp -d "$TMPROOT/$TMPTAG-scratch.XXXXXX")
-cleanup() { st=$?; if [ "$KEEP" -eq 0 ] && [ "$st" -eq 0 ]; then rm -rf "$FINDINGS" "$SCRATCH"; fi; }
+cleanup() { st=$?; if [ "$KEEP" -eq 0 ] && [ "$st" -eq 0 ]; then bash "${TMPROOT%/tmp}/plugins/operator/shared/clean-tmp.sh" "$TMPTAG"; fi; }
 trap cleanup EXIT
 
 # a finding leads with its kind rather than its file, so two scopes failing alike sort together

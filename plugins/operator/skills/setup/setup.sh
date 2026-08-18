@@ -325,7 +325,7 @@ if [ "$AUDIT" -eq 1 ]; then
   mkdir -p "$TMPROOT"
   FINDINGS=$(mktemp "$TMPROOT/suiteaudit-findings.XXXXXX")
   SCRATCH=$(mktemp -d "$TMPROOT/suiteaudit-scratch.XXXXXX")
-  cleanup() { st=$?; if [ "$st" -eq 0 ]; then rm -rf "$FINDINGS" "$SCRATCH"; fi; }
+  cleanup() { st=$?; if [ "$st" -eq 0 ]; then bash "${TMPROOT%/tmp}/plugins/operator/shared/clean-tmp.sh" suiteaudit; fi; }
   trap cleanup EXIT
 
   SUITE_START=$SECONDS

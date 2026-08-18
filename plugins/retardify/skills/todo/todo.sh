@@ -66,8 +66,8 @@ else
 
   # findings collect here as "category: detail" lines; this is report-only, so the run never fails
   FINDINGS=$(mktemp "$TMPROOT/$TMPTAG-findings.XXXXXX")
-  # a failed run leaves scratch behind to read; --keep does the same after a clean one
-  cleanup() { st=$?; if [ "$KEEP" -eq 0 ] && [ "$st" -eq 0 ]; then rm -f "$FINDINGS"; fi; }
+  # a failed run leaves scratch behind to read; a clean run sweeps every stale pair unless kept
+  cleanup() { st=$?; if [ "$KEEP" -eq 0 ] && [ "$st" -eq 0 ]; then bash "${TMPROOT%/tmp}/plugins/retardify/shared/clean-tmp.sh" "$TMPTAG"; fi; }
   trap cleanup EXIT
 
   # dirs never worth scanning: dependencies, build output, generated code and gitignored scratch
@@ -201,7 +201,7 @@ else
   THREADS_CUT=0
   THREADS_FILE=$(mktemp "$TMPROOT/$TMPTAG-threads.XXXXXX")
   # the findings trap already owns cleanup; extend it rather than replacing it
-  cleanup() { st=$?; if [ "$KEEP" -eq 0 ] && [ "$st" -eq 0 ]; then rm -f "$FINDINGS" "$THREADS_FILE"; fi; }
+  cleanup() { st=$?; if [ "$KEEP" -eq 0 ] && [ "$st" -eq 0 ]; then bash "${TMPROOT%/tmp}/plugins/retardify/shared/clean-tmp.sh" "$TMPTAG"; fi; }
 
   # injected context arrives as a user turn, so a hook payload or a skill preamble reads as a
   # prompt; these four openers are that noise and nothing an operative typed
@@ -378,8 +378,8 @@ mkdir -p "$TMPROOT"
 # findings collect as "SEV|file|line|category|detail" — line is its own field so the report can
 # sort numerically; joining it to the path first sorts 121 above 31. the run fails on ERROR only
 FINDINGS=$(mktemp "$TMPROOT/$TMPTAG-findings.XXXXXX")
-# a failed run leaves scratch behind to read; --keep does the same after a clean one
-cleanup() { st=$?; if [ "$KEEP" -eq 0 ] && [ "$st" -eq 0 ]; then rm -f "$FINDINGS"; fi; }
+# a failed run leaves scratch behind to read; a clean run sweeps every stale pair unless kept
+cleanup() { st=$?; if [ "$KEEP" -eq 0 ] && [ "$st" -eq 0 ]; then bash "${TMPROOT%/tmp}/plugins/retardify/shared/clean-tmp.sh" "$TMPTAG"; fi; }
 trap cleanup EXIT
 
 err()  { printf 'ERROR|%s|%s|%s|%s\n' "$1" "$2" "$3" "$4" >> "$FINDINGS"; }

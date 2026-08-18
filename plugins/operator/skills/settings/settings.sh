@@ -77,7 +77,7 @@ TMPROOT="$ROOT/tmp"
 mkdir -p "$TMPROOT"
 FINDINGS=$(mktemp "$TMPROOT/settingsaudit-findings.XXXXXX")
 SCRATCH=$(mktemp -d "$TMPROOT/settingsaudit-scratch.XXXXXX")
-cleanup() { st=$?; if [ "$st" -eq 0 ]; then rm -rf "$FINDINGS" "$SCRATCH"; fi; }
+cleanup() { st=$?; if [ "$st" -eq 0 ]; then bash "${TMPROOT%/tmp}/plugins/operator/shared/clean-tmp.sh" settingsaudit; fi; }
 trap cleanup EXIT
 
 err()  { printf 'ERROR|%s|%s|%s\n' "$1" "$2" "$3" >> "$FINDINGS"; }

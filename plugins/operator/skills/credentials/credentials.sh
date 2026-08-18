@@ -287,7 +287,7 @@ else
   TMPROOT="$(git rev-parse --show-toplevel)/tmp"
   mkdir -p "$TMPROOT"
   SCRATCH=$(mktemp -d "$TMPROOT/test-credentials.XXXXXX")
-  cleanup() { rm -rf "$SCRATCH"; }
+  cleanup() { bash "${TMPROOT%/tmp}/plugins/operator/shared/clean-tmp.sh" test-credentials; }
   trap cleanup EXIT
 
   for name in $MASKED; do probe_vectors "$name" mask; done
@@ -385,7 +385,7 @@ done
 TMPROOT="$(git rev-parse --show-toplevel)/tmp"
 mkdir -p "$TMPROOT"
 FINDINGS=$(mktemp "$TMPROOT/credentials-findings.XXXXXX")
-cleanup() { st=$?; if [ "$st" -eq 0 ]; then rm -f "$FINDINGS"; fi; }
+cleanup() { st=$?; if [ "$st" -eq 0 ]; then bash "${TMPROOT%/tmp}/plugins/operator/shared/clean-tmp.sh" credentials; fi; }
 trap cleanup EXIT
 
 err()  { printf 'ERROR|%s|%s|%s|%s\n' "$1" "$2" "$3" "$4" >> "$FINDINGS"; }

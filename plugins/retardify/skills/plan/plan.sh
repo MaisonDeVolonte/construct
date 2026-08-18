@@ -221,8 +221,8 @@ mkdir -p "$TMPROOT"
 # sort numerically; joining it to the path first sorts 121 above 31. the run fails on ERROR only
 FINDINGS=$(mktemp "$TMPROOT/$TMPTAG-findings.XXXXXX")
 SCRATCH=$(mktemp -d "$TMPROOT/$TMPTAG-scratch.XXXXXX")
-# a failed run leaves scratch behind to read; --keep does the same after a clean one
-cleanup() { st=$?; if [ "$KEEP" -eq 0 ] && [ "$st" -eq 0 ]; then rm -rf "$FINDINGS" "$SCRATCH"; fi; }
+# a failed run leaves scratch behind to read; a clean run sweeps every stale pair unless kept
+cleanup() { st=$?; if [ "$KEEP" -eq 0 ] && [ "$st" -eq 0 ]; then bash "${TMPROOT%/tmp}/plugins/retardify/shared/clean-tmp.sh" "$TMPTAG"; fi; }
 trap cleanup EXIT
 
 err()  { printf 'ERROR|%s|%s|%s|%s\n' "$1" "$2" "$3" "$4" >> "$FINDINGS"; }
