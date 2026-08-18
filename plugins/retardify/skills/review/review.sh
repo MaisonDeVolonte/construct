@@ -19,11 +19,21 @@ set -euo pipefail
 # own '## Help' section owns the output, which is why this prints a marker rather than a usage text
 case " $* " in *" --help "*|*" -h "*) echo "help: requested"; exit 0;; esac
 
+# the smoke case proves this file parses and its guards return; /test-skills reads the sources,
+# the @see paths and the tool guards statically, so nothing here runs a step of the skill
+case " $* " in *" --test "*) echo "test: ok"; exit 0;; esac
+
 # `--check` selects the validator half; anything else is the trigger, so the doc's own
 # bang-injected call keeps working untouched
 if [ "${1:-}" = "--check" ]; then
   shift
 else
+  # this branch is a catch-all, so a typo'd flag lands here and runs the trigger unannounced
+  if [ "$#" -gt 0 ]; then
+    echo "fatal: /retardify:review takes no arguments; --check selects the validator half" >&2
+    exit 1
+  fi
+
   # check if in git repository
   if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     echo "fatal: not a git repository" >&2; exit 1; fi

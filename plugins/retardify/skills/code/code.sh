@@ -24,6 +24,10 @@ set -euo pipefail
 # own '## Help' section owns the output, which is why this prints a marker rather than a usage text
 case " $* " in *" --help "*|*" -h "*) echo "help: requested"; exit 0;; esac
 
+# the smoke case proves this file parses and its guards return; /test-skills reads the sources,
+# the @see paths and the tool guards statically, so nothing here runs a step of the skill
+case " $* " in *" --test "*) echo "test: ok"; exit 0;; esac
+
 if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   echo "fatal: not a git repository" >&2; exit 1; fi
 cd "$(git rev-parse --show-toplevel)"

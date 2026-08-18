@@ -5,10 +5,9 @@ effort: max
 license: MIT
 compatibility: requires bash, git
 description: turn a goal into a fan-out spec prompt for a fresh session, then validate it (saves spec to .construct/)
-argument-hint: "[--help] <goal>"
+argument-hint: "[--help] <text> [--test]"
 disable-model-invocation: true
 metadata:
-  kind: trigger
   artifact: .construct/retardify/graph/
 ---
 **a prompt built for a fresh session:** constraints written down, fan-out on your go

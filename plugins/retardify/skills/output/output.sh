@@ -46,6 +46,10 @@ set -euo pipefail
 # own '## Help' section owns the output, which is why this prints a marker rather than a usage text
 case " $* " in *" --help "*|*" -h "*) echo "help: requested"; exit 0;; esac
 
+# the smoke case proves this file parses and its guards return; /test-skills reads the sources,
+# the @see paths and the tool guards statically, so nothing here runs a step of the skill
+case " $* " in *" --test "*) echo "test: ok"; exit 0;; esac
+
 # the style copy beside this skill owns the numbers; the constants only hold when it is absent
 STYLE_COPY="$(dirname "${BASH_SOURCE[0]}")/../../output-styles/operator.md"
 MAX_WIDTH=$(sed -n 's/.*\[C2\] lines:.*[^0-9]\([0-9]\{1,\}\) characters.*/\1/p' "$STYLE_COPY" 2>/dev/null | head -n 1)

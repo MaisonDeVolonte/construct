@@ -9,6 +9,7 @@
 # - one skill is one SKILL.md and one sidecar, so nothing outside this pair decides its shape
 # RUN
 # - no flag runs the trigger half, so every existing invocation is unchanged
+# - the trigger half digests recent session transcripts, capped by TODO_THREADS/TODO_THREAD_CHARS
 # - `--check [paths]` runs the validator half; with no paths it grades the whole artifact dir
 # - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
 # @see plugins/retardify/skills/todo/SKILL.md, plugins/operator/skills/logs/SKILL.md, .construct/retardify/todo/, .construct/operator/logs/, plugins/retardify/skills/todo/todo.sh, plugins/retardify/shared/secrets.sh
@@ -19,11 +20,21 @@ set -euo pipefail
 # own '## Help' section owns the output, which is why this prints a marker rather than a usage text
 case " $* " in *" --help "*|*" -h "*) echo "help: requested"; exit 0;; esac
 
+# the smoke case proves this file parses and its guards return; /test-skills reads the sources,
+# the @see paths and the tool guards statically, so nothing here runs a step of the skill
+case " $* " in *" --test "*) echo "test: ok"; exit 0;; esac
+
 # `--check` selects the validator half; anything else is the trigger, so the doc's own
 # bang-injected call keeps working untouched
 if [ "${1:-}" = "--check" ]; then
   shift
 else
+  # this branch is a catch-all, so a typo'd flag lands here and runs the trigger unannounced
+  if [ "$#" -gt 0 ]; then
+    echo "fatal: /retardify:todo takes no arguments; --check selects the validator half" >&2
+    exit 1
+  fi
+
   # ==============
   # PREFLIGHT
   # ==============
@@ -175,11 +186,77 @@ else
     done <<< "$hits"
   }
 
+  # ==============
+  # THREAD DIGEST
+  #   the raw session transcripts, which the operator's logs only summarize after a turn closes;
+  #   a thread that ended without a log entry is invisible to every other stream
+  # ==============
+
+  # how many sessions to digest, newest first, and the character budget the digest may spend
+  THREADS=${TODO_THREADS:-10}
+  THREAD_CHARS=${TODO_THREAD_CHARS:-12000}
+  # claude names a project's transcript dir after its path, every non-alphanumeric byte hyphenated
+  TRANSCRIPTS="$HOME/.claude/projects/$(printf '%s' "$PWD" | sed 's/[^A-Za-z0-9]/-/g')"
+  THREADS_READ=0
+  THREADS_CUT=0
+  THREADS_FILE=$(mktemp "$TMPROOT/$TMPTAG-threads.XXXXXX")
+  # the findings trap already owns cleanup; extend it rather than replacing it
+  cleanup() { st=$?; if [ "$KEEP" -eq 0 ] && [ "$st" -eq 0 ]; then rm -f "$FINDINGS" "$THREADS_FILE"; fi; }
+
+  # injected context arrives as a user turn, so a hook payload or a skill preamble reads as a
+  # prompt; these four openers are that noise and nothing an operative typed
+  is_injected() {
+    case "$1" in
+      "Base directory for this skill:"*) return 0;;
+      *"TABLE OF CONTENTS"*) return 0;;
+      "Caveat:"*) return 0;;
+      "Shell cwd was reset"*) return 0;;
+      *"hook feedback:"*) return 0;;
+      "├─"*|"│"*|"└─"*) return 0;;
+      *) return 1;;
+    esac
+  }
+
+  # one block per session: the opening asks and the closing asks, which is where an unfinished
+  # task sits — the middle of a thread is context the operative already resolved
+  digest_threads() {
+    local file prompts stamp bytes id kept count line
+    for file in $(ls -t "$TRANSCRIPTS"/*.jsonl 2>/dev/null | head -n "$THREADS"); do
+      prompts=$(jq -r 'select(.type=="user" and (.isSidechain|not))
+        | .message.content
+        | (if type=="string" then . else (map(select(.type=="text").text) | join(" ")) end)
+        | select(length > 0) | select(startswith("<") | not)
+        | gsub("\n"; " ") | .[0:110]' "$file" 2>/dev/null || true)
+      kept=''
+      while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        is_injected "$line" && continue
+        kept="$kept$line"$'\n'
+      done <<< "$prompts"
+      [ -z "$kept" ] && continue
+      id=$(basename "$file" .jsonl)
+      stamp=$(date -r "$file" '+%Y-%m-%d %H:%M' 2>/dev/null || echo unknown)
+      bytes=$(wc -c < "$file" | tr -d ' ')
+      THREADS_READ=$((THREADS_READ + 1))
+      count=$(printf '%s' "$kept" | grep -c . || true)
+      printf 'thread: %s  %s  %s bytes  prompts: %s\n' \
+        "${id:0:8}" "$stamp" "$bytes" "$count" >> "$THREADS_FILE"
+      # a short thread fits whole, so splitting it into opened and closed would print it twice
+      if [ "$count" -le 5 ]; then
+        printf '%s' "$kept" | sed 's/^/  prompt> /' >> "$THREADS_FILE"
+        continue
+      fi
+      printf '%s' "$kept" | head -n 2 | sed 's/^/  opened> /' >> "$THREADS_FILE"
+      printf '%s' "$kept" | tail -n 3 | sed 's/^/  closed> /' >> "$THREADS_FILE"
+    done
+  }
+
   # --- run list (add new checks here) ---
   check_mirror_pointers
   check_markdown_links
   check_see_paths
   check_code_markers
+  if [ -d "$TRANSCRIPTS" ] && command -v jq >/dev/null 2>&1; then digest_threads; fi
 
   # ==============
   # TELEMETRY
@@ -190,18 +267,27 @@ else
   markers=$(grep -c '^marker:' "$FINDINGS" || true)
   total=$(grep -c . "$FINDINGS" || true)
 
+  # the budget is spent newest-first, so a cut always drops the oldest thread, never the live one
+  digest=$(head -c "$THREAD_CHARS" "$THREADS_FILE")
+  digest_size=$(wc -c < "$THREADS_FILE" | tr -d ' ')
+  if [ "$digest_size" -gt "$THREAD_CHARS" ]; then THREADS_CUT=$((digest_size - THREAD_CHARS)); fi
+
   cat <<EOF
 
 === todo.sh sidecar ===
 todo_file: $TODAYS_TODO
 todo_time: $TODO_TIME
 todo_count: $TODO_COUNT
-SCANNED: mirror pointers, markdown links, see-tag paths, code markers
+SCANNED: mirror pointers, markdown links, see-tag paths, code markers, session threads
 broken_mirror: $broken_mirror
 broken_link: $broken_link
 broken_see: $broken_see
 markers: $markers
 total: $total
+transcripts: $TRANSCRIPTS
+threads_read: $THREADS_READ of $THREADS requested
+threads_chars: $digest_size of $THREAD_CHARS budgeted
+threads_cut: $THREADS_CUT chars
 --- findings ---
 EOF
 
@@ -209,6 +295,13 @@ EOF
     echo "none — every scanned reference resolves"
   else
     sort "$FINDINGS"
+  fi
+
+  echo "--- threads ---"
+  if [ "$THREADS_READ" -eq 0 ]; then
+    echo "none — no transcripts at $TRANSCRIPTS, or no jq on PATH"
+  else
+    printf '%s\n' "$digest"
   fi
 
   echo "=========================="

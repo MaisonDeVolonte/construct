@@ -5,10 +5,9 @@ effort: max
 license: MIT
 compatibility: requires bash, git
 description: distill a completed plan into a perfect-world build guide, then validate it (saves guide to .construct/)
-argument-hint: "[--help] <plan>"
+argument-hint: "[--help] <path> [--test]"
 disable-model-invocation: true
 metadata:
-  kind: trigger
   artifact: .construct/retardify/guide/
 ---
 **the messy build rewritten as the ideal path:** every dead end stays back in the plan
