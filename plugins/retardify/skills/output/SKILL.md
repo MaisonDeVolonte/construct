@@ -8,11 +8,6 @@ description: output style linter run by the stop hook, on the last reply, or via
 argument-hint: "[--help] <path> [--test]"
 disable-model-invocation: true
 ---
-**every reply is linted:** against the output style rules to keep conversations consistent
-- a plain run grades the last reply, read from this session's own transcript
-- used by the `retardify-output.sh` `stop` hook automatically but can be used manually for debugging
-- grades the mechanically checkable rules like markup, constraints, shapes, etc
-- blocks on HARD findings and quotes the offending line so the fix is mechanical
 
 # Instructions
 
@@ -45,7 +40,7 @@ echo "sidecar exit: $?"
 - line 0 names a whole-reply finding: the ceiling, the prose tolerance, or one of the action rules
 - `V2` and `F5` are SOFT, so they surface only when a HARD finding is already blocking
 - `F1` is HARD, and a reply shorter than `SIGNAL_FLOOR` lines is exempt from it
-- a reply satisfies `F1` with a final `SIGNAL:` line, or by closing on a fenced block
+- a reply satisfies `F1` with a final `NUMBERED SIGNAL:` line, or by closing on a fenced block
 - the width and ceiling numbers come from `output-styles/operator.md`, read at run time
 
 ## Verify
