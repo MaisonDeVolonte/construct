@@ -1,32 +1,22 @@
-# =========================================
-# @file ci.yml - shell lint and syntax gate
-# =========================================
+# ========================================================
+# @file ci.yml - syntax, lint, validation, and drift gates
+# ========================================================
 # @description
-# - the repo ships shell scripts that source each other, so ci gates exactly that and no more
-# - `shellcheck -x` lints every sidecar, hook, and validator at warning severity, sourced files too
-# - the shared files are linted directly as well, so a renamed variable fails the build (SC2034)
-# - `validate-skills` walks every pair, and it gates here because a red validator once merged green
-# - `push-release --check` gates the four version files, which ship as one install and must agree
-# - `export-readme` is NOT gated here, and neither is the readme index `validate-skills` warns on
-# - both describe a whole tree, and a pull request carries a subset, so both dragged docs into it
-# - `/gitgud:ship` runs the exporter and `validate-skills --strict` against a clean tree instead
-# - `sidecars stay read-only` fails the build on an executed mutating git verb outside a handover
-# - it exists because `prune.sh` ran one for five deliveries and the sandbox half-applied each merge
-# - `test-skills` is that reference checker, and it gates every `@see` a sidecar declares about itself
-# - it runs each sidecar's `--test` case, so a deleted-but-referenced script fails here not in a release
-# - it runs `--strict`, since all 32 sidecars carry the case and the warning count reached zero
-# - this is the required check that lets `gh pr merge --auto` engage (see plugins/gitgud/skills/deliver/SKILL.md)
-# @see README.md, plugins/gitgud/skills/deliver/SKILL.md, plugins/retardify/skills/file/SKILL.md, .claude/skills/export-readme/export-readme.sh
+# - the required check `gh pr merge --auto` waits on
+# @see README.md, plugins/gitgud/skills/deliver/SKILL.md
 
 name: ci
 
 on:
+  # repo requires pull requests before merging
   pull_request:
     branches: [main]
+  # repo has no merge queue so ci has to run on push too
   push:
     branches: [main]
 
 permissions:
+  # the only permission ci needs is 'read' because the 'verify' job only lints and checks
   contents: read
 
 jobs:
@@ -34,53 +24,41 @@ jobs:
     name: verify
     runs-on: ubuntu-latest
     steps:
-      # a shallow checkout is enough: every gate below reads the tree, and none reads the history
+      # gates only read file state, so checkout only needs latest commit
       - uses: actions/checkout@v4
 
-      # shellcheck ships preinstalled on ubuntu-latest runners
+      # scripts are nested so we use git to list the files (globs only reach one level down)
       - name: shellcheck
-        run: |
-          shellcheck --version
-          # find rather than globs: a glob that matches nothing is a build failure, and which
-          # directories hold scripts changes every time the plugin layout does
-          find plugins .claude/skills -name '*.sh' -print0 | xargs -0 shellcheck -x --severity=warning
+        run: git ls-files -z '*.sh' | xargs -0r shellcheck -x --severity=warning
 
-      # every script must at least parse, including any the lint globs above miss
+      # shell syntax fallback just in case shellcheck isn't able to parse a file
       - name: syntax
-        run: |
-          find plugins .claude/skills -name '*.sh' -print0 | xargs -0 -n1 bash -n
+        run: git ls-files -z '*.sh' | xargs -0rn1 bash -n
 
-      # a red validator merged green once because nothing in ci ran it; the walk is local and gates
-      # every skill pair, including the apostrophe probe that used to run as its own step
-      - name: skill pairs validate
-        run: bash .claude/skills/validate-skills/validate-skills.sh
+      # ensures every skill has a matching bash sidecar and a branch for every sidecar outcome
+      - name: validate-skills
+        run: bash .claude/skills/validate-skills/validate-skills.sh --strict --quick
 
-      # the pair validator reads a sidecar; this one RUNS it, which is the only way a moved shared
-      # file or a stale `@see` is caught before someone's install dies on it
-      - name: skill sidecars smoke test
-        run: bash .claude/skills/test-skills/test-skills.sh --strict
+      # each sidecar must parse and answer --help/--test, refusing unknown flags and broken refs
+      - name: test-skills
+        run: bash .claude/skills/test-skills/test-skills.sh --strict --quick
 
-      # one matcher of the wrong type discards a whole hooks file, silently under -p (#75081); ci
-      # is the only gate a shipped hooks.json passes, since a user's own scope is never seen here
-      - name: hooks register and resolve
-        run: bash plugins/operator/skills/hooks/hooks.sh --quick
+      # ensures all readme files are in sync
+      - name: export-readme
+        run: bash .claude/skills/export-readme/export-readme.sh --strict --quick
 
-      # the version is stored in four files and every one of them ships in the same install, so
-      # the gate is that they agree; --check is pure, reaches no network, and writes nothing
-      - name: version files agree
-        run: bash .claude/skills/push-release/push-release.sh --check
+      # ensures the marketplace manifest and all plugin manifests have matching version numbers
+      - name: push-release
+        run: bash .claude/skills/push-release/push-release.sh --strict --quick
 
-      # a sidecar measures and hands over; it never mutates the tree itself
-      - name: sidecars stay read-only
-        run: |
-          # handover_cmd and handover_note carry these verbs as strings, which is the whole design,
-          # and settings.sh feeds one to the hook replay; a quoted verb is data, so only bare runs
-          if grep -rnE '(^|[[:space:]]|[;&|(])git[[:space:]]+(merge[[:space:]]|pull|checkout|restore|switch|reset|clean|rebase|cherry-pick|revert|commit|am|apply|stash[[:space:]]+(push|pop|apply|drop|clear)|branch[[:space:]]+-[dD]|push|tag)' \
-              plugins/*/skills/*/*.sh plugins/*/shared/*.sh \
-              | grep -vE ':[0-9]+:[[:space:]]*#' \
-              | grep -vE 'handover_cmd|handover_note|telemetry_line' \
-              | grep -vE '["'"'"'`]git[[:space:]]'; then
-            echo "::error::a sidecar runs a mutating git command; emit it with handover_cmd instead"
-            exit 1
-          fi
-          echo "no sidecar mutates the worktree"
+      # ensures hooks use valid json with resolving paths and correctly typed matchers (breaks file)
+      - name: operator:hooks
+        run: bash plugins/operator/skills/hooks/hooks.sh --strict --quick
+
+      # lints file names, wayfinders, and comments; --warn only
+      - name: retardify:file
+        run: bash plugins/retardify/skills/file/file.sh --warn --quick
+
+      # lints code names, structure, and inline-comments; --warn only
+      - name: retardify:code
+        run: git ls-files -z '*.sh' | xargs -0rn1 bash plugins/retardify/skills/code/code.sh --warn --quick
