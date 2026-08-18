@@ -1,13 +1,80 @@
 ---
 name: export-readme
-description: "The readme is the source of truth: sections land on skill tops, styles and scripts, the file on plugin roots."
-argument-hint: "[--help] [--check] [<skill>...]"
+model: opus
+effort: high
+license: MIT
+compatibility: requires bash, jq, git
+description: the readme is the source of truth for every skill's frontmatter (saves report to .construct/)
+argument-hint: "[--help] [--check] <text> [--test]"
 when_to_use: "Editing any skill's frontmatter or preamble, an output style copy, or wiring a new section into the export map. Also after ANY README.md edit, since each plugin root carries a byte-identical copy, or when a managed region and its readme section disagree."
 disable-model-invocation: true
 metadata:
-  kind: spec
+  artifact: .construct/maintainer/export-readme/
 ---
+**one source, many copies:** the readme's sections land on skill tops, styles, scripts and plugin roots
+- `map.json` names which readme heading feeds which target file, and a value may be a list
+- every frontmatter rule is judged here, at the readme, before anything lands on a skill
+- `--check` writes nothing and exits 1 on drift, which is the mode ci runs
+- a copy edited after the readme refuses to export, and prints the diff it just protected
+
 # Instructions
+
+## Telemetry
+```!
+.claude/skills/export-readme/export-readme.sh "$ARGUMENTS"
+echo "sidecar exit: $?"
+```
+- it already ran, so there is no command to issue
+- no argument EXPORTS: every unblocked drifted region is rewritten from its readme section
+- `--check` reports and writes nothing, and skill names scope either mode
+- `mapped: N target(s)` → what the map named, counting every copy a listed section fans out to
+- `in_sync` / `drift` / `blocked` → the three states a target can be in, and they sum to `mapped`
+- `listing: N/1536 chars at its widest` → the widest skill listing, which truncates silently at the cap
+- `help: requested` from a `--help` invocation → read `## Help` and run nothing
+- fail (`sidecar exit` > 0) → an ERROR blocked a section, or `--check` found drift; quote the
+  drift table and the findings verbatim in a code block, and edit nothing until the user has read it
+- a `--- refused:` diff is the one finding to raise first, since it names an edit about to be lost
+- success (`sidecar exit` = 0) → report `drift` and `exported`, then re-run `--check` to confirm
+  `drift: 0`, since the export is idempotent by contract
+- a sandboxed run cannot write `.claude/skills/*/SKILL.md`; that is a partial export, not a pass
+
+## the artifact
+append one entry to `[audit_file]`, in the shape under `## the entry` below:
+
+- the heading reads `## Export Audit #[next_audit]: [timestamp]`, both taken from the telemetry
+- `state` is what the run measured, as hyphen bullets, one clause each
+- `findings` is the ERROR and WARN table the sidecar printed, or one bullet saying none held
+- `telemetry` is the sidecar's whole output, fenced and unedited, pasted last
+- CREATE the file first if it does not exist, with `# <audit_file>` as its only line
+- the sidecar names the path and the count and writes nothing, so a run nobody records leaves none
+
+## the entry
+> the artifact this skill appends to; `/gitgud:audit` grades the shape on its next run
+
+# .construct/maintainer/export-readme/YYYY-MM-DD.md
+one file per day, appended to by every run:
+
+- an entry captures one run at a moment in time, so it is never edited after the fact
+- lines are hyphen bullets holding a single clause, capped at 100 characters
+
+## Export Audit #1: YYYY-MM-DD HH:MM
+
+### state
+the mode, the source and map, the four target counts, the widest listing, and what exported
+
+*example:*
+> - mode: export, source README.md mapped through map.json
+> - targets: 52 mapped, 51 in sync, 1 drifted, 0 blocked
+> - exported: 1 file(s)
+
+### findings
+the ERROR and WARN table the sidecar printed, or one bullet saying every rule held
+
+*example:*
+> | WARN | README.md:1204 | listing | 1489/1536 chars, close to the truncation cap |
+
+### telemetry
+the sidecar's whole output, fenced and unedited
 
 ## the shape
 the readme's mapped sections are the source of truth for every managed region:

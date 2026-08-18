@@ -20,12 +20,24 @@
 # - read-only apart from the four version lines: it never commits, never merges, and never pushes
 # - the sequence is emitted into the handover block, including the release api call
 # - the write is a `sed` on the version line, never a `jq` render, so the rest of each file survives
-# @see .claude/skills/push-release/SKILL.md, .claude-plugin/marketplace.json, .github/workflows/ci.yml, plugins/gitgud/skills/ship/SKILL.md
+# ARTIFACT
+# - `.construct/maintainer/push-release/YYYY-MM-DD.md`, one file per day, appended by the agent
+# - reported, never created: this names the path and the count, and the doc says what to write
+# - `--check` returns before the telemetry, so that mode names no artifact at all
+# @see .claude/skills/push-release/SKILL.md, .claude-plugin/marketplace.json, .github/workflows/ci.yml, plugins/gitgud/skills/ship/SKILL.md, .construct/maintainer/push-release/
 set -euo pipefail
 
 # the doc is read only after this has already run, so help is refused here or not at all; the doc's
 # own '## Help' section owns the output, which is why this prints a marker rather than a usage text
 case " $* " in *" --help "*|*" -h "*) echo "help: requested"; exit 0;; esac
+
+# the smoke case proves this file parses and its guards return; /test-skills reads the sources,
+# the @see paths and the tool guards statically, so nothing here runs a step of the skill
+case " $* " in *" --test "*) echo "test: ok"; exit 0;; esac
+
+# the day's artifact is named here and written by the agent, the same split every other skill in
+# this repo makes; the `--check` path returns before the telemetry, so it names none
+ARTIFACTS=".construct/maintainer/push-release"
 
 # 1. global constants
 MANIFESTS="plugins/*/.claude-plugin/plugin.json"
@@ -120,7 +132,7 @@ fi
 # every one of these aborts, because a half-run release leaves the trunk and production diverged
 command -v jq >/dev/null 2>&1 || die "jq is not on PATH"
 command -v curl >/dev/null 2>&1 || die "curl is not on PATH"
-[ -n "${GH_TOKEN:-}" ] || die "GH_TOKEN is not set (see README.md > Settings > Keys)"
+[ -n "${GH_TOKEN_OPERATOR:-}" ] || die "GH_TOKEN_OPERATOR is not set (see README.md > Settings > Keys)"
 
 REMOTE_URL=$(git remote get-url origin 2>/dev/null || echo "")
 echo "$REMOTE_URL" | grep -q 'github\.com' || die "origin is not a github remote"
@@ -128,7 +140,7 @@ REPO_SLUG=$(echo "$REMOTE_URL" | sed -e 's#^.*github\.com[:/]##' -e 's#\.git$##'
 
 # prove the token authenticates before handing a release sequence to anyone
 AUTH_CODE=$(curl -sS --max-time 15 -o /dev/null -w '%{http_code}' \
-  -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/user 2>/dev/null || echo 000)
+  -H "Authorization: Bearer $GH_TOKEN_OPERATOR" https://api.github.com/user 2>/dev/null || echo 000)
 [ "$AUTH_CODE" = "200" ] || die "github api auth failed (http $AUTH_CODE)"
 
 TRUNK=$(default_branch)
@@ -181,6 +193,14 @@ done
 # ==============
 # TELEMETRY
 # ==============
+# one file per day: the count is read off the headings already in it, so the number the agent
+# writes survives a run that reported nothing. `grep -c` exits 1 on no match, hence the `|| true`
+TODAYS_AUDIT="$ARTIFACTS/$(date +%Y-%m-%d).md"
+if [ -f "$TODAYS_AUDIT" ];
+then AUDIT_COUNT=$(grep -c '^## Release Audit #' "$TODAYS_AUDIT" || true)
+else AUDIT_COUNT=0; fi
+AUDIT_COUNT=${AUDIT_COUNT:-0}
+
 cat <<EOF
 
 === /push-release telemetry ===
@@ -193,6 +213,10 @@ current version: $CURRENT
 next version: $NEXT
 version files written: $WROTE
 commits promoting to production: $PROMOTE_COUNT
+audit_file: $TODAYS_AUDIT
+audit_count: $AUDIT_COUNT
+next_audit: $((AUDIT_COUNT + 1))
+timestamp: $(date '+%Y-%m-%d %H:%M')
 EOF
 
 printf '\n%-46s %-10s %s\n' 'FILE' 'WAS' 'NOW'
@@ -201,7 +225,7 @@ for m in $FILES; do printf '%-46s %-10s %s\n' "$m" "$CURRENT" "$(read_version "$
 # a trunk rule requiring a pull request rejects step 4 below, and the tag exists by then, so the
 # release ends up on a sha the trunk never keeps; the rule is read rather than assumed
 TRUNK_GATE=direct
-if curl -sS --max-time 15 -H "Authorization: Bearer $GH_TOKEN" \
+if curl -sS --max-time 15 -H "Authorization: Bearer $GH_TOKEN_OPERATOR" \
   "https://api.github.com/repos/$REPO_SLUG/rules/branches/$TRUNK" 2>/dev/null \
   | jq -e 'any(.[]?; .type == "pull_request")' >/dev/null 2>&1; then
   TRUNK_GATE="pull request required"; fi
@@ -212,11 +236,9 @@ printf '\ntrunk gate: %s\n' "$TRUNK_GATE"
 # ==============
 # every mutating verb below is denied as a tool call by the floor this repo ships
 # so the whole sequence is emitted for a person to read once and paste
-cat <<EOF
-
-=== /push-release handover ===
-EOF
-
+# the steps are built into a function rather than printed straight out, so the agent copying them
+# into the artifact quotes the one text a person pasted, never a second heredoc that could drift
+handover_steps() {
 if [ "$TRUNK_GATE" = direct ]; then
 cat <<EOF
 # 1. stage the four version files this run wrote, and nothing else
@@ -263,9 +285,11 @@ git push origin $PRODUCTION_BRANCH
 git switch $TRUNK
 
 # 6. publish the release, once the tag is on origin; the notes generate from the commits
-curl -sS -X POST -H "Authorization: Bearer \$GH_TOKEN" \\
+curl -sS -X POST -H "Authorization: Bearer \$GH_TOKEN_OPERATOR" \\
   -H 'Accept: application/vnd.github+json' \\
   https://api.github.com/repos/$REPO_SLUG/releases \\
   -d '{"tag_name":"v$NEXT","name":"Release v$NEXT","generate_release_notes":true}'
-=====================
 EOF
+}
+
+printf '\n=== /push-release handover ===\n%s\n=====================\n' "$(handover_steps)"

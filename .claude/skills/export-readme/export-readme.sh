@@ -33,12 +33,24 @@
 # - the NEWER column reads file mtimes, and a copy that moved after the readme refuses to export
 # - a refused row prints its own diff, since the edit it protects is the one about to be lost
 # - pass skill names to scope either mode; the map and the source are fixed, and edited by hand
-# @see .claude/skills/export-readme/map.json, .claude/skills/export-readme/SKILL.md, .claude/skills/validate-skills/validate-skills.sh, README.md, .github/workflows/ci.yml
+# ARTIFACT
+# - `.construct/maintainer/export-readme/YYYY-MM-DD.md`, one file per day, appended by the agent
+# - reported, never created: this names the path and the count, and the doc says what to write
+# - a `--check` that passed is worth keeping, since it dates the last moment the tree agreed
+# @see .claude/skills/export-readme/map.json, .claude/skills/export-readme/SKILL.md, .claude/skills/validate-skills/validate-skills.sh, README.md, .github/workflows/ci.yml, .construct/maintainer/export-readme/
 set -euo pipefail
 
 # the doc is read only after this has already run, so help is refused here or not at all; the doc's
 # own '## Help' section owns the output, which is why this prints a marker rather than a usage text
 case " $* " in *" --help "*|*" -h "*) echo "help: requested"; exit 0;; esac
+
+# the smoke case proves this file parses and its guards return; /test-skills reads the sources,
+# the @see paths and the tool guards statically, so nothing here runs a step of the skill
+case " $* " in *" --test "*) echo "test: ok"; exit 0;; esac
+
+# the day's artifact is named here and written by the agent, the same split every other skill in
+# this repo makes; a sidecar that wrote it too would be a second author of `.construct`
+ARTIFACTS=".construct/maintainer/export-readme"
 
 CHECK=0
 MAP=".claude/skills/export-readme/map.json"
@@ -235,11 +247,10 @@ newer_side() {
   printf 'same'
 }
 
-# metadata.kind, declared rather than guessed; empty when unset, mirrors validate-skills.sh
-kind_of() {
-  awk '/^metadata:/ { inside = 1; next }
-       inside && /^[^[:space:]]/ { inside = 0 }
-       inside && /^[[:space:]]+kind:/ { gsub(/^[[:space:]]+kind:[[:space:]]*/, ""); print; exit }' "$1"
+# who may invoke this skill, read from the one field the harness itself acts on: a doc setting
+# disable-model-invocation is user-invoked, and anything else is model-invocable (see #6)
+user_invoked() {
+  grep -qE '^disable-model-invocation:[[:space:]]*(true|yes|on|1)[[:space:]]*$' "$1"
 }
 
 # a scope argument matches the skill folder or the plugin:name label, nothing fuzzier
@@ -398,31 +409,30 @@ while IFS=$'\t' read -r heading skill; do
     blocked=1
   fi
 
-  # the kind decides the rest of the frontmatter, so an undeclared one cannot export
-  kind=$(kind_of "$newtop")
-  case "$kind" in
-    trigger)
-      for key in $REQUIRED_TRIGGER; do
-        if ! grep -qE "^$key:[[:space:]]*\S" "$newtop"; then
-          err "$SOURCE" "$hline" missing_field "'$heading' yaml has no '$key:'; a trigger needs it"
-          blocked=1
-        fi
-      done
-      if ! grep -qE '^disable-model-invocation:[[:space:]]*(true|yes|on|1)[[:space:]]*$' "$newtop"; then
-        err "$SOURCE" "$hline" trigger_ungated \
-          "'$heading' is kind: trigger with no 'disable-model-invocation: true'; prose is not a gate"
+  # a user-invoked skill routes an invocation, so it needs the fields that route one; a
+  # model-invocable one is loaded by relevance and both fields are dead config on it
+  if user_invoked "$newtop"; then
+    for key in $REQUIRED_TRIGGER; do
+      if ! grep -qE "^$key:[[:space:]]*\S" "$newtop"; then
+        err "$SOURCE" "$hline" missing_field \
+          "'$heading' yaml has no '$key:'; a user-invoked skill needs it to route the invocation"
         blocked=1
-      fi;;
-    spec)
-      if grep -qE '^disable-model-invocation:' "$newtop"; then
-        err "$SOURCE" "$hline" spec_gated \
-          "'$heading' is kind: spec, which auto-loads; drop disable-model-invocation"
-        blocked=1
-      fi;;
-    *)
-      err "$SOURCE" "$hline" no_kind "'$heading' yaml needs metadata with 'kind: trigger' or 'kind: spec'"
-      blocked=1;;
-  esac
+      fi
+    done
+  else
+    for key in $REQUIRED_TRIGGER; do
+      if grep -qE "^$key:[[:space:]]*\S" "$newtop"; then
+        warn "$SOURCE" "$hline" dead_field \
+          "'$heading' sets '$key:' without disable-model-invocation; it routes nothing"
+      fi
+    done
+  fi
+  # a truthy spelling the harness does not act on reads as a gate and is not one
+  if grep -qE '^disable-model-invocation:' "$newtop" && ! user_invoked "$newtop"; then
+    err "$SOURCE" "$hline" gate_unread \
+      "'$heading' sets disable-model-invocation to something other than true; the gate is off"
+    blocked=1
+  fi
 
   # the harness truncates description + when_to_use silently past the cap, dropping the clause
   # that says when a skill fires; landing that loss is worse than blocking the export
@@ -558,11 +568,23 @@ WARNINGS=$(grep -c '^WARN|' "$FINDINGS" || true)
 MODE='export'
 if [ "$CHECK" -eq 1 ]; then MODE='check (nothing written)'; fi
 
+# one file per day: the count is read off the headings already in it, so the number the agent
+# writes survives a run that reported nothing. `grep -c` exits 1 on no match, hence the `|| true`
+TODAYS_AUDIT="$ARTIFACTS/$(date +%Y-%m-%d).md"
+if [ -f "$TODAYS_AUDIT" ];
+then AUDIT_COUNT=$(grep -c '^## Export Audit #' "$TODAYS_AUDIT" || true)
+else AUDIT_COUNT=0; fi
+AUDIT_COUNT=${AUDIT_COUNT:-0}
+
 cat <<EOF
 
 === /export-readme telemetry ===
 source: $SOURCE
 map: $MAP
+audit_file: $TODAYS_AUDIT
+audit_count: $AUDIT_COUNT
+next_audit: $((AUDIT_COUNT + 1))
+timestamp: $(date '+%Y-%m-%d %H:%M')
 mapped: $MAPPED target(s)
 in_sync: $IN_SYNC
 drift: $DRIFTED
