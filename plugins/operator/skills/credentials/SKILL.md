@@ -5,11 +5,10 @@ effort: max
 license: MIT
 compatibility: requires bash, jq, curl
 description: probe all credential-shaped variables in the active sandbox across 19 vectors (saves report to .construct/)
-argument-hint: "[--help] [--strict] [--quick]"
+argument-hint: "[--help] [--strict] [--quick] [--test]"
 disable-model-invocation: true
 disallowed-tools: WebFetch, WebSearch
 metadata:
-  kind: trigger
   artifact: .construct/operator/credentials/
 ---
 **blind authentication:** allows agents to use your credentials without seeing them

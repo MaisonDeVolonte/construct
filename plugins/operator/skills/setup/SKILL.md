@@ -5,11 +5,10 @@ effort: max
 license: MIT
 compatibility: requires bash, jq, git, curl
 description: step by step setup wizard that takes you from install to fully configured (saves roadmap to .construct/)
-argument-hint: "[--help] [--roadmap] [--audit] [--confirm]"
+argument-hint: "[--help] [--roadmap] [--audit] [--confirm] [--test]"
 disable-model-invocation: true
 disallowed-tools: Edit, Write
 metadata:
-  kind: trigger
   artifact: .construct/operator/setup/
 ---
 **end-to-end install wizard:** takes the guesswork out of securing your agentic workspace
