@@ -54,8 +54,8 @@ DEFAULT_PROTECTED_PATHS=(
   # anchored at the front instead, since `.env` is matched as the tail of a filename
   "(^|[/[:space:]])\.env"
 
-  # a command something else runs for you: the harness reads one, github reads the other
-  "\.mcp\.json$B" "\.github/workflows$B"
+  # a command something else runs for you (harness reads it)
+  "\.mcp\.json$B"
 
   # the policy directories: hooks.json is the pointer, so the folder is the unit (see #1)
   "plugins/operator/settings$B" "plugins/[a-z][a-z-]*/hooks$B"
