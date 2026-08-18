@@ -10,11 +10,14 @@
 # - a map value may be a list, so one section exports into every copy that has to agree
 # - the `README.md` entry names no section at all: the source file itself is what lands
 # REGION
-# - a skill's managed region runs from line 1 to the first body heading after its frontmatter
-# - a style file has no such heading, so its whole file is the region and the export owns it
+# - a skill's managed region is the yaml frontmatter only, closing `---` to the next blank line
+# - a skill's file keeps its own preamble: `# Instructions` follows that blank line, untouched
+# - a style file has no heading to stop at, so its whole file is the region and the export owns it
 # - a script target (*.sh) is the same whole-file region, rendered from its section's bash fence
 # - a readme copy (plugins/*/README.md) is the source verbatim, so its compare is a byte compare
-# - export replaces that region with the section's yaml inner block plus its trailing markdown
+# - export replaces that region with the section's yaml inner block
+# - a skill drops the trailing markdown that follows it in the readme
+# - a style or hook doc keeps that markdown, since it has no other body
 # - the bare invocation fence above the yaml block is readme display sugar and never lands
 # CHECKS
 # - every frontmatter rule lives here now, judged at the readme source before anything lands
@@ -30,6 +33,8 @@
 # RUN
 # - a bare run exports: every unblocked drifted region is rewritten from its readme section
 # - `--check` writes nothing and exits 1 on any drift, which is the one mode ci runs
+# - `--quick` is that same gate under the name every other ci sidecar answers to
+# - `--strict` promotes warnings to errors, so a near-cap listing fails rather than warns
 # - the NEWER column reads file mtimes, and a copy that moved after the readme refuses to export
 # - a refused row prints its own diff, since the edit it protects is the one about to be lost
 # - pass skill names to scope either mode; the map and the source are fixed, and edited by hand
@@ -53,6 +58,8 @@ case " $* " in *" --test "*) echo "test: ok"; exit 0;; esac
 ARTIFACTS=".construct/maintainer/export-readme"
 
 CHECK=0
+STRICT=0
+QUICK=0
 MAP=".claude/skills/export-readme/map.json"
 SOURCE="README.md"
 REQUIRED="name license compatibility description"
@@ -71,6 +78,9 @@ ONLY=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --check) CHECK=1;;
+    # quick is check by another name: both write nothing and both name no audit file
+    --quick) CHECK=1; QUICK=1;;
+    --strict) STRICT=1;;
     -*) echo "fatal: unknown flag $1" >&2; exit 1;;
     *) ONLY+=("$1");;
   esac
@@ -151,6 +161,16 @@ render_top() {
   ' "$1"
 }
 
+# what a skill top becomes: the yaml fence's inner lines only, nothing after its close; the
+# skill's own `# Instructions` preamble stays put, so nothing readme-side lands ahead of it
+render_frontmatter() {
+  awk '
+    state == 0 && /^```yaml[[:space:]]*$/ { state = 1; next }
+    state == 1 && /^```[[:space:]]*$/ { exit }
+    state == 1 { print }
+  ' "$1"
+}
+
 # what a script file becomes: the first ```bash fence's inner lines and nothing else; the prose
 # around the fence is readme documentation and never lands in a copy
 render_script() {
@@ -227,6 +247,12 @@ is_hookdoc() {
 # at all, so it earns even fewer checks than a style and exactly the same drift compare
 is_script() {
   case "$1" in *.sh) return 0;; *) return 1;; esac
+}
+
+# a skill owns a folder and its doc is always named SKILL.md; its region is frontmatter-only,
+# never the style/hookdoc whole-file region and never the script's rendered fence
+is_skill() {
+  case "$1" in */SKILL.md) return 0;; *) return 1;; esac
 }
 
 # a readme copy is the source landed whole at a plugin root, so an install taking one plugin's
@@ -339,6 +365,7 @@ while IFS=$'\t' read -r heading skill; do
   newtop="$SCRATCH/$pair.newtop"
   section_body "$heading" > "$section"
   if is_script "$skill"; then render_script "$section" | strip_trailing > "$newtop"
+  elif is_skill "$skill"; then render_frontmatter "$section" | strip_trailing > "$newtop"
   else render_top "$section" | strip_trailing > "$newtop"; fi
 
   # a script's whole contract at the source is its fence; every yaml rule below belongs to the
@@ -567,6 +594,7 @@ ERRORS=$(grep -c '^ERROR|' "$FINDINGS" || true)
 WARNINGS=$(grep -c '^WARN|' "$FINDINGS" || true)
 MODE='export'
 if [ "$CHECK" -eq 1 ]; then MODE='check (nothing written)'; fi
+if [ "$QUICK" -eq 1 ]; then MODE='quick — report inline, write nothing'; fi
 
 # one file per day: the count is read off the headings already in it, so the number the agent
 # writes survives a run that reported nothing. `grep -c` exits 1 on no match, hence the `|| true`
@@ -575,6 +603,9 @@ if [ -f "$TODAYS_AUDIT" ];
 then AUDIT_COUNT=$(grep -c '^## Export Audit #' "$TODAYS_AUDIT" || true)
 else AUDIT_COUNT=0; fi
 AUDIT_COUNT=${AUDIT_COUNT:-0}
+
+# quick has no agent behind it to append an audit, so it names none and the doc skips that step
+if [ "$QUICK" -eq 1 ]; then TODAYS_AUDIT=none; fi
 
 cat <<EOF
 
@@ -667,4 +698,5 @@ EOF
 
 if [ "$ERRORS" -gt 0 ]; then exit 1; fi
 if [ "$CHECK" -eq 1 ] && [ "$DRIFTED" -gt 0 ]; then exit 1; fi
+if [ "$STRICT" -eq 1 ] && [ "$WARNINGS" -gt 0 ]; then exit 1; fi
 exit 0
