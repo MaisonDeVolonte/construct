@@ -2,7 +2,7 @@
   "name": "TheConstruct",
   "owner": { "name": "MaisonDeVolonte", "url": "https://github.com/MaisonDeVolonte" },
   "description": "Secure agentic coding infra for Claude Code: sandboxed environments, masked credentials, and deterministic automations.",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "plugins": [
     {
       "name": "operator", "source": "./plugins/operator", "category": "security",
