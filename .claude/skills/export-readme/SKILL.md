@@ -5,23 +5,18 @@ effort: high
 license: MIT
 compatibility: requires bash, jq, git
 description: the readme is the source of truth for every skill's frontmatter (saves report to .construct/)
-argument-hint: "[--help] [--check] <text> [--test]"
+argument-hint: "[--help] [--check] [--quick] [--strict] <text> [--test]"
 when_to_use: "Editing any skill's frontmatter or preamble, an output style copy, or wiring a new section into the export map. Also after ANY README.md edit, since each plugin root carries a byte-identical copy, or when a managed region and its readme section disagree."
 disable-model-invocation: true
 metadata:
   artifact: .construct/maintainer/export-readme/
 ---
-**one source, many copies:** the readme's sections land on skill tops, styles, scripts and plugin roots
-- `map.json` names which readme heading feeds which target file, and a value may be a list
-- every frontmatter rule is judged here, at the readme, before anything lands on a skill
-- `--check` writes nothing and exits 1 on drift, which is the mode ci runs
-- a copy edited after the readme refuses to export, and prints the diff it just protected
 
 # Instructions
 
 ## Telemetry
 ```!
-.claude/skills/export-readme/export-readme.sh "$ARGUMENTS"
+.claude/skills/export-readme/export-readme.sh $ARGUMENTS
 echo "sidecar exit: $?"
 ```
 - it already ran, so there is no command to issue
