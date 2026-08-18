@@ -11,8 +11,9 @@
 # - a pair is one `SKILL.md` and one `<name>.sh`, sharing a folder named for the trigger
 # - the doc keeps frontmatter as its orientation; the wayfinder lives in the sidecar, here
 # - a trigger runs only when invoked; a spec loads whenever the model touches what it describes
-# - the sidecar measures and never mutates, and sources `gitgud/shared/handover.sh` for its blocks
-# - a sidecar needing to mutate emits the command into a block instead of running it
+# - the sidecar may read, fetch and call the github api, and sources `gitgud/shared/handover.sh`
+# - it may NOT stash, switch, merge, push, reset, restore, clean or delete a branch on this disk
+# - a sidecar needing one of those emits the command into a block instead of running it
 # SPLIT
 # - export-readme owns every frontmatter and preamble rule, judged at the readme source
 # - this sidecar owns the rest of the pair: the body, the sidecar, the pairing, and the index
@@ -25,13 +26,25 @@
 # - every check reads, except the free-text probe, which runs those sidecars on an apostrophe goal
 # - that probe was probe-arguments.sh until it folded in here, so ci runs one gate instead of two
 # - a readme listing describes a whole tree, so `unindexed` warns and `/gitgud:ship` gates it
-# @see .claude/skills/validate-skills/SKILL.md, .claude/skills/export-readme/export-readme.sh, plugins/gitgud/shared/handover.sh, plugins/, plugins/operator/shared/secrets.sh, .github/workflows/ci.yml
+# ARTIFACT
+# - `.construct/maintainer/validate-skills/YYYY-MM-DD.md`, one file per day, appended by the agent
+# - reported, never created: this names the path and the count, and the doc says what to write
+# - a secret match is counted in the telemetry but never quoted, since the file is already on disk
+# @see .claude/skills/validate-skills/SKILL.md, .claude/skills/export-readme/export-readme.sh, plugins/gitgud/shared/handover.sh, plugins/, plugins/operator/shared/secrets.sh, .github/workflows/ci.yml, .construct/maintainer/validate-skills/
 
 set -euo pipefail
 
 # the doc is read only after this has already run, so help is refused here or not at all; the doc's
 # own '## Help' section owns the output, which is why this prints a marker rather than a usage text
 case " $* " in *" --help "*|*" -h "*) echo "help: requested"; exit 0;; esac
+
+# the smoke case proves this file parses and its guards return; /test-skills reads the sources,
+# the @see paths and the tool guards statically, so nothing here runs a step of the skill
+case " $* " in *" --test "*) echo "test: ok"; exit 0;; esac
+
+# the day's artifact is named here and written by the agent, the same split every other skill in
+# this repo makes; a sidecar that wrote it too would be a second author of `.construct`
+ARTIFACTS=".construct/maintainer/validate-skills"
 
 # ==============
 # PREFLIGHT
@@ -167,6 +180,14 @@ plugin_of() {
   printf '%s' "$1" | sed -n 's|.*plugins/\([a-z][a-z-]*\)/skills/.*|\1|p'
 }
 
+# a skill under `.claude/skills/` belongs to no plugin and is invoked bare, so plugin_of returns
+# nothing for it on purpose: every invocation-shaped check has to keep reading that bare name.
+# it still OWNS an artifact directory though, and that directory is filed under `maintainer`
+owner_of() {
+  case "$1" in .claude/skills/*|./.claude/skills/*) printf 'maintainer'; return 0;; esac
+  plugin_of "$1"
+}
+
 # the doc half of a pair is a SKILL.md inside a lowercase skill folder; anything else in the tree
 # is a reference doc rather than a trigger, and only the first kind is a pair
 is_trigger_name() {
@@ -288,6 +309,57 @@ check_invocation() {
   done < <(grep -n '```!' "$doc" | grep -v ':```!$' || true)
 }
 
+# a doc may chain a sibling sidecar ahead of its own, so the fence plans against a state somebody
+# else measured; the five rules below are what keep that call from becoming hidden coupling
+check_chain() {
+  local doc=$1 name home root line path base prev='' owner_last=0 chained=0
+  name=$(trigger_name "$doc")
+  home=$(dirname "$doc")
+  root=$(dirname "$home")
+  while IFS= read -r line; do
+    case "$line" in
+      *'echo "'*' exit: $?"'*) prev='echo'; continue;;
+    esac
+    # a fence line naming a .sh is an invocation; anything else in the block is shell scaffolding
+    path=$(printf '%s' "$line" | grep -oE '[^[:space:]"]*\.sh' | head -n 1 || true)
+    [ -n "$path" ] || continue
+    base=$(basename "$path" .sh)
+    # rule 4: the line before this one has to be the previous invocation's exit echo
+    if [ "$chained" -gt 0 ] && [ "$prev" != echo ]; then
+      warn "$doc" "$(where "$doc" "$path")" chain_exit \
+        "chained $base.sh with no 'echo \"... exit: \$?\"' after the line before it"
+    fi
+    chained=$((chained + 1))
+    prev=''
+    if [ "$base" = "$name" ]; then owner_last=1; continue; fi
+    owner_last=0
+    # rule 2: a chain reaches a sibling under the same skills root, never across a plugin
+    # the line is judged rather than the path, since the plugin root arrives as a quoted token
+    case "$line" in
+      *'${CLAUDE_PLUGIN_ROOT}'*/skills/*|*"$root"/*) ;;
+      *) err "$doc" "$(where "$doc" "$path")" chain_root \
+           "$base.sh sits outside $root; a chain stays inside its own skills root";;
+    esac
+    # rule 1: the file has to exist, read through the caller's own root rather than the token
+    resolved="$root/${path##*/skills/}"
+    if [ ! -f "$resolved" ]; then
+      err "$doc" "$(where "$doc" "$path")" chain_path \
+        "no $resolved; a chained sidecar path that moved fails silently at load"
+      continue
+    fi
+    # rule 3: an argumented turn has to stay cheap, so the chained sidecar answers both markers
+    if ! grep -q -- '--help' "$resolved" || ! grep -q -- '--test' "$resolved"; then
+      warn "$doc" "$(where "$doc" "$path")" chain_markers \
+        "$base.sh lacks a --help or --test case, so an argumented turn runs it in full"
+    fi
+  done < <(awk '/^```!/ { inb = 1; next } /^```$/ { inb = 0 } inb' "$doc")
+  # rule 5: the owning sidecar runs last, so `sidecar exit` names this skill and not a sibling
+  if [ "$chained" -gt 1 ] && [ "$owner_last" -eq 0 ]; then
+    warn "$doc" 1 chain_order \
+      "$name.sh is not the last invocation, so 'sidecar exit' reports a sibling's status"
+  fi
+}
+
 # "fail: outputs raw terminal errors" and "success: evaluates telemetry and executes subsequent
 # actions" — both branches, however each doc words them, since a sidecar that reports a conflict
 # separately reads `> 1` where a two-state one reads `> 0`
@@ -311,7 +383,7 @@ check_branches() {
 check_artifact() {
   local doc=$1 name plugin own ref refplugin refskill
   name=$(trigger_name "$doc")
-  plugin=$(plugin_of "$doc")
+  plugin=$(owner_of "$doc")
   [ -n "$plugin" ] || return 0
   own=".construct/$plugin/$name/"
   while IFS= read -r ref; do
@@ -648,6 +720,22 @@ check_help() {
   fi
 }
 
+# the smoke case `/test-skills` runs: one line printing one marker, and nothing skill-specific in
+# it, so there is no sibling's name to paste wrong and no shared helper to keep three copies of
+check_test_case() {
+  local doc=$1 name sidecar
+
+  name=$(trigger_name "$doc")
+  sidecar="$(dirname "$doc")/$name.sh"
+  [ -f "$sidecar" ] || return 0
+
+  # a WARN rather than an ERROR, since the contract lands skill by skill and an unadopted sidecar
+  # is not yet broken; `/test-skills --strict` is where the tree is held to it whole
+  if ! grep -q 'echo "test: ok"' "$sidecar"; then
+    warn "$sidecar" 1 no_test_case "no --test case, so /test-skills can only read it, never load it"
+  fi
+}
+
 # the name is the contract: a skill called `audit` reads everything it can reach, so a bare run
 # prices the pass and stops. the block is compared whole for the same reason help's is
 check_confirm() {
@@ -722,20 +810,14 @@ check_scrub() {
   done
 }
 
-# a trigger acts on the repo and is invoked deliberately; a spec describes a shape and should load
-# whenever the model touches the thing it describes. the kind gates which body checks run here;
-# whether it is declared correctly is export-readme's rule, judged at the readme source
-# both yaml spellings are read, since an unread kind SKIPS the trigger checks rather than failing:
-# `metadata: {kind: trigger}` is valid yaml, and the block-only reader graded it unset (see #4)
-skill_kind() {
-  local doc=$1 declared
-  declared=$(awk '
-/^metadata:[[:space:]]*\{/ && match($0, /kind:[[:space:]]*[A-Za-z_-]+/) {
-  flow = substr($0, RSTART, RLENGTH); sub(/kind:[[:space:]]*/, "", flow); print flow; exit }
-/^metadata:/ { inside = 1; next }
-inside && /^[^[:space:]]/ { inside = 0 }
-inside && /^[[:space:]]+kind:/ { gsub(/^[[:space:]]+kind:[[:space:]]*/, ""); print; exit }' "$doc")
-  printf '%s' "${declared:-unset}"
+# a user-invoked skill is typed as a command and acts on the repo; a model-invocable one loads by
+# relevance and describes a shape. the harness reads one field for that, so this reads the same one
+skill_invocation() {
+  if grep -qE '^disable-model-invocation:[[:space:]]*(true|yes|on|1)[[:space:]]*$' "$1"; then
+    printf 'user'
+  else
+    printf 'model'
+  fi
 }
 
 # --- run list (add new checks here) ---
@@ -761,16 +843,17 @@ for pair in "${PAIRS[@]}"; do
   check_verify          "$pair"
   check_arguments       "$pair"
   check_help            "$pair"
+  check_test_case       "$pair"
   check_confirm         "$pair"
-  case "$(skill_kind "$pair")" in
-    spec) ;;
-    trigger)
+  # only a skill somebody types earns the checks about being invoked, indexed and acted on
+  case "$(skill_invocation "$pair")" in
+    model) ;;
+    user)
       check_invocation  "$pair"
+      check_chain       "$pair"
       check_branches    "$pair"
       check_artifact    "$pair"
       check_index       "$pair";;
-    *)
-      warn "$pair" 1 no_kind "kind unset, so the trigger checks were skipped; export-readme owns the rule";;
   esac
 done
 
@@ -784,6 +867,14 @@ ERRORS=$(grep -c '^ERROR|' "$FINDINGS" || true)
 WARNINGS=$(grep -c '^WARN|' "$FINDINGS" || true)
 SECRETS=$(grep -c '|secret|' "$FINDINGS" || true)
 
+# one file per day: the count is read off the headings already in it, so the number the agent
+# writes survives a run that reported nothing. `grep -c` exits 1 on no match, hence the `|| true`
+TODAYS_AUDIT="$ARTIFACTS/$(date +%Y-%m-%d).md"
+if [ -f "$TODAYS_AUDIT" ];
+then AUDIT_COUNT=$(grep -c '^## Validate Audit #' "$TODAYS_AUDIT" || true)
+else AUDIT_COUNT=0; fi
+AUDIT_COUNT=${AUDIT_COUNT:-0}
+
 cat <<EOF
 
 === /validate-skills telemetry ===
@@ -791,6 +882,10 @@ template: $TEMPLATE
 scanned: ${#PAIRS[@]} pair(s)
 probed: $PROBED free-text skill(s)
 index: ${INDEX:-none found}
+audit_file: $TODAYS_AUDIT
+audit_count: $AUDIT_COUNT
+next_audit: $((AUDIT_COUNT + 1))
+timestamp: $(date '+%Y-%m-%d %H:%M')
 errors: $ERRORS
 warnings: $WARNINGS
 secrets: $SECRETS

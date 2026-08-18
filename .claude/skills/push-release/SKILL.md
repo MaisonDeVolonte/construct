@@ -1,11 +1,19 @@
 ---
 name: push-release
-description: "Bumps the four version files, then hands over the tag, the promotion to production and the release call."
-argument-hint: "[--help] [--check] [--patch] [--minor] [--major]"
+license: MIT
+compatibility: requires bash, jq, git, curl
+description: bumps the four version files, then hands over the tag and the promotion (saves report to .construct/)
+argument-hint: "[--help] [--check] [--patch] [--minor] [--major] [--test]"
 when_to_use: "Cutting a release, promoting main to production, or answering what version this repo ships. Also when ci fails on the version files disagreeing."
 metadata:
-  kind: spec
+  artifact: .construct/maintainer/push-release/
 ---
+**the version is stored, never derived:** four files say it, and one run moves all four
+- `main` is the integration trunk and reaches no user, since the marketplace ref is `production`
+- it reads the trunk's own ruleset, so the emitted steps branch before committing when a pr is required
+- it writes the version lines and nothing else: it never commits, never merges and never pushes
+- `--check` is the pure gate ci runs, so that mode reaches no network and writes no artifact
+
 # Instructions
 
 ## the scheme
@@ -47,9 +55,47 @@ carries the field. The install a user gets is one directory, so all four move to
 - the commit, the tag, both pushes, the ff-merge and the release call are emitted, never run
 - `trunk gate` in the telemetry says which sequence you got: `direct` or `pull request required`
 
+## the artifact
+append one entry to `[audit_file]`, in the shape under `## the entry` below:
+
+- the heading reads `## Release Audit #[next_audit]: [timestamp]`, both taken from the telemetry
+- `state` is the repo, the branches, the version move and the trunk gate, one clause each
+- `files` is the FILE/WAS/NOW table the sidecar printed, as a markdown table
+- `handover` is the emitted sequence, fenced as bash and copied verbatim from the terminal
+- copy the handover rather than retyping it, since a retyped step is a step that can drift
+- CREATE the file first if it does not exist, with `# <audit_file>` as its only line
+- `--check` returns before the telemetry, so that mode names no artifact and writes none
+
+## the entry
+> the artifact this skill appends to; `/gitgud:audit` grades the shape on its next run
+
+# .construct/maintainer/push-release/YYYY-MM-DD.md
+one file per day, appended to by every bump:
+
+- an entry captures one bump at a moment in time, so it is never edited after the fact
+- lines are hyphen bullets holding a single clause, capped at 100 characters
+
+## Release Audit #1: YYYY-MM-DD HH:MM
+
+### state
+the repo, the trunk and production branches, the release type, the version move, the trunk gate
+
+*example:*
+> - repo: owner/name, trunk: main, production: production
+> - release type: patch, version: 0.12.0 -> 0.12.1
+> - trunk gate: pull request required, promoting 4 commit(s)
+
+### files
+the four version files, with the value each held before and after
+
+### handover
+the emitted sequence, fenced as bash, exactly as the terminal printed it
+
 ## Verify
 > not part of the tool; these run after a bump or before any release claim
 
+- RUN `bash .claude/skills/export-readme/export-readme.sh --check` FIRST; a release ships the
+  plugin copies, so a drifted one reaches users as the version that fixed nothing
 - RUN `bash .claude/skills/push-release/push-release.sh --check` before claiming a version
 - READ the preflight aborts rather than working around one; each names a way a release half-lands
 - CONFIRM the telemetry table in chat before pasting, since the four files are already written
