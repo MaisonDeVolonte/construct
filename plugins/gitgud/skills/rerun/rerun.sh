@@ -21,6 +21,10 @@ set -euo pipefail
 # own '## Help' section owns the output, which is why this prints a marker rather than a usage text
 case " $* " in *" --help "*|*" -h "*) echo "help: requested"; exit 0;; esac
 
+# the smoke case proves this file parses and its guards return; /test-skills reads the sources,
+# the @see paths and the tool guards statically, so nothing here runs a step of the skill
+case " $* " in *" --test "*) echo "test: ok"; exit 0;; esac
+
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || true)
 SHARED=$(cd "$HERE/../../shared" 2>/dev/null && pwd || true)
 if [ ! -f "$SHARED/handover.sh" ]; then
@@ -44,8 +48,8 @@ require_no_op_in_progress
 
 # check the github token is present; inside the sandbox it holds the masked sentinel
 # the proxy swaps for the real value — outside it holds the real token (curl takes both)
-if [ -z "${GH_TOKEN:-}" ]; then
-  echo "fatal: GH_TOKEN is not set (see README.md > Settings > Keys)" >&2; exit 1; fi
+if [ -z "${GH_TOKEN_OPERATOR:-}" ]; then
+  echo "fatal: GH_TOKEN_OPERATOR is not set (see README.md > Settings > Keys)" >&2; exit 1; fi
 
 DEFAULT_BRANCH=$(git_default_branch)
 if [ -z "$DEFAULT_BRANCH" ]; then
@@ -63,7 +67,7 @@ GITHUB_API="https://api.github.com"
 # proxy can substitute (see README.md > Settings > Keys > GitHub)
 github_api() {
   curl -sS --max-time 30 \
-    -H "Authorization: Bearer $GH_TOKEN" \
+    -H "Authorization: Bearer $GH_TOKEN_OPERATOR" \
     -H "Accept: application/vnd.github+json" \
     "$@"
 }

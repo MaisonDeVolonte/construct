@@ -5,11 +5,10 @@ effort: high
 license: MIT
 compatibility: requires bash, jq, git
 description: read the whole repo for composition, pairing, manifest agreement and freshness (saves report to .construct/)
-argument-hint: "[--help] [--confirm]"
+argument-hint: "[--help] [--confirm] [--test]"
 disable-model-invocation: true
 disallowed-tools: Edit
 metadata:
-  kind: trigger
   artifact: .construct/gitgud/audit/
 ---
 **what a fresh clone would load:** drift you cannot see from inside your own tree

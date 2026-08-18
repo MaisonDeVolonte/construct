@@ -5,10 +5,8 @@ effort: high
 license: MIT
 compatibility: requires bash, git
 description: snapshot the history and the working tree, verify that snapshot, then hand back every restore command
-argument-hint: "[--help]"
+argument-hint: "[--help] [--test]"
 disable-model-invocation: true
-metadata:
-  kind: trigger
 ---
 **a snapshot verified, not assumed:** worth typing before anything destructive
 - worth typing before any reset, rebase, history rewrite or bulk delete

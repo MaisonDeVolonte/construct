@@ -5,10 +5,8 @@ effort: high
 license: MIT
 compatibility: requires bash, jq, curl, git
 description: merge the current default branch into a stale PR so its CI re-runs against a trunk that has since moved
-argument-hint: "[--help] [--watch]"
+argument-hint: "[--help] [--watch] [--test]"
 disable-model-invocation: true
-metadata:
-  kind: trigger
 ---
 **stale PRs catch up to the trunk:** merge in what moved and CI runs again
 - merges the current default branch into the stale branch PR

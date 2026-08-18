@@ -5,11 +5,10 @@ effort: high
 license: MIT
 compatibility: requires bash, jq, curl, git
 description: triage every open issue on this repo and rank what is cheapest to fix (saves report to .construct/)
-argument-hint: "[--help]"
+argument-hint: "[--help] [--test]"
 disable-model-invocation: true
 disallowed-tools: WebFetch, WebSearch
 metadata:
-  kind: trigger
   artifact: .construct/gitgud/issues/
 ---
 **what your users reported, graded against your own code:** a queue instead of an inbox
