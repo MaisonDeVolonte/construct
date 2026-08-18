@@ -175,7 +175,7 @@
       "Bash(git -c *)", "Bash(git -C *)", "Bash(git --exec-path*)",
       "Bash(git --git-dir*)", "Bash(git --work-tree*)", "Bash(git --namespace*)",
       "Bash(git * --output*)",
-      "Bash(git shell*)", "Bash(git credential*)", "Bash(git config*)",
+      "Bash(git shell*)", "Bash(git credential*)", "Bash(git-credential-*)", "Bash(git config*)",
       "Bash(git daemon*)", "Bash(git instaweb*)", "Bash(git http-backend*)",
       "Bash(git upload-pack*)", "Bash(git receive-pack*)", "Bash(git cvsserver*)",
       "Bash(git remote-ext*)", "Bash(git remote-fd*)", "Bash(git web--browse*)",

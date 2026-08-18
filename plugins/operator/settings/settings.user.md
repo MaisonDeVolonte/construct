@@ -426,7 +426,7 @@ grouped most-destructive-first; any scope may add a deny, none may remove anothe
 "Bash(git --git-dir*)", "Bash(git --work-tree*)", "Bash(git --namespace*)",
 "Bash(git * --output*)",
 
-"Bash(git shell*)", "Bash(git credential*)", "Bash(git config*)",
+"Bash(git shell*)", "Bash(git credential*)", "Bash(git-credential-*)", "Bash(git config*)",
 "Bash(git daemon*)", "Bash(git instaweb*)", "Bash(git http-backend*)",
 "Bash(git upload-pack*)", "Bash(git receive-pack*)", "Bash(git cvsserver*)",
 "Bash(git remote-ext*)", "Bash(git remote-fd*)", "Bash(git web--browse*)",
@@ -485,6 +485,8 @@ grouped most-destructive-first; any scope may add a deny, none may remove anothe
 - `git -c core.pager='sh -c ...' log` is arbitrary execution wearing a read-only subcommand
 - denying them is what lets the rest stay single-form instead of needing `git * <verb>*` twins
 - `git credential fill` prints the credential, so it is a read command that reads the wrong thing
+- `git-credential-*` denies the same helpers invoked by their own binary names, which the
+  subcommand rule never matches, since `git-credential-osxkeychain get` is a different string
 - `git config*` goes broad and denies its read forms too, since `core.pager`, `gpg.program`,
   `diff.external`, `filter.*.clean` and `init.templateDir` all execute
 - `git remote-ext` runs commands as a transport, and `git shell -c` is a shell
