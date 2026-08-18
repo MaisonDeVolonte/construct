@@ -10,7 +10,10 @@
     "branch_pattern":            "{type}/{scope}/{slug}",
     "merge_method":              "rebase",
     "auto_merge":                true,
-    "handback_destructive_git":  false,
-    "guarded_paths":             [ "webflow" ]
+    "watch_merge":               true,
+    "merge_queue":               false
+  },
+  "policy": {
+    "protected_paths":           [ "webflow" ]
   }
 }
