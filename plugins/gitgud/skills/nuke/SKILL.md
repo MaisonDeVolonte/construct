@@ -5,10 +5,8 @@ effort: max
 license: MIT
 compatibility: requires bash, git
 description: price what a hard reset would take, take the backup that makes it survivable, then hand back the rest
-argument-hint: "[--help]"
+argument-hint: "[--help] [--test]"
 disable-model-invocation: true
-metadata:
-  kind: trigger
 ---
 **start over, knowingly:** the cost is counted and backed up before the reset
 - reports every commit, file and branch the reset would take

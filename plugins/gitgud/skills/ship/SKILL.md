@@ -5,10 +5,8 @@ effort: max
 license: MIT
 compatibility: requires bash, jq, curl, git
 description: verify every release precondition, abort on any fault, then hand back the bump, push and promote steps
-argument-hint: "[--help]"
+argument-hint: "[--help] [--test]"
 disable-model-invocation: true
-metadata:
-  kind: trigger
 ---
 **abort beats a bad bump:** every release precondition checked before the version moves
 - aborts on a dirty tree, detached HEAD, stale trunk, missing production or drifted docs
@@ -19,12 +17,16 @@ metadata:
 
 ## Telemetry
 ```!
+"${CLAUDE_PLUGIN_ROOT}"/skills/audit/audit.sh $ARGUMENTS
+echo "audit exit: $?"
 "${CLAUDE_PLUGIN_ROOT}"/skills/ship/ship.sh $ARGUMENTS
 echo "sidecar exit: $?"
 ```
 - `help: requested` → the run was refused before it started; `## Help` below is the whole turn
-- it already ran, so there is no command to issue
-- fail (`sidecar exit` > 0) → abort and report: "<raw terminal error>"
+- BOTH sidecars already ran, the audit first, so there is no command to issue
+- a release is the one moment a whole-repo read is worth its cost, which is why the audit chains here
+- a red row in the audit ABORTS the release; report it and stop, since a bump cannot fix composition
+- fail (`audit exit` > 0 or `sidecar exit` > 0) → abort and report: "<raw terminal error>"
 - success (`sidecar exit` = 0) → continue to step 1
 
 1. report the telemetry, then the handover, then STOP

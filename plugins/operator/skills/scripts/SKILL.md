@@ -5,11 +5,10 @@ effort: max
 license: MIT
 compatibility: requires bash, jq, git
 description: extract the commands your workflow scripts run, then verdict each of them (saves report to .construct/)
-argument-hint: "[--help] [--repo <name>] [--strict]"
+argument-hint: "[--help] [--repo <name>] [--strict] [--test]"
 disable-model-invocation: true
 disallowed-tools: Edit, Write
 metadata:
-  kind: trigger
   artifact: .construct/operator/scripts/
 ---
 **test agent sub-commands:** against your sandbox's actual merged settings

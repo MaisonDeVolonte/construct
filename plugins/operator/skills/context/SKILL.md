@@ -5,11 +5,10 @@ effort: max
 license: MIT
 compatibility: requires bash, jq, git
 description: prove what literally reached this session's context, read from its transcript (saves report to .construct/)
-argument-hint: "[--help] [--quick] [--strict] [--keep]"
+argument-hint: "[--help] [--quick] [--strict] [--keep] [--test]"
 disable-model-invocation: true
 disallowed-tools: WebFetch, WebSearch
 metadata:
-  kind: trigger
   artifact: .construct/operator/context/
 ---
 **provable context:** ensure the payload each hook emitted is the payload that actually landed

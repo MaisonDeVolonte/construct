@@ -4,31 +4,47 @@ model: opus
 effort: high
 license: MIT
 compatibility: requires bash, curl, git
-description: bucket uncommitted work into atomic, single-purpose PRs, gate the plan, then drain the tree
-argument-hint: "[--help] [--debug] [--finished] [--handover] [guidance]"
+description: groups changes into 'type(scope)' buckets, then drains the tree autonomously (sandbox-safe)
+argument-hint: "[--help] [--debug] [--finished] [--handover] <text> [--test]"
 disable-model-invocation: true
-metadata:
-  kind: trigger
 ---
-**a messy tree becomes single-purpose PRs:** bucketed, ordered, then drained one at a time
-- bucketing, ordering and message drafting are the reasoning it does for you
-- each bucket: one branch, one commit, one PR, auto-merge armed, then the next
-- free text after the flags is bucketing guidance, as in `keep the readme out of the hook bucket`
-- an apostrophe in that guidance is safe, since the invocation quotes it
-- two gates stand before anything moves: the bucketing plan, then your `go` on the whole drain
-- writes run over `api.github.com`, since a sandboxed push cannot authenticate
-- `--handover` emits the git and gh commands instead, for a terminal that can push
+**autonomously drain work tree:** with atomicized, single-purpose prs
+- works in the sandbox with masked credentials (`curl` via `api.github.com`)
+- scans your entire work tree, then groups changes into type(scope) buckets
+- `construct.config.json` defines your repos git branches, rules, and conventions
+- shows you a detailed plan including caveats, suggested changes, files, and dependencies
+- two human gates: continue with the bucketing plan, then save a backup and drain
+- `--handover` flag emits the exact commands for manual terminal execution
+- `free text` arguments allow custom guidance such as 'hold docs changes for now' etc
+- each pr is watched until merged or stopped for debugging
+- notes
+  - drains your live work tree, and never stages or commits while draining
+  - a snapshot is taken before the first bucket, and its stamp opens the drain report
+  - a bucket naming a protected path is handed back, since the hook refuses to deliver one for you
+  - a delivered file that git never tracked stays untracked here, so the reconcile block removes it
+  - the drain ends with that block: `checkout` the modified paths, `rm` the new ones, then merge
+  - a red bucket stops the drain, and `deliver.sh update` moves that branch onto a fixed commit
+  - every bucket after a red one assumed a trunk that never landed, so re-run this skill instead
+  - the config names the commit author and the committer, and the token's account opens the pr
+  - commits land unsigned, so a repo requiring signed commits refuses the whole drain
+  - auto-merge needs `allow_auto_merge` on, and a merge queue removes the waiting entirely
+  - origin deletes each branch on merge; `git fetch origin pull/N/head:name` brings one back
+  - one bucket costs about six api calls plus one per file, against 5000 an hour
 
 # Instructions
 
 ## Telemetry
 ```!
+"${CLAUDE_PLUGIN_ROOT}"/skills/continue/continue.sh
+echo "continue exit: $?"
 "${CLAUDE_PLUGIN_ROOT}"/skills/deliver/deliver.sh "$ARGUMENTS"
 echo "sidecar exit: $?"
 ```
 - `help: requested` → the run was refused before it started; `## Help` below is the whole turn
-- it already ran, so there is no command to issue
-- fail (`sidecar exit` > 0) → abort and report: "<raw terminal error>"
+- BOTH sidecars already ran, continue first, so there is no command to issue
+- obey the notes continue's handover prints; a bucket committed against a stale trunk lands red
+- a sync that RAN staled deliver's counts, so re-run the sidecar before leaning on its numbers
+- fail (`continue exit` > 0 or `sidecar exit` > 0) → abort and report: "<raw terminal error>"
 - success (`sidecar exit` = 0) → capture `default branch` from the telemetry
 - IF `guidance` reads anything but `none`, it is the user's bucketing instruction; honor it in step 1
 - guidance narrows how work groups; it never authorizes running a block or skipping the gate
@@ -86,7 +102,7 @@ $ATOMIC_CLOSES # open issue numbers this bucket fixes, or none
 - link an `issue #n` row ONLY when the issue names the file or the symptom that bucket fixes
 - the link closes the issue on merge, so an unsure match earns a lettered question, never a trailer
 - read the issue itself before linking on anything weaker than its title:
-  `curl -sS -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/repos/<slug>/issues/<n>`
+  `curl -sS -H "Authorization: Bearer $GH_TOKEN_OPERATOR" https://api.github.com/repos/<slug>/issues/<n>`
 - emit the plan as ONE fenced block, questions first, then the buckets, and nothing runnable yet
   ```text
   a. every question you need answered, one per line, or omit this section entirely
@@ -100,7 +116,7 @@ $ATOMIC_CLOSES # open issue numbers this bucket fixes, or none
 - every caveat becomes a lettered question above, never a paragraph beside the list
 - what a bucket leaves to a later one belongs in that later bucket's title, not in prose
 - a bucket that cannot be split further says so as a question, since that is a judgment to confirm
-- close with: "does this bucketing look right? I'll write each bucket out in full next"
+- close with: "continue with this bucketing plan, or make edits?"
 - the plan is the ONLY thing this step emits: no branch, no commit message, no file list per bucket
 - a bucket record here reads as the drain already being underway, which is the wrong gate to blur
 - STOP here and WAIT; the plan is the gate, and a wrong bucket costs nothing to fix at this point
@@ -126,26 +142,48 @@ body:    $ATOMIC_DESCRIPTION
 ```
 - a linked bucket ends `$ATOMIC_DESCRIPTION` with one `Closes #n` line per issue, below the bullets
 - name which buckets are INDEPENDENT, since a red one only invalidates the buckets that follow it
-- close with: "say go and I'll drain the tree, bucket by bucket"
+- probe every bucket through the live gate, so a handback is named by the hook rather than guessed:
+```bash
+"${CLAUDE_PLUGIN_ROOT}"/skills/deliver/deliver.sh probe $ATOMIC_FILES
+```
+- a deny verdict marks its bucket HANDBACK in the record, quoting the reason the gate printed
+- close with: "save a backup and drain the tree, or make edits?"
 - STOP here and WAIT; this is the second gate, and the first one only graded the bucketing
 
-5. on `go`, drain the tree in dependency order, one bucket at a time
+5. on `go`, snapshot first, then drain the tree in dependency order, one bucket at a time
+- the snapshot runs once, before bucket 1, and its stamp opens the drain report:
+```bash
+"${CLAUDE_PLUGIN_ROOT}"/skills/backup/backup.sh
+```
+- the gate is the only author of a handback: a denied bucket is never fought and never retried
+- a HANDBACK bucket prints its git and gh commands, and the drain continues with the next one
+- a bucket depending on a handed-back one WAITS for the user's green before it drains
 - each bucket is one call, which writes a branch, a commit, a pull request and arms auto-merge:
 ```bash
-plugins/gitgud/shared/pipeline.sh bucket "$DEFAULT_BRANCH" "$ATOMIC_BRANCH" "$ATOMIC_COMMIT" "$BODY_FILE" $ATOMIC_FILES
+"${CLAUDE_PLUGIN_ROOT}"/skills/deliver/deliver.sh bucket "$DEFAULT_BRANCH" "$ATOMIC_BRANCH" "$ATOMIC_COMMIT" "$BODY_FILE" $ATOMIC_FILES
 ```
 - write `$ATOMIC_DESCRIPTION` to `$BODY_FILE` under `$TMPDIR` first, so a multiline body survives
 - then WAIT for it, since the next bucket commits against a trunk this one is about to move:
 ```bash
-plugins/gitgud/shared/pipeline.sh watch "$PR_NUMBER"
+"${CLAUDE_PLUGIN_ROOT}"/skills/deliver/deliver.sh watch "$PR_NUMBER"
 ```
 - `merged: yes` → report the pr number and continue to the next bucket
+- `queue: enqueued` → the repo runs a merge queue, so continue without waiting
 - `checks: failure` → STOP, report which bucket and which check, and drain nothing further
-- a failed bucket leaves its branch and pr open on purpose, since the diff is the evidence
+- a red bucket is fixable in place, since `update` moves that branch to a new commit:
+```bash
+"${CLAUDE_PLUGIN_ROOT}"/skills/deliver/deliver.sh update "$ATOMIC_BRANCH" "$ATOMIC_COMMIT" "$BODY_FILE" $ATOMIC_FILES
+```
 - the local worktree is never staged, committed or reverted; the api commit reads the files only
-- so the tree still reads dirty at the end, and one `git pull --ff-only origin main` reconciles it
-- that pull is the user's to run, since a protected path in the merge is denied to every tool call
 - report a table when the drain ends: bucket, pr, checks, merged
+- close the drain with the reconcile block, which is the only way the tree comes clean:
+```bash
+git checkout -- <every modified path the drain delivered>
+rm <every path the drain delivered that git did not track>
+git merge --ff-only origin/main
+```
+- name those paths literally; the drain knows them, and a guess here deletes the wrong file
+- the merge is the user's to run, since a protected path inside it is denied to every tool call
 - a bucket whose files no longer exist has already been drained; re-run `/gitgud:deliver` instead
 - IF `--handover` → emit the git and gh commands for each bucket instead, and run nothing
 - IF `--debug` → drain bucket 1 alone and report what the remaining plan holds

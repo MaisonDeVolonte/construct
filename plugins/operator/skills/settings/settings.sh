@@ -159,10 +159,10 @@ emit_scopes() {
   # not a copy, so no template carries them and no audit can hand them back
   cat <<EOF
 --- beyond the copies (masked credentials) ---
-keys       mkdir -p ~/.operator && chmod 700 ~/.operator
-env        write each token into ~/.construct/.env as: export GH_TOKEN="..."
+keys       mkdir -p ~/.construct && chmod 700 ~/.construct
+env        write each token into ~/.construct/.env as: export GH_TOKEN_OPERATOR="..."
 shell      append to ~/.zshrc: [ -r ~/.construct/.env ] && source ~/.construct/.env
-rules      add one {"name":"GH_TOKEN","mode":"mask"} per token to sandbox.credentials.envVars
+rules      add one {"name":"GH_TOKEN_OPERATOR","mode":"mask"} per token to sandbox.credentials.envVars
 restart    restart the editor, then start a new claude session
 EOF
   cat <<'EOF'
@@ -245,8 +245,8 @@ emit_advanced() {
 4  unset     add {"name":"<VAR>","mode":"deny"} per exposed credential to
              sandbox.credentials.envVars, which removes the variable rather than hiding it
 5  rotate    rotate each exposed token one at a time, since a token an agent could read is spent
-6  export    append one line per rotated credential: export GH_TOKEN="..."
-7  mask      add {"name":"GH_TOKEN","mode":"mask","injectHosts":["api.github.com"]} to
+6  export    append one line per rotated credential: export GH_TOKEN_OPERATOR="..."
+7  mask      add {"name":"GH_TOKEN_OPERATOR","mode":"mask","injectHosts":["api.github.com"]} to
              sandbox.credentials.envVars, naming every host that token authenticates against
 8  domains   add each injectHosts host to sandbox.network.allowedDomains
 9  shell     append to ~/.zshrc: [ -r ~/.construct/.env ] && source ~/.construct/.env
@@ -736,4 +736,3 @@ EOF
 
 if [ "$ERRORS" -gt 0 ]; then exit 1; fi
 exit 0
-

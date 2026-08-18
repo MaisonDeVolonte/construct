@@ -5,11 +5,10 @@ effort: max
 license: MIT
 compatibility: requires bash, git
 description: adversarial read-only code review grading documented claims against reality (saves scorecard to .construct/)
-argument-hint: "[--help]"
+argument-hint: "[--help] [--test]"
 disable-model-invocation: true
 disallowed-tools: Edit
 metadata:
-  kind: trigger
   artifact: .construct/retardify/review/
 ---
 **documented claims measured against reality:** a scorecard that never flatters you

@@ -5,11 +5,10 @@ effort: high
 license: MIT
 compatibility: requires bash, jq, curl
 description: search upstream claude-code issues and update the readme banner (saves report to .construct/)
-argument-hint: "[--help] [--tracked] [--sandbox] [--hooks] [--plugins] [--permissions] [--since <days>]"
+argument-hint: "[--help] [--tracked] [--sandbox] [--hooks] [--plugins] [--permissions] [--since <days>] [--test]"
 disable-model-invocation: true
 disallowed-tools: WebFetch, WebSearch
 metadata:
-  kind: trigger
   artifact: .construct/operator/upstream/
 ---
 **upstream movement since you last looked:** one report instead of a dozen open tabs

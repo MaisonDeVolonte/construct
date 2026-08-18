@@ -3,10 +3,9 @@ name: logs
 license: MIT
 compatibility: requires bash, git
 description: "the shape of a daily agent log: threads carrying their own notes and prompts (saves log to .construct/)"
-argument-hint: "[--help]"
+argument-hint: "[--help] [--test]"
 when_to_use: "Writing to .construct/operator/logs/, which the taskcompleted and stop hooks both demand before a turn closes. Also when asked to log, note or record what happened, or to recap the day's threads."
 metadata:
-  kind: spec
   artifact: .construct/operator/logs/
 ---
 **today's work, shaped for tomorrow's session:** the next agent reads it instead of asking you

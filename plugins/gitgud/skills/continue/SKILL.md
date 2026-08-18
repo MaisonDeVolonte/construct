@@ -5,10 +5,8 @@ effort: high
 license: MIT
 compatibility: requires bash, git
 description: measure the trunk delta, then run the sync it planned against four narrow allows, ending on the trunk
-argument-hint: "[--help]"
+argument-hint: "[--help] [--test]"
 disable-model-invocation: true
-metadata:
-  kind: trigger
 ---
 **leave anytime, come back synced:** every pause and resume lands on the trunk
 - enforces trunk-based development: the sync always ends on the trunk

@@ -1,11 +1,21 @@
 ---
 name: validate-skills
-description: "Shape every skill pair must hold: the SKILL.md, its sidecar, and the frontmatter that gates it. Validates them."
-argument-hint: "[--help] [--strict] [--keep] [<path>]"
+license: MIT
+compatibility: requires bash, jq, git
+description: the shape every skill pair must hold: the doc, its sidecar, its frontmatter (saves report to .construct/)
+argument-hint: "[--help] [--strict] [--keep] <path> [--test]"
 when_to_use: "Authoring or editing any SKILL.md or its sidecar, adding a skill to a plugin, or deciding whether a skill is a trigger or a spec. Also when a listing looks truncated or a skill fails to load."
 metadata:
-  kind: spec
+  artifact: .construct/maintainer/validate-skills/
 ---
+**a skill is one folder holding exactly two files:** this grades the pair they have to make
+- `export-readme` owns every frontmatter rule; this owns the body, the sidecar and the pairing
+- `disable-model-invocation` decides the rest: set means user-invoked, absent means model-invocable
+- ERROR breaks a rule the doc states outright, and WARN names a smell the doc tolerates
+- the free-text probe runs those sidecars on an apostrophe, since an unquoted expansion splits on it
+- a doc may chain sibling sidecars in its telemetry fence: read-only planners, same skills root
+- chained notes name who runs what, every line echoes its exit, and the owning sidecar runs last
+
 # Instructions
 
 ## the pair
@@ -142,6 +152,18 @@ every sidecar and every hook is tracked `100755`, since git records the mode an 
 - the repair is `git update-index --chmod=+x <path>`, which the finding prints in full
 - `shared/*.sh` stays `100644` on purpose, since those are sourced and never exec'd
 
+## the smoke case
+below the help guard, every sidecar carries one `--test` case, which `/test-skills` is built to run:
+
+- the case is one line: `case " $* " in *" --test "*) echo "test: ok"; exit 0;; esac`
+- it sits above every preflight and every confirm gate, since a gated test is a test nobody runs
+- it names no path and no invocation, so there is nothing in it a sibling's copy could get wrong
+- what a sidecar declares about itself is graded by `/test-skills` from outside, never from within
+- a sidecar with no case is a WARN here, since this pair grades shape rather than execution
+- ci runs `/test-skills --strict`, so a new sidecar without the case fails the build outright
+- that gate went strict once all 32 adopted the case and the warning count reached zero
+- `.claude/skills/test-skills/SKILL.md` owns the case's shape; this pair only checks it is there
+
 ## the read-only contract
 - a sidecar may fetch, since that moves only remote-tracking refs, and may call the github api
 - a sidecar may NOT stash, switch, merge, push, reset, restore, clean, or delete a branch
@@ -155,6 +177,45 @@ every sidecar and every hook is tracked `100755`, since git records the mode an 
   stay in the handover no matter how many times the same paste gets asked for
 - `plugins/gitgud/shared/handover.sh` carries the shared preflights, queries, and block emitters
 - default branch resolution goes through `git_default_branch`, since `symbolic-ref` is denied
+
+## the artifact
+append one entry to `[audit_file]`, in the shape under `## the entry` below:
+
+- the heading reads `## Validate Audit #[next_audit]: [timestamp]`, both taken from the telemetry
+- `state` is the scope and the counts, as hyphen bullets, one clause each
+- `findings` is the ERROR and WARN table the sidecar printed, or one bullet saying none held
+- a secret finding names its file and line and NOTHING else, since copying the match spreads it
+- `telemetry` is the sidecar's whole output, fenced and unedited, pasted last
+- CREATE the file first if it does not exist, with `# <audit_file>` as its only line
+- the sidecar names the path and the count and writes nothing, so a ci run leaves no entry
+
+## the entry
+> the artifact this skill appends to; `/gitgud:audit` grades the shape on its next run
+
+# .construct/maintainer/validate-skills/YYYY-MM-DD.md
+one file per day, appended to by every run:
+
+- an entry captures one run at a moment in time, so it is never edited after the fact
+- lines are hyphen bullets holding a single clause, capped at 100 characters
+
+## Validate Audit #1: YYYY-MM-DD HH:MM
+
+### state
+the template, the pairs scanned, the skills probed, the index, and the three counts
+
+*example:*
+> - template: .claude/skills/validate-skills/SKILL.md, index: README.md
+> - scanned: 28 pair(s), 5 free-text skill(s) probed
+> - counts: 0 error(s), 0 warning(s), 0 secret match(es)
+
+### findings
+the table the sidecar printed, or one bullet saying every machine-checkable rule holds
+
+*example:*
+> | ERROR | plugins/x/skills/y/y.sh:1 | exec_bit | 100644, repair: git update-index --chmod=+x |
+
+### telemetry
+the sidecar's whole output, fenced and unedited
 
 ## Verify
 > not part of the trigger; these run after a doc or a sidecar changes

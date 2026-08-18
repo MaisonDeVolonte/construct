@@ -199,8 +199,8 @@ check_named() {
 
 # the hook keeps its own copy of the protected paths, and nothing keeps the two lists in step
 # the paths live in one action, block-protected-paths.sh, so drift reads that file and no sibling
-# only the compiled-in array is read: `github.guarded_paths` is the operator's own extension, and a
-# settings rule is not expected to mirror it (see the CONFIGURED block in that hook)
+# only the compiled-in array is read: `policy.protected_paths` is the operator's own extension, and
+# a settings rule is not expected to mirror it (see the CONFIGURED block in that hook)
 check_drift() {
   local path
   awk '/^DEFAULT_PROTECTED_PATHS=\(/ { inside = 1; next } inside && /^\)/ { inside = 0 } inside' \

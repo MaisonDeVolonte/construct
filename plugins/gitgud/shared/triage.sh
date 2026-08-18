@@ -82,14 +82,14 @@ REPO_SLUG=$(git remote get-url origin 2>/dev/null | grep 'github\.com' | sed -e 
 # sentinel out of its reach (see README.md > Settings > Keys > GitHub)
 github_api() {
   curl -sS --max-time 15 \
-    -H "Authorization: Bearer $GH_TOKEN" \
+    -H "Authorization: Bearer $GH_TOKEN_OPERATOR" \
     -H "Accept: application/vnd.github+json" \
     "$@"
 }
 
 # probes only run when the token, the tools, and the remote all resolve; login doubles as "me"
 GH_LOGIN=""
-if [ -n "${GH_TOKEN:-}" ] && [ -n "$REPO_SLUG" ] && command -v curl >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+if [ -n "${GH_TOKEN_OPERATOR:-}" ] && [ -n "$REPO_SLUG" ] && command -v curl >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
   GH_LOGIN=$(github_api "$GITHUB_API/user" 2>/dev/null | jq -r '.login // empty' 2>/dev/null)
 fi
 
