@@ -4,35 +4,40 @@ model: opus
 effort: high
 license: MIT
 compatibility: requires bash, git
-description: measure the trunk delta, then run the sync it planned against four narrow allows, ending on the trunk
+description: snapshot, then measure the trunk delta, then run the sync against four narrow allows
 argument-hint: "[--help] [--test]"
 disable-model-invocation: true
+metadata:
+  artifact: .construct/gitgud/continue/
 ---
-**leave anytime, come back synced:** every pause and resume lands on the trunk
-- enforces trunk-based development: the sync always ends on the trunk
-- the sidecar measures and plans, then the trigger runs what it planned
-- a diverged trunk is never resolved for you; it is handed over instead
 
 # Instructions
 
 ## Telemetry
 ```!
+"${CLAUDE_PLUGIN_ROOT}"/skills/backup/backup.sh
+echo "backup exit: $?"
 "${CLAUDE_PLUGIN_ROOT}"/skills/continue/continue.sh $ARGUMENTS
 echo "sidecar exit: $?"
 ```
 - `help: requested` → the run was refused before it started; `## Help` below is the whole turn
 - it already ran, so there is no command to issue
-- fail (`sidecar exit` > 0) → abort and report: "<raw terminal error>"
+- fail (`backup exit` > 0 or `sidecar exit` > 0) → abort and report: "<raw terminal error>"
 - success (`sidecar exit` = 0) → continue to step 1
 
 1. report the telemetry, then act on `sync state`, since it decides which shape applies
     - `up to date` → say so; there is nothing to run
     - `behind, fast-forwards cleanly` → run the emitted commands, each as its own tool call
-    - `behind, but the sync is yours to run` → STOP and hand the block over; the incoming commits
-      write a path the sandbox denies, and a sandboxed merge half-applies rather than refusing,
-      leaving the writable files checked out against a HEAD that never moved
+    - `behind, but the sync is yours to run` → STOP and hand the block over; either the incoming
+      commits or your own dirty tree write a path the sandbox denies, and a sandboxed merge
+      half-applies rather than refusing, leaving the writable files checked out against a HEAD
+      that never moved
+    - `colliding, the sync is yours to run` → STOP and hand the block over; a path is both
+      incoming and locally uncommitted at once, and a merge would write it before stash pop got
+      a chance to restore yours, so the collision is the user's to resolve, never a script's guess
     - `diverged` → STOP and hand the block over; local commits origin lacks need a rebase or a
       merge commit, and both rewrite history, so both stay the user's call
+- name the artifact path from the telemetry, so the user can read the full manifest later
 
 2. run the sequence, one command per tool call, in the printed order
 - STOP at the first non-zero exit and report the raw error; never improvise a recovery
