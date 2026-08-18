@@ -5,11 +5,10 @@ effort: max
 license: MIT
 compatibility: requires bash, jq, git
 description: grade every settings scope for silent faults, then probe the live gate (saves report to .construct/)
-argument-hint: "[--help] [--local] [--project] [--user] [--managed] [--advanced]"
+argument-hint: "[--help] [--local] [--project] [--user] [--managed] [--advanced] [--test]"
 disable-model-invocation: true
 disallowed-tools: Edit, Write
 metadata:
-  kind: trigger
   artifact: .construct/operator/settings/
 ---
 **built-in settings hygiene:** checks dozens of failure points, preventing silent faults

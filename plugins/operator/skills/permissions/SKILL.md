@@ -5,11 +5,10 @@ effort: max
 license: MIT
 compatibility: requires bash, jq, git
 description: replay the corpus through the real PreToolUse hook, then audit the merged rules (saves report to .construct/)
-argument-hint: "[--help] [--strict] [--keep]"
+argument-hint: "[--help] [--strict] [--keep] [--test]"
 disable-model-invocation: true
 disallowed-tools: Edit, Write
 metadata:
-  kind: trigger
   artifact: .construct/operator/permissions/
 ---
 **provable deny rules:** ensure every command in your corpus is tested against your actual merged rules
