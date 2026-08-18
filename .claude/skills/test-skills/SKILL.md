@@ -5,18 +5,12 @@ effort: high
 license: MIT
 compatibility: requires bash, git, perl
 description: runs every skill's sidecar at a shallow depth and proves each still answers (saves report to .construct/)
-argument-hint: "[--help] [--strict] <path> [--test]"
+argument-hint: "[--help] [--quick] [--strict] <path> [--test]"
 when_to_use: "Before a release, after a rename or a moved shared file, or when a skill fails to load and you need to know which ones still run. Also when adding a skill, to confirm it answers the --test contract."
 disable-model-invocation: true
 metadata:
   artifact: .construct/maintainer/test-skills/
 ---
-**a green exit code proves nothing:** each sidecar has to parse, answer, resolve and load
-- four tiers, each running only when the one before it passed, so one break reports once
-- every reference a sidecar declares about itself is read from here, never from inside it
-- `--test` is one line printing one marker, so adopting the contract costs a sidecar nothing
-- every invocation is capped by `perl -e alarm`, since macos ships no `timeout`
-- a sidecar with no `--test` case warns rather than fails, so the contract lands skill by skill
 
 # Instructions
 
@@ -33,6 +27,8 @@ echo "sidecar exit: $?"
 - fail (`sidecar exit` > 0) → a tier failed, or a WARN landed under `--strict`; quote the findings
   table verbatim inside a markdown code block, and fix nothing until the user has read it
 - success (`sidecar exit` = 0) → report `errors` and `warnings`, then work the table top to bottom
+- `--quick` reports inline and writes nothing, `--strict` promotes warnings to errors
+- IF `--quick`, STOP after the inline report; `audit_file: none` confirms it, and nothing is appended
 
 1. READ the table and group the rows by tier, since one broken shared file fails many skills at once
 2. NAME the tier each failure landed in, since the tier says how far the sidecar got before it broke
@@ -128,7 +124,7 @@ case " $* " in *" --test "*) echo "test: ok"; exit 0;; esac
 - CONFIRM a new sidecar carries the `--test` case, since `validate-skills` warns and does not block
 - CONFIRM this sidecar reads `100755` under `git ls-files -s`, since the disk bit lies
 - FIX every `t0-mode` row, since that break reaches only the people who installed from a clone
-- KEEP the probe directory with `--keep` when a `t3` row disagrees with the run you just watched
+- RERUN a disagreeing `t3` row scoped to that one path, since this sidecar writes no scratch to keep
 
 ## Help
 > IF the invocation carries `--help` or `-h`, this section is the whole turn:

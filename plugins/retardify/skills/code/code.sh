@@ -16,6 +16,9 @@
 # - a leading slash reads as repo-relative, so `/src/app.ts` and `src/app.ts` name the same file
 # - ERROR breaks a rule the doc states outright; WARN names a smell the doc tolerates
 # - `--strict` promotes warnings to errors; exits 1 on any error
+# - `--warn` is its inverse: every finding reports and the run exits 0, which is how ci reads it
+# - passing both is refused, since one bar has to answer for the exit code
+# - `--quick` names no audit file, since a ci runner has no agent to append one
 # @see plugins/retardify/skills/code/SKILL.md, plugins/retardify/skills/file/file.sh, plugins/operator/hooks/posttooluse/retardify-code.sh, .construct/retardify/code/
 
 set -euo pipefail
@@ -49,10 +52,14 @@ JS_EXT="js jsx ts tsx mjs cjs"
 ALL_EXT="$JS_EXT go rs py rb java c h cpp hpp cc cs swift kt kts scala php dart sh bash zsh"
 
 STRICT=0
+QUICK=0
+WARN_ONLY=0
 FILE=""
 for arg in "$@"; do
   case "$arg" in
     --strict) STRICT=1;;
+    --quick) QUICK=1;;
+    --warn) WARN_ONLY=1;;
     -*) echo "fatal: unknown flag $arg" >&2; exit 1;;
     *)
       if [ -n "$FILE" ]; then
@@ -60,6 +67,10 @@ for arg in "$@"; do
       FILE="$arg";;
   esac
 done
+
+# refused rather than ordered by precedence, since a silent winner hides the typo in a ci step
+if [ "$STRICT" -eq 1 ] && [ "$WARN_ONLY" -eq 1 ]; then
+  echo "fatal: --strict and --warn are opposites; pass one" >&2; exit 1; fi
 
 if [ -z "$FILE" ]; then
   echo "fatal: /retardify:code needs a path, as in: /retardify:code src/utils/net.ts" >&2; exit 1; fi
@@ -85,7 +96,7 @@ case " $ALL_EXT " in *" $EXT "*) GRADED=1;; esac
 TMPROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)/tmp"
 mkdir -p "$TMPROOT"
 FINDINGS=$(mktemp "$TMPROOT/code-findings.XXXXXX")
-cleanup() { st=$?; if [ "$st" -eq 0 ]; then rm -f "$FINDINGS"; fi; }
+cleanup() { st=$?; if [ "$st" -eq 0 ]; then bash "${TMPROOT%/tmp}/plugins/retardify/shared/clean-tmp.sh" code; fi; }
 trap cleanup EXIT
 
 err()  { printf 'ERROR|%s|%s|%s\n' "$1" "$2" "$3" >> "$FINDINGS"; }
@@ -200,11 +211,23 @@ then AUDIT_COUNT=$(grep -c '^## Code Audit #' "$TODAYS_AUDIT" || true)
 else AUDIT_COUNT=0; fi
 AUDIT_COUNT=${AUDIT_COUNT:-0}
 
+# a ci runner has no agent to append an audit, so quick names none and the doc skips that step
+if [ "$QUICK" -eq 1 ];
+then MODE="quick — report inline, write nothing"; AUDIT_FILE=none
+else MODE="audit — append to audit_file"; AUDIT_FILE=$TODAYS_AUDIT; fi
+
+# the bar the exit code answers to, printed so a ci log says which one this run was held to
+if [ "$STRICT" -eq 1 ]; then SEVERITY="strict — a warning fails the run"
+elif [ "$WARN_ONLY" -eq 1 ]; then SEVERITY="warn — every finding reports, nothing fails the run"
+else SEVERITY="default — an error fails the run, a warning does not"; fi
+
 cat <<EOF
 
 === code.sh sidecar ===
 file: $FILE
-audit_file: $TODAYS_AUDIT
+mode: $MODE
+severity: $SEVERITY
+audit_file: $AUDIT_FILE
 audit_count: $AUDIT_COUNT
 next_audit: $((AUDIT_COUNT + 1))
 timestamp: $(date '+%Y-%m-%d %H:%M')
@@ -239,6 +262,7 @@ NOT VIBES
 =======================
 EOF
 
+if [ "$WARN_ONLY" -eq 1 ]; then exit 0; fi
 if [ "$ERRORS" -gt 0 ]; then exit 1; fi
 if [ "$STRICT" -eq 1 ] && [ "$WARNINGS" -gt 0 ]; then exit 1; fi
 exit 0
