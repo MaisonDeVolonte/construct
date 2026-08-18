@@ -11,27 +11,6 @@ disallowed-tools: Edit, Write
 metadata:
   artifact: .construct/operator/settings/
 ---
-**built-in settings hygiene:** checks dozens of failure points, preventing silent faults
-- ERRORS
-  - when a settings file is not valid json, so every rule inside it is silently ignored
-  - when the plugin's `settings/` folder is missing or empty, so nothing can be compared
-  - when a path is denied for reads but not matching writes
-  - when a credentials block sits in a scope that cannot honor it
-  - when a settings template will not parse, so pasting it breaks the file
-  - when a scope has no `.md`, or carries rules with no explanation written down
-  - when a doc claims to mirror another scope but the two have quietly diverged
-  - when the hook stays silent on a force-push command fed straight to it
-- WARNS
-  - when installed settings differ from the template they were copied from
-  - when project settings carry machine-specific paths that break on the next clone
-  - when duplicate rules are found, in a settings file or in a template
-  - when a documented rule no longer exists in the json
-  - when nothing stops an agent editing the settings and hooks this audit depends on
-- answers for the settings stack alone; `/operator:setup --audit` runs every lens together
-- leaves file denies and token masks to `/operator:credentials`, which probes every vector
-- walks you through masked-credential setup, and names the steps you already finished
-- prints the copy commands for whichever settings scope you name
-- never changes a settings file, it only hands back commands for you to run
 
 # Instructions
 

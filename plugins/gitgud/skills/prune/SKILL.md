@@ -8,10 +8,6 @@ description: prune the dead tracking refs, report the trunk delta, then hand bac
 argument-hint: "[--help] [--test]"
 disable-model-invocation: true
 ---
-**one sweep for every ref already spent:** merged branches named, unmerged left alone
-- prunes dead tracking refs, then reports the trunk delta
-- preserves unmerged branches and names only the merged ones
-- deletes nothing; every deletion is handed back as a command you run
 
 # Instructions
 

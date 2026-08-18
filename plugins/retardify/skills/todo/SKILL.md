@@ -11,10 +11,6 @@ disallowed-tools: Edit
 metadata:
   artifact: .construct/retardify/todo/
 ---
-**where to start when you cannot tell:** everything ranked urgent against important
-- four streams: reference checks, doc-vs-reality, recent agent logs, recent session threads
-- categorizes every opportunity on an urgent/important matrix
-- broken references are one signal among many, never the point
 
 # Instructions
 

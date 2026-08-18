@@ -8,10 +8,6 @@ description: snapshot the history and the working tree, verify that snapshot, th
 argument-hint: "[--help] [--test]"
 disable-model-invocation: true
 ---
-**a snapshot verified, not assumed:** worth typing before anything destructive
-- worth typing before any reset, rebase, history rewrite or bulk delete
-- nothing to configure; the destination is fixed and it overwrites nothing
-- never restores anything; the restore commands are handed back to you
 
 # Instructions
 

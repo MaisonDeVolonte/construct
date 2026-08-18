@@ -11,10 +11,6 @@ disallowed-tools: WebFetch, WebSearch
 metadata:
   artifact: .construct/operator/credentials/
 ---
-**blind authentication:** allows agents to use your credentials without seeing them
-- probes the live sandbox: the token still works, the value hides, exfiltration fails
-- grades every credential masked, unset or unruled, and only unruled holds work
-- writes a dated report naming the variable and the vector, never the value
 
 # Instructions
 

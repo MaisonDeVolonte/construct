@@ -8,28 +8,6 @@ description: groups changes into 'type(scope)' buckets, then drains the tree aut
 argument-hint: "[--help] [--debug] [--finished] [--handover] <text> [--test]"
 disable-model-invocation: true
 ---
-**autonomously drain work tree:** with atomicized, single-purpose prs
-- works in the sandbox with masked credentials (`curl` via `api.github.com`)
-- scans your entire work tree, then groups changes into type(scope) buckets
-- `construct.config.json` defines your repos git branches, rules, and conventions
-- shows you a detailed plan including caveats, suggested changes, files, and dependencies
-- two human gates: continue with the bucketing plan, then save a backup and drain
-- `--handover` flag emits the exact commands for manual terminal execution
-- `free text` arguments allow custom guidance such as 'hold docs changes for now' etc
-- each pr is watched until merged or stopped for debugging
-- notes
-  - drains your live work tree, and never stages or commits while draining
-  - a snapshot is taken before the first bucket, and its stamp opens the drain report
-  - a bucket naming a protected path is handed back, since the hook refuses to deliver one for you
-  - a delivered file that git never tracked stays untracked here, so the reconcile block removes it
-  - the drain ends with that block: `checkout` the modified paths, `rm` the new ones, then merge
-  - a red bucket stops the drain, and `deliver.sh update` moves that branch onto a fixed commit
-  - every bucket after a red one assumed a trunk that never landed, so re-run this skill instead
-  - the config names the commit author and the committer, and the token's account opens the pr
-  - commits land unsigned, so a repo requiring signed commits refuses the whole drain
-  - auto-merge needs `allow_auto_merge` on, and a merge queue removes the waiting entirely
-  - origin deletes each branch on merge; `git fetch origin pull/N/head:name` brings one back
-  - one bucket costs about six api calls plus one per file, against 5000 an hour
 
 # Instructions
 

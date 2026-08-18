@@ -10,10 +10,6 @@ disable-model-invocation: true
 metadata:
   artifact: .construct/retardify/plan/
 ---
-**big work gets staged before it starts:** one PR per stage, ordered once instead of mid-build
-- written before complex or architectural work, never after it
-- the checklist is the deliverable, and readiness is what gates it
-- a stage nobody can run is a stage that does not start
 
 # Instructions
 

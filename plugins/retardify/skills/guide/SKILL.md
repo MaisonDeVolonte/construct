@@ -10,10 +10,6 @@ disable-model-invocation: true
 metadata:
   artifact: .construct/retardify/guide/
 ---
-**the messy build rewritten as the ideal path:** every dead end stays back in the plan
-- distills a closed plan into the build as it goes when every step lands clean
-- imperative, sorted, maximally concise; the dead ends stay in the plan
-- assumes the likeliest case at every fork, so edge cases never make the page
 
 # Instructions
 

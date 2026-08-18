@@ -11,16 +11,6 @@ disallowed-tools: Edit, Write
 metadata:
   artifact: .construct/operator/setup/
 ---
-**end-to-end install wizard:** takes the guesswork out of securing your agentic workspace
-- probes your machine's state and maps out a detailed roadmap all the way through
-- interactive questionnaire helps you decide which sandbox config is right for you
-- ends with a clean `--audit` handoff that makes sure everything is fully secure
-  - runs settings, permissions, hooks, scripts, credentials, context and upstream, keeping each whole
-  - recomputes no verdict; each lens grades itself and this collects what they returned
-  - correlates across lenses, which no single lens can do from inside itself
-  - takes no lens flag, since one lens belongs to its own skill and its own artifact
-  - prices the run against the sidecars it would replay, and asks before spending any of it
-  - costs minutes, and names the seconds each lens spent so a long stage reads as work
 
 # Instructions
 

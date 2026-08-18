@@ -10,10 +10,6 @@ disable-model-invocation: true
 metadata:
   artifact: .construct/retardify/graph/
 ---
-**a prompt built for a fresh session:** constraints written down, fan-out on your go
-- a spec states constraints, never plan steps
-- writes one file and stops; the fan-out begins only on your explicit go
-- the checkboxes belong to whatever it produces, never to the spec
 
 # Instructions
 

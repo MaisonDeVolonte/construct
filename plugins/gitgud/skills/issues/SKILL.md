@@ -11,11 +11,6 @@ disallowed-tools: WebFetch, WebSearch
 metadata:
   artifact: .construct/gitgud/issues/
 ---
-**what your users reported, graded against your own code:** a queue instead of an inbox
-- fetches every open issue on origin with plain curl, since the sandbox breaks `gh` itself
-- reproduces each claim against the tree before it earns a verdict, so a stale report closes
-- ranks the survivors cheapest first, which is the order you would clear them in
-- triages and reports only; the fixing is a separate turn you start yourself
 
 # Instructions
 

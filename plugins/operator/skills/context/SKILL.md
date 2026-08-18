@@ -4,17 +4,13 @@ model: opus
 effort: max
 license: MIT
 compatibility: requires bash, jq, git
-description: prove what literally reached this session's context, read from its transcript (saves report to .construct/)
+description: verify the active session's injected context, derived from its transcript (saves report to .construct/)
 argument-hint: "[--help] [--quick] [--strict] [--keep] [--test]"
 disable-model-invocation: true
 disallowed-tools: WebFetch, WebSearch
 metadata:
   artifact: .construct/operator/context/
 ---
-**provable context:** ensure the payload each hook emitted is the payload that actually landed
-- answers one question: did what a hook declared reach context, byte for byte
-- a hook can run, exit 0 and print perfectly, and still inject nothing once it passes the cap
-- reads the session's own transcript, so a drop is measured rather than inferred from a replay
 
 # Instructions
 
