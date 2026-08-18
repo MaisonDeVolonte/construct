@@ -11,10 +11,6 @@ disallowed-tools: WebFetch, WebSearch
 metadata:
   artifact: .construct/operator/upstream/
 ---
-**upstream movement since you last looked:** one report instead of a dozen open tabs
-- fetches every cited claude-code issue with plain curl, since the sandbox breaks `gh` itself
-- topical searches (`--sandbox`, `--hooks`, `--plugins`, `--permissions`) surface new candidates
-- ends by drafting the known-issues banner update, applied only when you confirm it
 
 # Instructions
 

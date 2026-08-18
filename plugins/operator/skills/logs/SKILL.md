@@ -8,10 +8,6 @@ when_to_use: "Writing to .construct/operator/logs/, which the taskcompleted and 
 metadata:
   artifact: .construct/operator/logs/
 ---
-**today's work, shaped for tomorrow's session:** the next agent reads it instead of asking you
-- threads group work by topic, carrying their own notes and prompts
-- `inject-log` carries the four most recent threads forward across days
-- the stop hook demands it, so a turn cannot close on an unwritten day
 
 # .construct/operator/logs/YYYY-MM-DD.md
 one file per day, holding both the work and the prompts that drove it:

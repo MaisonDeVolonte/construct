@@ -10,10 +10,6 @@ disable-model-invocation: true
 metadata:
   artifact: .construct/retardify/quiz/
 ---
-**an ungraded quiz on your own shipped code:** you still learn what the agent wrote
-- a study map in build order, then 20 questions written against the code
-- generation ships NO answers, and a second run grades what you ticked
-- every miss names the transferable concept underneath it, not just the letter
 
 # Instructions
 

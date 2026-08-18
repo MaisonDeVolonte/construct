@@ -11,10 +11,6 @@ disallowed-tools: Edit
 metadata:
   artifact: .construct/retardify/review/
 ---
-**documented claims measured against reality:** a scorecard that never flatters you
-- strictly read-only, and it never flatters the user
-- punishes hand-wavy conventions and unearned "green ci" claims
-- produces a graded scorecard saved to file, not a chat reply
 
 # Instructions
 

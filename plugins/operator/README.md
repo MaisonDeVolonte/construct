@@ -145,7 +145,7 @@ VERIFIED
 # unauthenticated    $ curl -o /dev/null -w "%{http_code}" https://api.github.com/user
                      401
 # authenticated      $ curl -H "Authorization: Bearer $GH_TOKEN_OPERATOR" https://api.github.com/user
-                     200  "login": "MaisonDeVolonte"
+                     200  "login": "MaisonDeVolonte-Operator"
 # proved identity    $ curl -H "Authorization: Bearer $GH_TOKEN_OPERATOR" https://api.github.com/rate_limit
                      5000 requests/hr  (anonymous: 60)
 # ── MASKED ──────────────────────────────────────────────────────────────────────────────────────
@@ -572,6 +572,17 @@ claude
 # CORRECT:   worst verdict: ok          → (nothing leaked)
 # INCORRECT: worst verdict: LEAKED      → (a real value reached the sandbox)
 ```
+```bash
+# 15. configure .github/CODEOWNERS
+/.github/CODEOWNERS @HumanAdminUsername
+/.github/workflows/ @HumanAdminUsername
+```
+```
+# 16. create/edit github ruleset for your integration branch
+github.com/.../.../settings/rules/...
+- [x] require a pull request before merging
+  - [x] require review from code owners
+```
 
 </details>
 
@@ -586,6 +597,10 @@ claude plugin details operator@TheConstruct
 ```
 /operator:setup
 ```
+**end-to-end install wizard:** takes the guesswork out of securing your agentic workspace
+- establish a baseline configuration by probing your machine's current state
+- decide which sandbox config fits your needs via an interactive questionnaire
+- validate the final configuration with a comprehensive audit handoff
 ```yaml
 ---
 name: setup
@@ -601,21 +616,27 @@ metadata:
   artifact: .construct/operator/setup/
 ---
 ```
-**end-to-end install wizard:** takes the guesswork out of securing your agentic workspace
-- probes your machine's state and maps out a detailed roadmap all the way through
-- interactive questionnaire helps you decide which sandbox config is right for you
-- ends with a clean `--audit` handoff that makes sure everything is fully secure
-  - runs settings, permissions, hooks, scripts, credentials, context and upstream, keeping each whole
-  - recomputes no verdict; each lens grades itself and this collects what they returned
-  - correlates across lenses, which no single lens can do from inside itself
-  - takes no lens flag, since one lens belongs to its own skill and its own artifact
-  - prices the run against the sidecars it would replay, and asks before spending any of it
-  - costs minutes, and names the seconds each lens spent so a long stage reads as work
+**what it does:** 
+- skill
+  - appends a new entry to the roadmap file with the current state, route, steps, and telemetry
+  - walks through outstanding steps one at a time, stopping at the first incomplete step
+  - `--roadmap` emits the current roadmap file inline without re-probing
+  - `--audit` appends an entry to the audit file and reports the full suite inline (expensive, gated)
+- sidecar
+  - probes the machine to build the state block, route chooser, and list of outstanding steps
+  - marks steps as `[done]` only when the probe actually observes them
+  - `--audit`, runs all 7 lenses in order (settings, permissions, hooks, scripts, credentials, context, upstream)
+  - preserves each lens's raw output and correlates their findings without recomputing verdicts
+  - calculates the estimated runtime for the audit and requires confirmation to proceed
 
 #### Context
 ```
 /operator:context
 ```
+**verifiable context injection:** ensures the payload each SessionStart hook emitted actually lands
+- catch a SessionStart payload dropped by the ~10,000-char cap, hook exit clean
+- catch `/resume` replaying the same SessionStart batch, doubling injected cost
+- flag an injector that ignores JSON-escaping cost, so its budget looks safe until it isn't
 ```yaml
 ---
 name: context
@@ -623,7 +644,7 @@ model: opus
 effort: max
 license: MIT
 compatibility: requires bash, jq, git
-description: prove what literally reached this session's context, read from its transcript (saves report to .construct/)
+description: verify the active session's injected context, derived from its transcript (saves report to .construct/)
 argument-hint: "[--help] [--quick] [--strict] [--keep] [--test]"
 disable-model-invocation: true
 disallowed-tools: WebFetch, WebSearch
@@ -631,15 +652,27 @@ metadata:
   artifact: .construct/operator/context/
 ---
 ```
-**provable context:** ensure the payload each hook emitted is the payload that actually landed
-- answers one question: did what a hook declared reach context, byte for byte
-- a hook can run, exit 0 and print perfectly, and still inject nothing once it passes the cap
-- reads the session's own transcript, so a drop is measured rather than inferred from a replay
+**what it does:** 
+- skill
+  - runs context.sh, reporting a lost payload on failure or what landed on success
+  - ranks findings provable-first: declared output versus transcript-confirmed landing
+  - `--quick` prints the inline report and stops, saving nothing
+  - by default appends a dated entry with the sidecar's raw output verbatim
+- sidecar
+  - resolves the session's transcript under `~/.claude/projects`, or exits `no_transcript`
+  - matches each hook's declared stdout against what actually landed, by exact match
+  - counts SessionStart batches to catch a resume replaying payloads twice
+  - checks each injector's source for a budget constant, grades it against escaped size
+  - writes only scratch to disk itself — the dated report is the skill's write, not the sidecar's
 
 #### Hooks
 ```
 /operator:hooks
 ```
+**provable hooks:** ensure every hook this machine registers is one the harness will actually load
+- catch a malformed `matcher` that silently discards a scope's hooks under `claude -p`
+- catch a hook and its script out of sync — one points to a deleted file, or vice versa
+- catch a hook that registers cleanly but never actually fires, proven via the transcript
 ```yaml
 ---
 name: hooks
@@ -655,15 +688,28 @@ metadata:
   artifact: .construct/operator/hooks/
 ---
 ```
-**provable hooks:** ensure every hook this machine registers is one the harness will actually load
-- answers one question: is a hook block loadable, resolvable and proven to have run
-- one matcher of the wrong type makes the harness skip that whole file, every event inside it
-- an interactive session dialogs that; `claude -p` drops the file and says nothing at all
+**what it does:** 
+- skill
+  - runs hooks.sh and reports the registration table inline, findings first
+  - `--quick` stops after the inline report and writes nothing
+  - by default appends a dated entry with the sidecar's raw telemetry verbatim
+  - accepts an extra `<path>` to grade alongside the real settings and plugin scopes
+  - never edits a hook or settings scope — an unprobeable version is its own finding
+- sidecar
+  - checks every scope at once — settings, every plugin's `hooks.json`, every template
+  - validates each file's JSON, then grades hook groups and commands for type/path
+  - flags a blocker hook whose verdict is `ask` not `deny` — `ask` can auto-approve
+  - cross-checks the transcript for `hook_success` events — a registered no-run is `silent`
+  - exits nonzero on any error-level finding, or on any warning under `--strict`
 
 #### Credentials
 ```
 /operator:credentials
 ```
+**blind authentication:** allows agents to use your credentials without seeing them
+- catch a credential-shaped variable with no mask rule, exposed to every sandboxed command
+- verify each masked variable seven ways — shell, env dump, python, xtrace, write-read
+- catch `gh` falling back to a plaintext token in `hosts.yml` when its keyring write fails
 ```yaml
 ---
 name: credentials
@@ -679,15 +725,27 @@ metadata:
   artifact: .construct/operator/credentials/
 ---
 ```
-**blind authentication:** allows agents to use your credentials without seeing them
-- probes the live sandbox: the token still works, the value hides, exfiltration fails
-- grades every credential masked, unset or unruled, and only unruled holds work
-- writes a dated report naming the variable and the vector, never the value
+**what it does:** 
+- skill
+  - runs credentials.sh and aborts on a pre-grade crash rather than guessing at a verdict
+  - `--quick` reports verdict, unruled count, and three tables inline, then stops
+  - on a full run, appends a dated report — verdict through notes, never echoes a value
+  - blocks outbound network tools for the run, since names/fingerprints sit in context
+- sidecar
+  - proves the sandbox gate is active first — an unprovably masked variable is `UNGRADED`
+  - pulls each ruled variable seven ways, grading it leaked if any returns the real value
+  - sweeps the environment for unruled credential-shaped vars and denied-path readability
+  - checks `gh`'s own `hosts.yml` for a plaintext token left behind by a failed keyring write
+  - reports only classifications and four-and-four fingerprints — never a value
 
 #### Permissions
 ```
 /operator:permissions
 ```
+**provable deny rules:** every command in your corpus is tested against your merged rules
+- catch a hook that stays silent on a command it should block — only a replay proves it
+- catch a zero-prompt allow wildcard, or a Read/Write deny bash still reaches via `cp`
+- catch a hook's hardcoded path list drifting from settings' deny/ask rules over time
 ```yaml
 ---
 name: permissions
@@ -703,15 +761,27 @@ metadata:
   artifact: .construct/operator/permissions/
 ---
 ```
-**provable deny rules:** ensure every command in your corpus is tested against your actual merged rules
-- answers one question: does the gate refuse what the corpus says it must refuse
-- a config can read perfectly and still have a dead hook, which only a replay catches
-- audits the merged rules for drift, dead entries and wildcards that auto-approve
+**what it does:** 
+- skill
+  - runs permissions.sh, treating its replay result as measured fact over any lead
+  - surfaces "allow rules to add next," ranked by how often each command was asked about
+  - appends a dated entry to `.construct/operator/permissions/`, header seeded if new
+  - never edits a settings file — a live gap gets added to the shared corpus
+- sidecar
+  - replays every corpus command as a fake PreToolUse payload against every real hook
+  - tags each entry with its expected gate — `hook` (must deny) or `none` (must be silent)
+  - cross-checks a hook's protected-path list against settings' deny/ask rules
+  - finds deny/allow entries already shadowed by an earlier wildcard, so they never fire
+  - exits nonzero on any error-level finding, or on any warning if `--strict` is set
 
 #### Scripts
 ```
 /operator:scripts
 ```
+**test agent sub-commands:** against your sandbox's actual merged settings
+- catch an internal command — like a `git stash` buried in `backup.sh` — a deny rule can't see
+- catch a script that stalls on every run because an internal command has no allow rule
+- predict sandbox breakage first — a bad write, a denied read, or a missing allowed host
 ```yaml
 ---
 name: scripts
@@ -727,15 +797,27 @@ metadata:
   artifact: .construct/operator/scripts/
 ---
 ```
-**test agent sub-commands:** against your sandbox's actual merged settings
-- a permission rule judges `bash nuke.sh` but not the commands inside it
-- tests each internal command your agents are allowed to run
-- reports allowed, denied, asked or no-match, one line each
+**what it does:** 
+- skill
+  - runs scripts.sh, separating what permissions judge (invocation) from sandbox-only internals
+  - reports a bypass as by-design — a deny or hook rule stops at the script boundary
+  - appends one dated entry to `.construct/operator/scripts/`, seeded with a header line if new
+  - never edits a settings file or sidecar — a bypass is resolved manually, or accepted
+- sidecar
+  - scans every `.sh` file under this plugin family's `plugins/` and `.claude/skills/`
+  - feeds each invocation through every pretooluse hook plus the merged `Bash()` rules
+  - splits each script into commands, checked against deny/excluded/domain/write rules
+  - re-grades every existing dated audit file, so a malformed report is a finding too
+  - writes nothing persistent besides scratch — exits nonzero on error or `--strict` warn
 
 #### Settings
 ```
 /operator:settings
 ```
+**built-in settings hygiene:** checks dozens of failure points, preventing silent faults
+- catch invalid JSON in a settings file — Claude Code silently ignores every rule inside
+- catch a path with a Read/Edit deny but no Write deny — reads protected, stays writable
+- prove the live gate fires, by feeding a real `git push --force` into the destructive hook
 ```yaml
 ---
 name: settings
@@ -751,32 +833,27 @@ metadata:
   artifact: .construct/operator/settings/
 ---
 ```
-**built-in settings hygiene:** checks dozens of failure points, preventing silent faults
-- ERRORS
-  - when a settings file is not valid json, so every rule inside it is silently ignored
-  - when the plugin's `settings/` folder is missing or empty, so nothing can be compared
-  - when a path is denied for reads but not matching writes
-  - when a credentials block sits in a scope that cannot honor it
-  - when a settings template will not parse, so pasting it breaks the file
-  - when a scope has no `.md`, or carries rules with no explanation written down
-  - when a doc claims to mirror another scope but the two have quietly diverged
-  - when the hook stays silent on a force-push command fed straight to it
-- WARNS
-  - when installed settings differ from the template they were copied from
-  - when project settings carry machine-specific paths that break on the next clone
-  - when duplicate rules are found, in a settings file or in a template
-  - when a documented rule no longer exists in the json
-  - when nothing stops an agent editing the settings and hooks this audit depends on
-- answers for the settings stack alone; `/operator:setup --audit` runs every lens together
-- leaves file denies and token masks to `/operator:credentials`, which probes every vector
-- walks you through masked-credential setup, and names the steps you already finished
-- prints the copy commands for whichever settings scope you name
-- never changes a settings file, it only hands back commands for you to run
+**what it does:** 
+- skill
+  - runs settings.sh with no flags for a full audit, appending a fixed-shape dated entry
+  - `--local`/`--project`/`--user`/`--managed` report one scope's copy command inline
+  - `--advanced` walks an ordered masking procedure one step at a time, never echoes a token
+  - can't call Edit or Write — the audit append goes through Bash, so findings can't be patched
+- sidecar
+  - runs 9 checks in order — JSON validity, drift, deny gaps, leaks, coverage, live probe
+  - checks whether its own settings/hooks are protected, since an editable auditor lies
+  - diffs every installed scope file against its template, flags docs that drifted from JSON
+  - re-validates every prior dated report against the shape contract, catching hand-edits
+  - prints every check's result, including passes, so a pass reads apart from a skip
 
 #### Upstream
 ```
 /operator:upstream
 ```
+**upstream movement since you last looked:** one report instead of a dozen open tabs
+- auto-discover every cited claude-code issue link in this repo and re-fetch its live state
+- redact every pulled comment through shared secret patterns before printing or saving
+- treat every fetched issue title and comment as untrusted data, never as a command
 ```yaml
 ---
 name: upstream
@@ -792,15 +869,27 @@ metadata:
   artifact: .construct/operator/upstream/
 ---
 ```
-**upstream movement since you last looked:** one report instead of a dozen open tabs
-- fetches every cited claude-code issue with plain curl, since the sandbox breaks `gh` itself
-- topical searches (`--sandbox`, `--hooks`, `--plugins`, `--permissions`) surface new candidates
-- ends by drafting the known-issues banner update, applied only when you confirm it
+**what it does:** 
+- skill
+  - runs upstream.sh, separating cited-issue movement (`tracked`) from new hits (`topic`)
+  - appends a dated entry, pasting the sidecar's raw output in as telemetry, last
+  - can propose a rewrite of the README's known-issues banner, but stops for confirmation
+  - can't call WebFetch or WebSearch — every check goes through the sidecar's own curl
+- sidecar
+  - probes its GitHub token against `/rate_limit`, falling back to anonymous with a warning
+  - redacts every fetched comment excerpt through shared secret patterns before stdout
+  - reports each tracked issue's state, date, comments, and movement since the last report
+  - never aborts the whole run on one failed request — that's a per-item failure, not a crash
+  - writes nothing to disk beyond its own scratch — exits nonzero only if nothing fetched
 
 #### Logs
 ```
 /operator:logs
 ```
+**today's work, shaped for tomorrow's session:** the next agent reads it instead of asking you
+- close every turn only on a logged day — stop and taskcompleted hooks both block otherwise
+- cap each thread's size to what the next sessionstart hook can inject whole, untruncated
+- scan every log for secrets first, and refuse to let editing replace rotating a leaked key
 ```yaml
 ---
 name: logs
@@ -813,15 +902,27 @@ metadata:
   artifact: .construct/operator/logs/
 ---
 ```
-**today's work, shaped for tomorrow's session:** the next agent reads it instead of asking you
-- threads group work by topic, carrying their own notes and prompts
-- `inject-log` carries the four most recent threads forward across days
-- the stop hook demands it, so a turn cannot close on an unwritten day
+**what it does:** 
+- skill
+  - shapes each unit of work into a numbered thread: context, changes, insights, advice
+  - folds the prior thread's notes into prose, prunes prompts to what changed direction
+  - caps every line to ~100 characters and one clause, scrubs names and tokens first
+  - has no `model`/`effort` frontmatter, unlike siblings — the model or a hook can invoke it
+- sidecar
+  - runs 13 checks per log file — order, size caps, formatting, placeholders, secrets
+  - reports its real injection cap via `--budget`: 2 threads, not the 4 the doc says
+  - prints a STOP block, not a normal finding, the moment it finds anything secret-shaped
+  - never creates the day's log file — that's inject-log.sh's job, this only grades it
+  - writes nothing but its own scratch file — exits nonzero on error, or `--strict` warn
 
 #### Install
 ```
 /operator:install
 ```
+**one inventory, five layers:** what's installed, where it sits, and which copy loads
+- catch a skills-dir copy shadowed by an enabled install of the same name
+- read the plugin registry and disk layout directly, so a broken install still shows up
+- name a generic failure to load — a deleted path, an `enabled_missing` entry, orphaned cache
 ```yaml
 ---
 name: install
@@ -837,18 +938,26 @@ metadata:
   artifact: .construct/operator/install/
 ---
 ```
-**one inventory, five layers:** answers what is installed, where it sits, and which copy a session loads
-- reads the registry and the disk rather than a session, so a broken install still reports
-- grades the collision a name can lose: an enabled install outranks a skills-dir copy silently
-- writes a dated report naming every path, version and orphan, with home paths masked
+**what it does:** 
+- skill
+  - runs install.sh and leads its report with any `shadowed` finding first, ahead of everything else
+  - `--quick` prints all six inventory tables plus findings inline and writes nothing
+  - otherwise appends a dated, append-only report, copying the sidecar's findings verbatim
+  - closes a shadowed finding with the exact disable/uninstall command to resolve it
+- sidecar
+  - inventories five layers in one pass — marketplaces, installs, cache, skills dir, enabled
+  - decides "which wins" with one check: a skills-dir entry flips to `shadowed` if enabled
+  - sizes orphaned cache directories and flags duplicate installs of the same plugin
+  - masks every `$HOME`-rooted path down to `~` through a single helper before it ever prints one
+  - writes nothing to disk beyond its own scratch — the report is the skill's write
 
 ### /gitgud
 > the whole git dance; each pairs with a `.sh` sidecar that measures, then hands the commands back
 > three run part of their own block against narrow allows: `/gitgud:continue`'s sync, which is
 > recoverable throughout, `/gitgud:backup`'s snapshot, which only ever writes, and `/gitgud:nuke`'s
 > backup stash, which is what makes its reset survivable
-- [triage.sh](plugins/gitgud/shared/triage.sh): shared branch triage and team probes, run by three siblings
-- [handover.sh](plugins/gitgud/shared/handover.sh): shared preflights, queries, and the telemetry/handover blocks
+- [triage.sh](plugins/gitgud/shared/triage.sh): branch/team probes, run by three sibling skills
+- [handover.sh](plugins/gitgud/shared/handover.sh): shared preflights and handover blocks
 
 #### Audit
 ```
@@ -870,10 +979,22 @@ metadata:
 ---
 ```
 **what a fresh clone would load:** drift you cannot see from inside your own tree
-- read-only: it counts and compares, and never mutates a tracked file
-- checks composition, skill pairing, manifest agreement and artifact freshness
-- prices the run against the tracked files it would walk, and asks before spending any of it
-- outputs a numbered list, each finding with the command that shows the detail
+- catch a plugin reporting zero skills, graded as a load failure, not an empty plugin
+- catch a shared `secrets.sh` copy drifting from its siblings, since duplication needs agreement
+- catch a writer skill that quietly stopped running, by checking its newest artifact's age
+**what it does:**
+- skill
+  - runs audit.sh and prices the walk by tracked-file count before it measures anything
+  - `--confirm` is required to proceed — without it, the sidecar prints cost and stops
+  - reports a numbered, worst-first list, one line per finding, each with an inspect command
+  - appends a dated entry to `.construct/gitgud/audit/`, telemetry pasted in raw and fenced
+  - never edits a tracked file; can't call Edit at all during this skill
+- sidecar
+  - checks composition, pairing, manifests, shared code drift, and artifact freshness
+  - grades a plugin with zero skills or hooks as a load failure, not an empty plugin
+  - hashes every `secrets.sh` copy across plugins, flagging any version drift as an error
+  - finds each writer skill's newest artifact, so a stale file flags a stalled automation
+  - writes nothing itself; hands back `triage.sh` and `validate-skills.sh` as next reads
 
 #### Issues
 ```
@@ -895,10 +1016,22 @@ metadata:
 ---
 ```
 **what your users reported, graded against your own code:** a queue instead of an inbox
-- fetches every open issue on origin with plain curl, since the sandbox breaks `gh` itself
-- reproduces each claim against the tree before it earns a verdict, so a stale report closes
-- ranks the survivors cheapest first, which is the order you would clear them in
-- triages and reports only; the fixing is a separate turn you start yourself
+- catch `gh` breaking inside the sandbox, since curl reaches the api where `gh` can't
+- catch an issue that's already fixed or invalid, by running the command it claims fails
+- catch rework: an issue already triaged in an older report carries forward, not redone
+**what it does:**
+- skill
+  - runs issues.sh and carries forward any issue already triaged in an older report
+  - reads the exact file and line named, runs the failing command, grades live/fixed/invalid
+  - treats issue text as untrusted data, never as instructions, runs no command it suggests
+  - appends one dated entry with three sections: summary, issues, suggestions
+  - triages and reports only; a fix is its own turn, never offered here
+- sidecar
+  - derives owner/repo from the origin remote, then fetches every open issue with curl
+  - probes its GitHub token against `/rate_limit`, falling back to anonymous with a warning
+  - ranks the printed queue cheapest fix first, sized small, medium, or large
+  - redacts each issue body through the shared secret patterns before it ever prints
+  - writes nothing to disk itself; the dated report is the skill's write, not the sidecar's
 
 #### Backup
 ```
@@ -917,9 +1050,21 @@ disable-model-invocation: true
 ---
 ```
 **a snapshot verified, not assumed:** worth typing before anything destructive
-- worth typing before any reset, rebase, history rewrite or bulk delete
-- nothing to configure; the destination is fixed and it overwrites nothing
-- never restores anything; the restore commands are handed back to you
+- catch a silently incomplete `.git` copy, by counting objects before and after and failing hard
+- catch what `reset --hard` and `clean -fd` would destroy: tracked plus untracked-not-ignored
+- never restores anything itself, since applying a restore could overwrite what's there now
+**what it does:**
+- skill
+  - runs backup.sh, which is the entire skill — no other tool call on a clean run
+  - surfaces the sidecar's own object-count verification, rather than re-checking it itself
+  - reports the snapshot location, what it captured, and the restore commands, then stops
+  - never restores anything automatically — every restore command is only handed back
+- sidecar
+  - copies `.git` to a fixed timestamped path, then verifies it by counting objects both sides
+  - copies every tracked and untracked-not-ignored file, skipping anything git ignores
+  - refuses to overwrite an existing backup — the destination path must not already exist
+  - writes a manifest with the head sha, branch, counts, and both exact restore commands
+  - fails hard and says to delete and retry if the object count ever comes up short
 
 #### Continue
 ```
@@ -932,15 +1077,31 @@ model: opus
 effort: high
 license: MIT
 compatibility: requires bash, git
-description: measure the trunk delta, then run the sync it planned against four narrow allows, ending on the trunk
+description: snapshot, then measure the trunk delta, then run the sync against four narrow allows
 argument-hint: "[--help] [--test]"
 disable-model-invocation: true
+metadata:
+  artifact: .construct/gitgud/continue/
 ---
 ```
 **leave anytime, come back synced:** every pause and resume lands on the trunk
-- enforces trunk-based development: the sync always ends on the trunk
-- the sidecar measures and plans, then the trigger runs what it planned
-- a diverged trunk is never resolved for you; it is handed over instead
+- snapshots the whole repo first, via `/gitgud:backup`, before anything else runs
+- catch a trunk that's merely behind, not diverged — an earlier version routed both to nuke
+- catch incoming commits touching a sandbox-protected path, and hand that sync over instead
+- catch a path that's both incoming and locally uncommitted, the silent-loss shape
+- never resolves a diverged trunk itself, since a rebase or merge always rewrites history
+**what it does:**
+- skill
+  - runs backup.sh, then continue.sh, then runs what it planned as separate tool calls
+  - runs only the four commands the plan allows: stash, switch, merge --ff-only, pop
+  - hands the sync over instead of running it, once a path collides or touches a protected one
+  - stops on a conflicted `stash pop`, reporting it rather than resolving it
+- sidecar
+  - fetches only the default branch, then measures how far local and origin have each moved
+  - classifies the state as diverged, colliding, blocked, syncable, or already up to date
+  - stashes only when something actually needs to move underneath the working tree
+  - emits the exact four-command sequence needed, in order, for the skill to run one by one
+  - writes one manifest per run to `.construct/gitgud/continue/`, refused or clean alike
 
 #### Deliver
 ```
@@ -959,27 +1120,30 @@ disable-model-invocation: true
 ---
 ```
 **autonomously drain work tree:** with atomicized, single-purpose prs
-- works in the sandbox with masked credentials (`curl` via `api.github.com`)
-- scans your entire work tree, then groups changes into type(scope) buckets
-- `construct.config.json` defines your repos git branches, rules, and conventions
-- shows you a detailed plan including caveats, suggested changes, files, and dependencies
-- two human gates: continue with the bucketing plan, then save a backup and drain
-- `--handover` flag emits the exact commands for manual terminal execution
-- `free text` arguments allow custom guidance such as 'hold docs changes for now' etc
-- each pr is watched until merged or stopped for debugging
-- notes
-  - drains your live work tree, and never stages or commits while draining
-  - a snapshot is taken before the first bucket, and its stamp opens the drain report
-  - a bucket naming a protected path is handed back, since the hook refuses to deliver one for you
-  - a delivered file that git never tracked stays untracked here, so the reconcile block removes it
-  - the drain ends with that block: `checkout` the modified paths, `rm` the new ones, then merge
-  - a red bucket stops the drain, and `deliver.sh update` moves that branch onto a fixed commit
-  - every bucket after a red one assumed a trunk that never landed, so re-run this skill instead
-  - the commit author comes from the config, and the token's account opens the pr
-  - commits land unsigned, so a repo requiring signed commits refuses the whole drain
-  - auto-merge needs `allow_auto_merge` on, and a merge queue removes the waiting entirely
-  - origin deletes each branch on merge; `git fetch origin pull/N/head:name` brings one back
-  - one bucket costs about six api calls plus one per file, against 5000 an hour
+- work around `gh` and `git push` both breaking in the sandbox, by writing through the api
+- catch a red pr before it ships, by validating every bucket against `HEAD` first
+- catch a bucket touching a protected path, by replaying its command through the live gate
+- recover a failed bucket without restarting, by moving its branch onto a new commit
+- stop the whole drain the moment one bucket's checks go red, since later buckets assume it landed
+**what it does:**
+- skill
+  - groups every changed file into atomic type(scope) buckets, ranked by a fixed order
+  - two human gates: approve the bucketing plan, then approve the backup-and-drain
+  - validates every bucket's references against `HEAD` and its checks before draining it
+  - takes one backup before bucket one, and its stamp opens the drain report
+  - watches each pr until it merges, queues, or fails checks, stopping the drain on failure
+  - `--handover` emits every bucket's commands instead of running any of them
+  - `--debug` drains only the first bucket and reports the rest of the plan
+  - `--finished` only drains buckets with no leftover todos, stubs, or scaffolding
+  - ends with one reconcile block: checkout modified paths, remove new ones, then merge
+- sidecar
+  - writes every commit through the GitHub tree and blob api, never `git commit` or `push`
+  - represents a deleted file as a null blob sha, since the api has no delete verb
+  - replays a bucket's exact command through the live pretooluse gate before it ever runs
+  - arms auto-merge over graphql, since the rest api has no field for it
+  - moves a red branch onto a new commit at its own tip, refusing any non-fast-forward move
+  - polls each pr's checks until merged, queued, or failed, returning failure on a red run
+  - costs about six api calls per bucket, plus one more for every file it touches
 
 #### Prune
 ```
@@ -998,9 +1162,20 @@ disable-model-invocation: true
 ---
 ```
 **one sweep for every ref already spent:** merged branches named, unmerged left alone
-- prunes dead tracking refs, then reports the trunk delta
-- preserves unmerged branches and names only the merged ones
-- deletes nothing; every deletion is handed back as a command you run
+- catch a rebase-merged branch that `--merged` alone would call unmerged forever
+- catch a trunk that's ahead of origin, and refuse any deletion until that's resolved
+- never deletes anything itself — every delete comes back as a command to run
+**what it does:**
+- skill
+  - runs continue.sh then prune.sh, aborting on either's nonzero exit before suggesting anything
+  - runs `triage.sh` itself to fold branch, remote, and team state into the handover
+  - flags an absorbed-but-not-merged branch, since it needs a force delete, not a plain one
+  - ends with one copy-paste block listing every delete command, in the order it named them
+- sidecar
+  - prunes only remote-tracking refs via `fetch --prune`, never touching a local branch
+  - classifies merged branches by ancestry, and gone branches by their vanished upstream
+  - proves an unmerged branch is actually absorbed by comparing merge-tree output, not shas
+  - keeps anything it can't prove absorbed, failing safe rather than naming it for deletion
 
 #### Nuke
 ```
@@ -1019,9 +1194,20 @@ disable-model-invocation: true
 ---
 ```
 **start over, knowingly:** the cost is counted and backed up before the reset
-- reports every commit, file and branch the reset would take
-- takes the backup itself, which is what makes the reset survivable
-- never resets, cleans or deletes; each of those is yours to run
+- catch every commit, file, and branch a hard reset would throw away, before handing it back
+- run the backup stash itself and prove it landed, so a reset is never offered after a failed one
+- never runs the reset, clean, or branch deletes itself — that handover is the deliverable
+**what it does:**
+- skill
+  - runs nuke.sh twice: once for telemetry, once to run the one stash command it allows
+  - runs `git stash list` itself to prove the named stash exists before handing anything back
+  - stops and reports the raw error if the stash step fails, handing back nothing destructive
+  - hands back one block naming exactly what pasting it will discard, delete, or throw away
+- sidecar
+  - prices the reset: untracked and modified files, commits either side would lose, every branch
+  - stashes the dirty tree itself under a named entry, ahead of handing back anything
+  - hands back the switch, clean, hard reset, and every branch delete as one block
+  - never calls into backup.sh directly; it re-implements the same stash pattern inline
 
 #### Rerun
 ```
@@ -1040,9 +1226,19 @@ disable-model-invocation: true
 ---
 ```
 **stale PRs catch up to the trunk:** merge in what moved and CI runs again
-- merges the current default branch into the stale branch PR
-- typically after `/gitgud:deliver` leaves a PR computed against old trunk
-- `--watch` follows the run instead of returning immediately
+- catch a PR left stale by `/gitgud:deliver`, whose CI ran against a trunk that has since moved
+- catch a real conflict early, by checking mergeable state before ever calling the update api
+- catch a PR that isn't actually stale, and refuse, so a real CI failure isn't waved away
+**what it does:**
+- skill
+  - runs rerun.sh inline for telemetry, then again as its own tool call when `--watch` is passed
+  - reports the raw error and stops if the sidecar's exit code comes back nonzero
+  - reports the redelivery telemetry verbatim before deciding whether to watch it run
+- sidecar
+  - finds the open pr for the current branch itself; no pr number is ever passed in
+  - refuses if the pr is genuinely conflicted, or if it isn't stale against the trunk at all
+  - merges trunk into the pr through the GitHub update-branch api, never a local merge or push
+  - `--watch` polls the fresh run to completion and reports its real conclusion, red or green
 
 #### Ship
 ```
@@ -1061,9 +1257,19 @@ disable-model-invocation: true
 ---
 ```
 **abort beats a bad bump:** every release precondition checked before the version moves
-- aborts on a dirty tree, detached HEAD, stale trunk, missing production or drifted docs
-- computes the next version rather than applying it, since `npm version` commits
-- releases nothing; the bump, push and promote are handed over
+- catch a repo whose readme or skill pairs have drifted, the one point a whole-tree check pays off
+- catch a missing production branch before handing back a promote step that would fail
+- catch a trunk push that needs a pr first, and hand back a branch flow instead of a direct one
+**what it does:**
+- skill
+  - runs audit.sh then ship.sh, aborting the release on a red row or nonzero exit from either
+  - computes the next version rather than applying it, since a real bump commits and tags
+  - never bumps, pushes, merges, or releases itself — the handover sequence is the deliverable
+- sidecar
+  - checks a clean, synced trunk, a real production branch, and zero readme or skill drift
+  - checks readme drift and skill-pair validity across the whole tree, not just the diff
+  - checks branch protection rules to decide whether the trunk push needs a pr first
+  - hands back the bump, the push or pr sequence, the production merge, then the release call last
 
 ### /retardify
 > keeps machine output legible: what a convention is, whether the tree holds to it, and prose you can follow
@@ -1073,6 +1279,10 @@ disable-model-invocation: true
 ```
 /retardify:output
 ```
+**every reply is linted:** against the output style rules to keep conversations consistent
+- catch bold, italics, emoji, or fenced plaintext outside a list, table, or fence (B1)
+- catch a reply that goes fully prose, past the wrap tolerance, or past the line ceiling
+- catch a reply that never lands on a closing action, costing the user another turn to ask
 ```yaml
 ---
 name: output
@@ -1085,39 +1295,54 @@ argument-hint: "[--help] <path> [--test]"
 disable-model-invocation: true
 ---
 ```
-**every reply is linted:** against the output style rules to keep conversations consistent
-- a plain run grades the last reply, read from this session's own transcript
-- used by the `retardify-output.sh` `stop` hook automatically but can be used manually for debugging
-- grades the mechanically checkable rules like markup, constraints, shapes, etc
-- blocks on HARD findings and quotes the offending line so the fix is mechanical
+**what it does:**
+- skill
+  - a plain run grades the last reply, read from this session's own transcript
+  - runs automatically via the `retardify-output.sh` stop hook, or manually against a saved path
+  - reports findings labeled by the style spec's own rule addresses (B1, C2, V2, F1, etc)
+  - fixes every HARD finding, since each one blocks a stop-hook turn on its own
+  - re-runs the sidecar after fixing, so closed findings are proven closed
+- sidecar
+  - reads a file path, stdin via `-`, or the transcript's last assistant text with no path given
+  - reads the width and line-ceiling caps from `output-styles/operator.md`, falling back to 100/30
+  - scans line by line for markup, width, epigram shapes, and an unclosed fence
+  - counts whole-reply signals: files with no coordinate, and actions with nothing pasteable
+  - exits 1 on any HARD finding, 0 on SOFT-only or a clean reply
 
 #### Code
 ```
 /retardify:code <path>
 ```
+**maximally legible code:** ensures you're able to keep up with the codebase
+- catch a second ternary chained onto one expression, where an if-statement reads plainer
+- catch nesting past 2 levels deep, where a guard or a helper should flatten it instead
+- catch a name past 25 characters or 4 words, or a callback named `e`, `idx`, `el`, or `cb`
 ```yaml
 ---
 name: code
 license: MIT
 compatibility: requires bash, git
 description: code-legibility linter run by PostToolUse or via <path> argument (saves audits to .construct/)
-argument-hint: "[--help] <path> [--test]"
+argument-hint: "[--help] [--quick] [--strict] [--warn] <path> [--test]"
 when_to_use: "editing code, PostToolUse warnings, or when asked to review code"
 paths: "**/*.ts, **/*.tsx, **/*.js, **/*.jsx, **/*.mjs, **/*.cjs, **/*.sh, **/*.py, **/*.rb, **/*.go, **/*.rs"
 metadata:
   artifact: .construct/retardify/code/
 ---
 ```
-
-**maximally legible code:** ensures you're able to keep up with the codebase
-- `logic-only` refactors since `/retardify:file` already owns the frame around it
-- `retard-maxxes` like a jr-engineer who does everything the long, extremely boring way
-- `simplifies` logic instead of advanced, deeply nested, or overly efficient abstractions
-- `separates` files or functions that do more than one thing, where practical
-- `sequences` logic from top to bottom in order of state, definitions, guards, then execution
-- `names` things using clear, concise, intuitively understood language
-- `linebreaks` separate distinct conceptual blocks, not single-line statements
-- `first principles` such as DRY, SoC, POLA, etc are a vibe; RDD, WTF, WET, etc are not a vibe
+**what it does:**
+- skill
+  - refactors logic only, since `/retardify:file` already owns the frame around a file
+  - retard-maxxes like a jr-engineer, doing everything the long, boring, explicit way
+  - sequences code top to bottom: constants, hoisted state, helpers, then execution
+  - answers the checklist for what no script can judge: DRY, SoC, POLA, RDD, WTF, WET
+  - appends a deliberate run to the daily audit file, skipping that when the hook fires it
+- sidecar
+  - grades one file across six mechanics: ternaries, `.reduce(`, blank runs, nesting, names
+  - runs the three js-only checks (ternary, reduce, short_name) on the js file family only
+  - runs nesting, blank-run, and long-name checks on every graded language
+  - strips full-line comments before scanning, so prose in a comment never trips a code rule
+  - exits 1 on any error, or on any warning under `--strict`
 
 <details>
 <summary>example:</summary>
@@ -1192,27 +1417,36 @@ export function writeCode(requirements: Requirement[], request: string) {
 ```
 /retardify:file <path>
 ```
+**validated file shapes:** keep tokens aimed at logic instead of conventions
+- catch a wayfinding header missing, out of order, or naming the wrong `@file` filename
+- catch an `@see` reference that resolves to nothing, or a filename in neither casing shape
+- catch a credential-shaped string in a file, and stop before anything touches or truncates it
 ```yaml
 ---
 name: file
 license: MIT
 compatibility: requires bash, git
 description: file-shape linter run by PostToolUse or via <path> argument (saves audits to .construct/)
-argument-hint: "[--help] <path> [--test]"
+argument-hint: "[--help] [--quick] [--strict] [--warn] [--keep] <path> [--test]"
 when_to_use: "editing files, PostToolUse warnings, or when asked to review files"
 paths: "**/*.ts, **/*.tsx, **/*.js, **/*.jsx, **/*.mjs, **/*.cjs, **/*.sh, **/*.py, **/*.rb, **/*.go, **/*.rs"
 metadata:
   artifact: .construct/retardify/file/
 ---
 ```
-
-**validated file shapes:** keep tokens aimed at logic instead of conventions
-- `shape-only` refactors since `/retardify:code` already owns the logic inside it
-- `file name` casing is configured and enforced mechanistically
-- `wayfinders` improve code orientation and help keep inline comments to a minimum
-- `module` organization is standardized for maximum scannability
-- `inline comments` are continually synthesized to ensure they're accurate and legible
-- `configured` in the skill doc and enforced by the bash sidecar
+**what it does:**
+- skill
+  - refactors shape only, since `/retardify:code` already owns the logic inside a file
+  - names files PascalCase, camelCase, MatchCase, or kebab-case, based on what the file is for
+  - orders imports external, then webflow, then internal, then reexported, then exported
+  - keeps inline comments to one clause, lowercase, explaining why rather than what
+  - appends a deliberate run to the daily audit file, skipping that when the hook fires it
+- sidecar
+  - defaults to every tracked eligible file, or scopes to the paths and directories handed to it
+  - checks naming, the wayfinding header, module order, and inline comments in one pass
+  - runs wayfinder checks only on the js/ts and shell families, comment checks on the wider list
+  - resolves every `@see` path and every `#1:`/`(see #1)` citation pair against the file
+  - scans for credential-shaped strings, and exits 1 on any error or warning under `--strict`
 
 <details>
 <summary>example:</summary>
@@ -1259,6 +1493,10 @@ export async function getFoo(): Promise<FooNode[]> { return []; }
 ```
 /retardify:research
 ```
+**what the docs say, measured against what this repo does:** one brief instead of twelve tabs
+- every claim is fetched this run and cited; a claim from training never lands
+- the repo is probed first, so the answer is reconciled rather than recited
+- rounds continue while a round still finds a source the last one missed
 ```yaml
 ---
 name: research
@@ -1273,15 +1511,28 @@ metadata:
   artifact: .construct/retardify/research/
 ---
 ```
-**what the docs say, measured against what this repo does:** one brief instead of twelve tabs
-- every claim is fetched this run and cited; a claim from training never lands
-- the repo is probed first, so the answer is reconciled rather than recited
-- rounds continue while a round still finds a source the last one missed
+**what it does:**
+- skill
+  - probes this repo first, logging each measurement as a `PROBED` line before any search
+  - fans out 2-5 agents by source tier: official, vendor, industry, community
+  - loops rounds until one finds no source the prior rounds missed, capped at three
+  - reconciles every surviving claim into an `agrees`/`conflicts`/`untested` row
+  - validates with `research.sh --check`, shows the brief inline, then stops
+- sidecar
+  - slugifies the question into `YYYY-MM-DD-<title>.md`, capped at 48 chars
+  - refuses to overwrite an existing brief holding the same slug
+  - reports the sandbox's allowed network domains, since an unlisted host fails in bash
+  - `--check` enforces filename, section order, width, source numbering/shape, citations
+  - `--check` requires a probed line, a reconciled row, and a non-empty gaps section
 
 #### Graph
 ```
 /retardify:graph
 ```
+**a prompt built for a fresh session:** constraints written down, fan-out on your go
+- a spec states constraints, never plan steps
+- writes one file and stops; the fan-out begins only on your explicit go
+- the checkboxes belong to whatever it produces, never to the spec
 ```yaml
 ---
 name: graph
@@ -1296,15 +1547,27 @@ metadata:
   artifact: .construct/retardify/graph/
 ---
 ```
-**a prompt built for a fresh session:** constraints written down, fan-out on your go
-- a spec states constraints, never plan steps
-- writes one file and stops; the fan-out begins only on your explicit go
-- the checkboxes belong to whatever it produces, never to the spec
+**what it does:**
+- skill
+  - reads the repo and asks the user once, in one round, for what the repo cannot answer
+  - writes a seven-field spec: goal, context, done when, fan out, rules, verify, output
+  - names 2-5 fan-out agents plus one unnumbered return shape they all share
+  - validates with `graph.sh --check`, shows the saved spec, then stops before any fan-out
+- sidecar
+  - slugifies the goal into `YYYY-MM-DD-operation-<title>.md`, capped at 36 chars
+  - refuses to overwrite an existing spec holding the same slug
+  - `--check` enforces the banner, seven-field order, column-15 alignment, 100-char width
+  - `--check` bans checkboxes in the spec body and enforces 2-5 numbered fan-out agents
+  - `--check` verifies the OUTPUT path's basename matches the spec's own filename
 
 #### Plan
 ```
 /retardify:plan
 ```
+**big work gets staged before it starts:** one PR per stage, ordered once instead of mid-build
+- written before complex or architectural work, never after it
+- the checklist is the deliverable, and readiness is what gates it
+- a stage nobody can run is a stage that does not start
 ```yaml
 ---
 name: plan
@@ -1319,15 +1582,28 @@ metadata:
   artifact: .construct/retardify/plan/
 ---
 ```
-**big work gets staged before it starts:** one PR per stage, ordered once instead of mid-build
-- written before complex or architectural work, never after it
-- the checklist is the deliverable, and readiness is what gates it
-- a stage nobody can run is a stage that does not start
+**what it does:**
+- skill
+  - reads the repo, or a `<path>` spec/brief, for motivation, obstacle, constraint, guardrails
+  - asks one lettered round of questions, then releases the user as QUESTIONS or UNATTENDED
+  - writes context, goal, solution, risks, checklist, readiness, notes, one PR per stage
+  - sorts risks by blast radius and irreversibility, never by likelihood
+  - validates with `plan.sh --check`, shows the saved plan, then stops before stage 1
+- sidecar
+  - derives the goal from a path's `GOAL:` line (a graph spec) or its first `# ` heading (a brief)
+  - stops on `confirm: required` for any path input, since goal and filename were derived
+  - surfaces open checkboxes from other plans in the artifact dir as blocker candidates
+  - `--check` verifies risk labels, stage numbering, `~~SKIPPED: <why>~~` syntax, note refs
+  - `--check` verifies readiness rows sum to stage item counts and quote real permission rules
 
 #### Guide
 ```
 /retardify:guide
 ```
+**the messy build rewritten as the ideal path:** every dead end stays back in the plan
+- distills a closed plan into the build as it goes when every step lands clean
+- imperative, sorted, maximally concise; the dead ends stay in the plan
+- assumes the likeliest case at every fork, so edge cases never make the page
 ```yaml
 ---
 name: guide
@@ -1342,15 +1618,27 @@ metadata:
   artifact: .construct/retardify/guide/
 ---
 ```
-**the messy build rewritten as the ideal path:** every dead end stays back in the plan
-- distills a closed plan into the build as it goes when every step lands clean
-- imperative, sorted, maximally concise; the dead ends stay in the plan
-- assumes the likeliest case at every fork, so edge cases never make the page
+**what it does:**
+- skill
+  - reads the whole completed plan, checklist and notes, and extracts the path that won
+  - drops every probe, reversal, workaround, and repair the real build needed
+  - writes requires, steps, done in imperative, present-tense, single-clause lines
+  - validates with `guide.sh --check`, shows the saved guide inline, then stops
+- sidecar
+  - refuses to run while the source plan holds an open checkbox, reporting `completed: no`
+  - names the target from the plan's own slug, stripped of date, `operation-` and `-DONE`
+  - flags a collision instead of overwriting an existing guide for that plan
+  - `--check` bans hedge words anywhere in the guide: should, might, workaround, rollback, retry
+  - `--check` enforces section order, climbing stage/directive numbers, kebab-case filename
 
 #### Quiz
 ```
 /retardify:quiz
 ```
+**an ungraded quiz on your own shipped code:** you still learn what the agent wrote
+- catches a verdict line leaking onto an ungraded quiz before anyone has taken it
+- catches a graded question missing its score line, or marking the wrong number of picks
+- catches a file list sorted alphabetically instead of build order, the whole point of the study map
 ```yaml
 ---
 name: quiz
@@ -1365,15 +1653,28 @@ metadata:
   artifact: .construct/retardify/quiz/
 ---
 ```
-**an ungraded quiz on your own shipped code:** you still learn what the agent wrote
-- a study map in build order, then 20 questions written against the code
-- generation ships NO answers, and a second run grades what you ticked
-- every miss names the transferable concept underneath it, not just the letter
+**what it does:**
+- skill
+  - reads every file the feature touches, follows the imports, and orders them build-first
+  - writes the study half (Files/Model/Pattern) then 20 unmarked four-option questions, then stops
+  - on a later run, grades ticked picks and adds a mechanism plus a transferable concept per miss
+  - runs `quiz.sh --check` on the saved file and fixes every ERROR before showing it inline
+  - never refactors the feature it just quizzed, even mid-review
+- sidecar
+  - with no flags, resolves the day+slug filename and reports state: absent, ungraded, or graded
+  - refuses to touch a graded quiz and tells the caller to jump straight to grading an ungraded one
+  - `--check` validates header, section order, and the checkbox shape of the file list
+  - flags a leaked verdict on an ungraded question, or a wrong verdict/pick count on a graded one
+  - flags alphabetical file order, lines over 100 chars, unclosed fences, and leftover placeholder text
 
 #### Review
 ```
 /retardify:review
 ```
+**documented claims measured against reality:** a scorecard that never flatters you
+- catches a README or AGENTS.md claim the git log or repo state actually contradicts
+- catches a strong infra grade being used to paper over weak app or test coverage
+- catches a scorecard softened after the fact instead of appending a fresh, undoctored entry
 ```yaml
 ---
 name: review
@@ -1389,15 +1690,28 @@ metadata:
   artifact: .construct/retardify/review/
 ---
 ```
-**documented claims measured against reality:** a scorecard that never flatters you
-- strictly read-only, and it never flatters the user
-- punishes hand-wavy conventions and unearned "green ci" claims
-- produces a graded scorecard saved to file, not a chat reply
+**what it does:**
+- skill
+  - reads README.md, and AGENTS.md if present, to gather the claims worth grading
+  - weighs the telemetry across five dimensions: effort/output, claim/reality, tests, risk, traps
+  - writes a scorecard with three A-F lanes and one unapologetic verdict sentence
+  - appends the scorecard to the day's file, creating it first if this is the day's first run
+  - never edits an earlier scorecard, since grade drift across days is the actual finding
+- sidecar
+  - with no flags, gathers commit-type distribution, LOC balance, test-file and TODO counts
+  - checks tracked files for `.env`/`secret`/`.pem` names and flags any hit as risk
+  - `--check` confirms the filename reads `YYYY-MM-DD.md` and the header matches its own path
+  - enforces the four subsections and all three graded lanes appear, in order, on every entry
+  - flags an unfalsifiable trap with no file or number, and a verdict spanning more than one sentence
 
 #### Todo
 ```
 /retardify:todo
 ```
+**where to start when you cannot tell:** everything ranked urgent against important
+- catches a broken `@mirror`, markdown link, or `@see` path before it misleads the next reader
+- catches a thread that closed on an unanswered ask with no log entry recording it anywhere
+- catches a Q1 item that has survived three straight reports, proving it isn't urgent in practice
 ```yaml
 ---
 name: todo
@@ -1413,10 +1727,19 @@ metadata:
   artifact: .construct/retardify/todo/
 ---
 ```
-**where to start when you cannot tell:** everything ranked urgent against important
-- four streams: reference checks, doc-vs-reality, recent agent logs, recent session threads
-- categorizes every opportunity on an urgent/important matrix
-- broken references are one signal among many, never the point
+**what it does:**
+- skill
+  - reconciles README.md, AGENTS.md, and each plugin skill's doc against what the code actually does
+  - reads the last 5 agent logs for pain points, unfinished tasks, and recurring bugs
+  - reads the thread digest, opening a transcript directly only when a closed prompt looks unresolved
+  - sorts every finding onto the urgent/important matrix across all four quadrants
+  - appends the report to the day's file, restating any recurring opportunity rather than editing it
+- sidecar
+  - greps mirror pointers, markdown links, and `@see` paths, flagging any target that doesn't exist
+  - logs standing `TODO`/`FIXME`/`HACK` markers as leads rather than as broken references
+  - digests the newest sessions into opened/closed prompt blocks, filtering out injected noise
+  - reports `threads_cut` when the character budget dropped the oldest thread from the digest
+  - `--check` enforces the four subsections, quadrant order, and a `carried N reports` note
 
 ### /maintainer
 > the four tools that grade this repo rather than yours; they live in `.claude/skills/`, ship in no
@@ -1434,7 +1757,7 @@ name: validate-skills
 license: MIT
 compatibility: requires bash, jq, git
 description: the shape every skill pair must hold: the doc, its sidecar, its frontmatter (saves report to .construct/)
-argument-hint: "[--help] [--strict] [--keep] <path> [--test]"
+argument-hint: "[--help] [--quick] [--strict] [--keep] <path> [--test]"
 when_to_use: "Authoring or editing any SKILL.md or its sidecar, adding a skill to a plugin, or deciding whether a skill is a trigger or a spec. Also when a listing looks truncated or a skill fails to load."
 metadata:
   artifact: .construct/maintainer/validate-skills/
@@ -1460,7 +1783,7 @@ effort: high
 license: MIT
 compatibility: requires bash, git, perl
 description: runs every skill's sidecar at a shallow depth and proves each still answers (saves report to .construct/)
-argument-hint: "[--help] [--strict] <path> [--test]"
+argument-hint: "[--help] [--quick] [--strict] <path> [--test]"
 when_to_use: "Before a release, after a rename or a moved shared file, or when a skill fails to load and you need to know which ones still run. Also when adding a skill, to confirm it answers the --test contract."
 disable-model-invocation: true
 metadata:
@@ -1486,7 +1809,7 @@ effort: high
 license: MIT
 compatibility: requires bash, jq, git
 description: the readme is the source of truth for every skill's frontmatter (saves report to .construct/)
-argument-hint: "[--help] [--check] <text> [--test]"
+argument-hint: "[--help] [--check] [--quick] [--strict] <text> [--test]"
 when_to_use: "Editing any skill's frontmatter or preamble, an output style copy, or wiring a new section into the export map. Also after ANY README.md edit, since each plugin root carries a byte-identical copy, or when a managed region and its readme section disagree."
 disable-model-invocation: true
 metadata:
@@ -1509,7 +1832,7 @@ name: push-release
 license: MIT
 compatibility: requires bash, jq, git, curl
 description: bumps the four version files, then hands over the tag and the promotion (saves report to .construct/)
-argument-hint: "[--help] [--check] [--patch] [--minor] [--major] [--test]"
+argument-hint: "[--help] [--check] [--quick] [--strict] [--patch] [--minor] [--major] [--test]"
 when_to_use: "Cutting a release, promoting main to production, or answering what version this repo ships. Also when ci fails on the version files disagreeing."
 metadata:
   artifact: .construct/maintainer/push-release/
@@ -1899,7 +2222,7 @@ keep-coding-instructions: true
 <banned>
 
 - [B1] all markup NOT a list, table, fence, or `backtick`: no bold, italics, or emojis
-- [B2] all lines NOT beginning with a LABEL:, list item, table row, fenced, or blank
+- [B2] all lines NOT beginning with a NUMBERED LABEL:, list item, table row, fenced, or blank
 - [B3] all prose NOT coordinates, telemetry, runnable commands, or actionable directives
 - [B4] continuation lines that finish ideas started on the line above it
 - [B5] aphorisms, inversions and clever contrasts standing in for a plain statement
@@ -1925,7 +2248,7 @@ keep-coding-instructions: true
 - [F4] comparisons: table
 - [F5] commands: fenced
 - [F6] identifiers: ticks
-- [F7] headings: LABELS (free-form)
+- [F7] headings: 1 — NUMBERED LABELS (free-form)
 
 </formatting>
 
@@ -1935,23 +2258,23 @@ keep-coding-instructions: true
 <schema>
 
 ```
-LABEL: Description, one complete idea.
-LABEL: Description, one complete idea.
-LABEL: Description, one complete idea.
+1 — LABEL: Description, one complete idea.
+2 — LABEL: Description, one complete idea.
+3 — LABEL: Description, one complete idea.
 
-LABEL:
+4 — LABEL:
 - Description, one complete idea.
 - Description, one complete idea.
 - Description, one complete idea.
 
-LABEL:
+5 — LABEL:
 | Field name | Field name |
 |------------|------------|
 | Value      | Value      |
 | Value      | Value      |
 | Value      | Value      |
 
-SIGNAL: `Code & Coordinates` OR `Copy/Paste Commands`
+6 — SIGNAL: `Code & Coordinates` OR `Copy/Paste Commands`
 ```
 
 </schema>
@@ -1968,19 +2291,19 @@ SIGNAL: `Code & Coordinates` OR `Copy/Paste Commands`
 ```
 > interesting... let me lay it out plainly...
 
-FUNCTION:
+1 — FUNCTION:
 - A checkpoint that sits between a user's request and your main code.
 - Checks, cleans, or blocks incoming traffic before it hits your app.
 
-MECHANICS:
+2 — MECHANICS:
 - Runs step by step whenever someone visits a route.
 - Either passes the request to the next step or stops it if there is a problem.
 
-PURPOSE:
+3 — PURPOSE:
 - Keeps shared jobs like logins and safety checks in one single place.
 - Stops you from copying the same check code into every single route file.
 
-SIGNAL: Look inside src/middleware/ to see your project checkpoints.
+4 — SIGNAL: Look inside src/middleware/ to see your project checkpoints.
 ```
 
 </example>
@@ -1991,19 +2314,19 @@ SIGNAL: Look inside src/middleware/ to see your project checkpoints.
 ```
 > it's only 88 lines, sir... read it again (hint: line 14).. prepping brief now...
 
-FUNCTION:
+1 — FUNCTION:
 - Caps how many requests one client can make inside a time window.
 - Rejects the overflow with a 429 instead of passing it to your routes.
 
-MECHANICS:
+2 — MECHANICS:
 - rate-limiter.ts:12 keys each caller by IP, then counts hits in Redis.
 - rate-limiter.ts:31 expires that key after the window, so counts reset.
 - rate-limiter.ts:44 returns 429 with a Retry-After header once over the cap.
 
-LIMITS:
+3 — LIMITS:
 - The cap is 100 requests per 60s, set at rate-limiter.ts:8.
 
-SIGNAL: Change the window at rate-limiter.ts:8, never per route.
+4 — SIGNAL: Change the window at rate-limiter.ts:8, never per route.
 ```
 
 </example>
@@ -2014,23 +2337,23 @@ SIGNAL: Change the window at rate-limiter.ts:8, never per route.
 ```
 > looks mostly normal... wait, i see something...
 
-ASSESSMENT:
+1 — ASSESSMENT:
 - Content hashing is correct and the output names are stable.
 - Invalidation reruns on every build, so unchanged assets still churn.
 
-FINDINGS:
+2 — FINDINGS:
 | line | issue | impact |
 |---|---|---|
 | cache-buster.ts:22 | hashes the file after a second read | doubles IO on large bundles |
 | cache-buster.ts:57 | manifest write is not atomic | a crash leaves a partial map |
 | cache-buster.ts:81 | no cap on manifest size | memory grows with asset count |
 
-FINAL SOLUTION:
-1. Read once into a buffer, then hash the buffer.
-2. Write the manifest to a temp path, then rename over it.
-3. Stream the manifest instead of holding it whole.
+3 — FINAL SOLUTION:
+- Read once into a buffer, then hash the buffer.
+- Write the manifest to a temp path, then rename over it.
+- Stream the manifest instead of holding it whole.
 
-SIGNAL: Start at cache-buster.ts:57, since a partial manifest breaks the build.
+4 — SIGNAL: Start at cache-buster.ts:57, since a partial manifest breaks the build.
 ```
 
 </example>
@@ -2041,8 +2364,9 @@ SIGNAL: Start at cache-buster.ts:57, since a partial manifest breaks the build.
 ```
 > sorry buddy, gotta lay it on you honestly...
 
-ANSWER: Cookies, with httpOnly and SameSite set.
+1 — ANSWER: Cookies, with httpOnly and SameSite set.
 
+2 — COMPARISON:
 | factor | cookies | local storage |
 |---|---|---|
 | XSS exposure | unreadable to JS when httpOnly | any script on the page reads it |
@@ -2051,9 +2375,9 @@ ANSWER: Cookies, with httpOnly and SameSite set.
 | Size cap | about 4KB | about 5MB |
 | Expiry | the server sets it | you write the logic yourself |
 
-TRADEOFF: Local storage removes the CSRF surface by making any XSS fatal.
+3 — TRADEOFF: Local storage removes the CSRF surface by making any XSS fatal.
 
-SIGNAL: Set httpOnly, Secure and SameSite=Lax, then the CSRF gap closes.
+4 — SIGNAL: Set httpOnly, Secure and SameSite=Lax, then the CSRF gap closes.
 ```
 
 </example>
@@ -2062,16 +2386,16 @@ SIGNAL: Set httpOnly, Secure and SameSite=Lax, then the CSRF gap closes.
 > input: "is UPPER casing in `.env` the generally accepted convention, why/why not?"
 
 ```
-ANSWER: Yes, UPPER_SNAKE_CASE is the convention.
+1 — ANSWER: Yes, UPPER_SNAKE_CASE is the convention.
 
-REASON:
+2 — REASON:
 - POSIX reserves lowercase names for shell-local variables.
 - Uppercase marks a name as exported into the environment.
 - Every loader in wide use reads both, so this is convention, not syntax.
 
-UNVERIFIED: No .env is readable from this sandbox, so your file is unchecked.
+3 — UNVERIFIED: No .env is readable from this sandbox, so your file is unchecked.
 
-SIGNAL: Run grep -c '^[a-z]' .env to count the names that break it.
+4 — SIGNAL: Run grep -c '^[a-z]' .env to count the names that break it.
 ```
 
 </example>
@@ -2080,16 +2404,16 @@ SIGNAL: Run grep -c '^[a-z]' .env to count the names that break it.
 > input: "would my `native wrapped webflow components` implementation from `other-project` work here?"
 
 ```
-PREMISE: other-project sits outside this directory, so its code is unreadable here.
+1 — PREMISE: other-project sits outside this directory, so its code is unreadable here.
 
-UNVERIFIED: The answer assumes a standard Webflow export inside a wrapper component.
+2 — UNVERIFIED: The answer assumes a standard Webflow export inside a wrapper component.
 
-CONDITIONS:
+3 — CONDITIONS:
 - Works if this repo renders client side and can load the Webflow CSS bundle.
 - Breaks if this repo renders server side, since the wrapper touches document on import.
 - Breaks if class names collide, since Webflow ships unscoped global CSS.
 
-SIGNAL: Copy one component onto a branch here, run the build, then we measure it.
+4 — SIGNAL: Copy one component onto a branch here, run the build, then we measure it.
 ```
 
 </example>
@@ -2100,16 +2424,16 @@ SIGNAL: Copy one component onto a branch here, run the build, then we measure it
 ```
 > @dozer here... champ, we don't have much time and gotta keep things moving so listen up...
 
-PLAINLY:
+1 — PLAINLY:
 - Your browser refuses to let one website read another website's data.
 - The block comes from the browser, not from your code and not from the server.
 
-MECHANICS:
+2 — MECHANICS:
 - Your page at site-a.com asks site-b.com for some data.
 - The browser asks site-b.com first, may site-a.com read this.
 - site-b.com answers with a header, and a missing header means no.
 
-SIGNAL: Add site-a.com to the Access-Control-Allow-Origin header on site-b.com.
+3 — SIGNAL: Add site-a.com to the Access-Control-Allow-Origin header on site-b.com.
 ```
 
 </example>
@@ -2161,7 +2485,7 @@ Correctness beats cleverness here, so I'd leave most of it alone.
 > input: "you recommend `cookies` but my instincts say `local storage`, what are the tradeoffs?"
 
 ```
-DISPATCH: Migrate all session handling to cookies immediately.
+1 — DISPATCH: Migrate all session handling to cookies immediately.
 
 Local storage is not a session store, it is a scratchpad. No security without
 httpOnly. The cookie is the session.
@@ -2174,7 +2498,7 @@ CSRF surface only exists for cookies whereas the XSS surface only really bites
 local storage, so there is a real tradeoff either way depending on your threat
 model and how much you trust every script you load.
 
-ANSWER: Cookies.
+2 — ANSWER: Cookies.
 ```
 
 </example>
@@ -2237,8 +2561,7 @@ description: compressed operator brief, injected by every skill so a subagent ho
 ```
 
 <brief>
-
-GROUNDING:
+#### Grounding
 - [G1] read a file this turn before describing it
 - [G2] run a thing before describing its output
 - [G3] diff against `HEAD` before claiming committed state
@@ -2248,29 +2571,29 @@ GROUNDING:
 - [G7] label anything unprobeable here `unverified`
 - [G8] say so in the first line when the premise is wrong
 
-CONSTRAINTS:
+#### Constraints
 - [C1] one clause per line; shorten a long clause, never wrap it
 - [C2] roughly 100 characters per line
 - [C4] yes/no: 1 line, [C5] what/how: 10, [C6] why: 20, [C7] review: 30
 - [C8] reply ceiling: 30 lines
 - [C10] exempt: code, terminal output, quoted content, tables
 
-BANNED:
-- [B1] no bold, italics or emoji; a LABEL: carries the emphasis
-- [B2] every line is a LABEL:, a list item, a table row, fenced, or blank
+#### Banned
+- [B1] no bold, italics or emoji; a NUMBERED LABEL: carries the emphasis
+- [B2] every line is a NUMBERED LABEL:, a list item, a table row, fenced, or blank
 - [B3] every prose line is a coordinate, telemetry, a command, or an actionable directive
 - [B6] no aphorism or inversion standing in for a plain statement
 
-FORMATTING:
+#### Formatting
 - [F1] order: answer, evidence, SIGNAL
 - [F2] facts bulleted, [F3] systems numbered, [F4] comparisons tabled
-- [F5] commands fenced, [F6] identifiers ticked, [F7] headings are free-form LABELS
+- [F5] commands fenced, [F6] identifiers ticked, [F7] headings are free-form NUMBERED LABELS
 
-SCHEMA:
+#### Schema
 ```
-LABEL: Description, one complete idea.
+1 — LABEL: Description, one complete idea.
 
-LABEL:
+2 — LABEL:
 - Description, one complete idea.
 - Description, one complete idea.
 ```

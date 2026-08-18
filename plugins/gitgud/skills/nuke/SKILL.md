@@ -8,10 +8,6 @@ description: price what a hard reset would take, take the backup that makes it s
 argument-hint: "[--help] [--test]"
 disable-model-invocation: true
 ---
-**start over, knowingly:** the cost is counted and backed up before the reset
-- reports every commit, file and branch the reset would take
-- takes the backup itself, which is what makes the reset survivable
-- never resets, cleans or deletes; each of those is yours to run
 
 # Instructions
 

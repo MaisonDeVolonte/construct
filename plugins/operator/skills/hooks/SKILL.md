@@ -11,10 +11,6 @@ disallowed-tools: WebFetch, WebSearch
 metadata:
   artifact: .construct/operator/hooks/
 ---
-**provable hooks:** ensure every hook this machine registers is one the harness will actually load
-- answers one question: is a hook block loadable, resolvable and proven to have run
-- one matcher of the wrong type makes the harness skip that whole file, every event inside it
-- an interactive session dialogs that; `claude -p` drops the file and says nothing at all
 
 # Instructions
 

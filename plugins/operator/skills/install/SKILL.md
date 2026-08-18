@@ -11,10 +11,6 @@ disallowed-tools: WebFetch, WebSearch
 metadata:
   artifact: .construct/operator/install/
 ---
-**one inventory, five layers:** answers what is installed, where it sits, and which copy a session loads
-- reads the registry and the disk rather than a session, so a broken install still reports
-- grades the collision a name can lose: an enabled install outranks a skills-dir copy silently
-- writes a dated report naming every path, version and orphan, with home paths masked
 
 # Instructions
 

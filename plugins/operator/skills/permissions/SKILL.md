@@ -11,10 +11,6 @@ disallowed-tools: Edit, Write
 metadata:
   artifact: .construct/operator/permissions/
 ---
-**provable deny rules:** ensure every command in your corpus is tested against your actual merged rules
-- answers one question: does the gate refuse what the corpus says it must refuse
-- a config can read perfectly and still have a dead hook, which only a replay catches
-- audits the merged rules for drift, dead entries and wildcards that auto-approve
 
 # Instructions
 

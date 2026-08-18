@@ -10,10 +10,6 @@ disable-model-invocation: true
 metadata:
   artifact: .construct/retardify/research/
 ---
-**what the docs say, measured against what this repo does:** one brief instead of twelve tabs
-- every claim is fetched this run and cited; a claim from training never lands
-- the repo is probed first, so the answer is reconciled rather than recited
-- rounds continue while a round still finds a source the last one missed
 
 # Instructions
 

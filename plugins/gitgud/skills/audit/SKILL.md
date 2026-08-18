@@ -11,11 +11,6 @@ disallowed-tools: Edit
 metadata:
   artifact: .construct/gitgud/audit/
 ---
-**what a fresh clone would load:** drift you cannot see from inside your own tree
-- read-only: it counts and compares, and never mutates a tracked file
-- checks composition, skill pairing, manifest agreement and artifact freshness
-- prices the run against the tracked files it would walk, and asks before spending any of it
-- outputs a numbered list, each finding with the command that shows the detail
 
 # Instructions
 

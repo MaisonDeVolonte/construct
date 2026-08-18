@@ -8,10 +8,6 @@ description: merge the current default branch into a stale PR so its CI re-runs 
 argument-hint: "[--help] [--watch] [--test]"
 disable-model-invocation: true
 ---
-**stale PRs catch up to the trunk:** merge in what moved and CI runs again
-- merges the current default branch into the stale branch PR
-- typically after `/gitgud:deliver` leaves a PR computed against old trunk
-- `--watch` follows the run instead of returning immediately
 
 # Instructions
 

@@ -11,10 +11,6 @@ disallowed-tools: Edit, Write
 metadata:
   artifact: .construct/operator/scripts/
 ---
-**test agent sub-commands:** against your sandbox's actual merged settings
-- a permission rule judges `bash nuke.sh` but not the commands inside it
-- tests each internal command your agents are allowed to run
-- reports allowed, denied, asked or no-match, one line each
 
 # Instructions
 
