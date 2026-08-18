@@ -5,11 +5,10 @@ effort: max
 license: MIT
 compatibility: requires bash, jq, git
 description: prove every hook loads, resolves and fires, before a silent scope drop hides one (saves report to .construct/)
-argument-hint: "[--help] [--quick] [--strict] [--keep] [<file>...]"
+argument-hint: "[--help] [--quick] [--strict] [--keep] <path> [--test]"
 disable-model-invocation: true
 disallowed-tools: WebFetch, WebSearch
 metadata:
-  kind: trigger
   artifact: .construct/operator/hooks/
 ---
 **provable hooks:** ensure every hook this machine registers is one the harness will actually load
