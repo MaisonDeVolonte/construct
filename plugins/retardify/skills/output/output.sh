@@ -192,7 +192,7 @@ while IFS= read -r raw; do
       hard B1 "$LINE" "emoji; B1 allows a list, a table, a fence or a backtick and nothing else";;
   esac
   if [[ $text =~ \*\*[^*]+\*\* || $text =~ __[^_]+__ ]]; then
-    hard B1 "$LINE" "bold or italic; a LABEL: carries the emphasis instead"
+    hard B1 "$LINE" "bold or italic; a NUMBERED LABEL: carries the emphasis instead"
   fi
 
   # C10 exempts a table row and quoted content, so neither earns a width or a shape finding
@@ -215,9 +215,9 @@ fi
 
   # b2's own definition: anything that is none of the allowed shapes is a wrapped prose line
   if [[ ! $text =~ ^([-*+]|[0-9]+\.)[[:space:]] && ! $text =~ ^#{1,6}[[:space:]] \
-     && ! $text =~ ^[A-Z][A-Z0-9\ /_-]*: ]]; then
+     && ! $text =~ ^[0-9]+[[:space:]]—[[:space:]][A-Z][A-Z0-9\ /_-]*: ]]; then
     WRAPPED=$((WRAPPED + 1))
-    soft B2 "$LINE" "prose line; every line is a LABEL:, a list item, a table row, or fenced"
+    soft B2 "$LINE" "prose line; every line is a NUMBERED LABEL:, a list item, a table row, or fenced"
   fi
 done <<< "$BODY"
 
@@ -250,8 +250,8 @@ fi
 # F1 orders a reply as answer then evidence then actions; the last line is where actions land
 # a fenced block closing the reply already IS the action, which is why it satisfies this
 if [ "$COUNTED" -ge "$SIGNAL_FLOOR" ] && [ "$LAST_KIND" != fence ] \
-   && [[ ! $LAST_TEXT =~ ^SIGNAL: ]]; then
-  hard F1 0 "the reply never lands on an action; close on a SIGNAL: line or a pasteable block"
+   && [[ ! $LAST_TEXT =~ ^[0-9]+[[:space:]]—[[:space:]]SIGNAL: ]]; then
+  hard F1 0 "the reply never lands on an action; close on a NUMBERED SIGNAL: line or a pasteable block"
 fi
 
 if [ "$HARD" -eq 0 ] && [ "$SOFT" -eq 0 ]; then exit 0; fi
