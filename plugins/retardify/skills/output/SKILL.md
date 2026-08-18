@@ -5,10 +5,8 @@ effort: high
 license: MIT
 compatibility: requires bash, jq, git
 description: output style linter run by the stop hook, on the last reply, or via <path> argument
-argument-hint: "[--help] [<path>|-]"
+argument-hint: "[--help] <path> [--test]"
 disable-model-invocation: true
-metadata:
-  kind: trigger
 ---
 **every reply is linted:** against the output style rules to keep conversations consistent
 - a plain run grades the last reply, read from this session's own transcript

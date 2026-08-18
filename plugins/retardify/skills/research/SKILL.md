@@ -5,10 +5,9 @@ effort: max
 license: MIT
 compatibility: requires bash, git
 description: research a question on the web, reconcile it against this repo, then validate it (saves brief to .construct/)
-argument-hint: "[--help] <question>"
+argument-hint: "[--help] <text> [--test]"
 disable-model-invocation: true
 metadata:
-  kind: trigger
   artifact: .construct/retardify/research/
 ---
 **what the docs say, measured against what this repo does:** one brief instead of twelve tabs

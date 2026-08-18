@@ -3,11 +3,10 @@ name: file
 license: MIT
 compatibility: requires bash, git
 description: file-shape linter run by PostToolUse or via <path> argument (saves audits to .construct/)
-argument-hint: "[--help] <path>"
+argument-hint: "[--help] <path> [--test]"
 when_to_use: "editing files, PostToolUse warnings, or when asked to review files"
 paths: "**/*.ts, **/*.tsx, **/*.js, **/*.jsx, **/*.mjs, **/*.cjs, **/*.sh, **/*.py, **/*.rb, **/*.go, **/*.rs"
 metadata:
-  kind: spec
   artifact: .construct/retardify/file/
 ---
 

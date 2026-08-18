@@ -5,10 +5,9 @@ effort: max
 license: MIT
 compatibility: requires bash, curl, git
 description: turn work into a staged plan with per-stage readiness tables, then validate it (saves plan to .construct/)
-argument-hint: "[--help] [--confirm] <goal|path to a spec or brief>"
+argument-hint: "[--help] [--confirm] <text> [--test]"
 disable-model-invocation: true
 metadata:
-  kind: trigger
   artifact: .construct/retardify/plan/
 ---
 **big work gets staged before it starts:** one PR per stage, ordered once instead of mid-build

@@ -5,10 +5,9 @@ effort: max
 license: MIT
 compatibility: requires bash, git
 description: turn a shipped feature into a study map and an ungraded 20-question quiz (saves quiz to .construct/)
-argument-hint: "[--help] <feature>"
+argument-hint: "[--help] <text> [--test]"
 disable-model-invocation: true
 metadata:
-  kind: trigger
   artifact: .construct/retardify/quiz/
 ---
 **an ungraded quiz on your own shipped code:** you still learn what the agent wrote
