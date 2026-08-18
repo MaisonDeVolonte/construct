@@ -70,23 +70,26 @@ is_absorbed() {
   if [ "$merged_tree" = "$trunk_tree" ]; then echo yes; else echo no; fi
 }
 
-# incoming policy paths, mirroring block-protected-paths.sh's PROTECTED list; it over-approximates the write
-# deny on purpose, since a needless handover costs a paste and a missed one costs a half-synced tree
-protected_incoming() {
-  local range="$1" boundary protected
+# mirrors block-protected-paths.sh's PROTECTED list, over-approximating on purpose
+# reads a newline-separated path list on stdin, so incoming or local paths both work
+protected_paths() {
+  local boundary protected
   boundary='([/[:space:]"'"'"']|$)'
   protected="^\.claude$boundary|^\.git$boundary|^\.husky$boundary"
   protected="$protected|^plugins/operator/settings$boundary|^plugins/operator/hooks$boundary"
   protected="$protected|^plugins/operator/skills/(credentials|permissions|scripts|settings)$boundary"
-  git diff --name-only "$range" 2>/dev/null | grep -E "$protected" || true
+  grep -E "$protected" || true
+}
+
+# incoming policy paths specifically: whatever a range would write, filtered through the same list
+protected_incoming() {
+  git diff --name-only "$1" 2>/dev/null | protected_paths
 }
 
 # ==============
 # OUTPUT
 # ==============
-# a sidecar using these prints the same two blocks in the same order, so its trigger doc reads one
-# contract: telemetry is what was measured, handover is what the user runs. `rerun.sh` opts out and
-# prints one bespoke block, which is why this says "a sidecar" rather than "every sidecar"
+# a sidecar using these prints the same two blocks in the same order; `rerun.sh` opts out
 # the name is the INVOCATION, `gitgud:audit`, so a block header and a `/` menu entry never disagree
 telemetry_open() {
   printf '\n=== /%s telemetry ===\n' "$1"
