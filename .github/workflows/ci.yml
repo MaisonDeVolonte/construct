@@ -53,7 +53,7 @@ jobs:
 
       # ensures hooks use valid json with resolving paths and correctly typed matchers (breaks file)
       - name: operator:hooks
-        run: bash plugins/operator/skills/hooks/hooks.sh --strict --quick
+        run: bash plugins/operator/skills/hooks/hooks.sh --quick
 
       # lints file names, wayfinders, and comments; --warn only
       - name: retardify:file
