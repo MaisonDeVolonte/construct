@@ -12,6 +12,7 @@
 # - #2: any interpreter beside a policy path counts as a writer; cat, grep and bash stay free
 # - #3: a heredoc splits interpreter from program by line, so it is judged as a whole command
 # - #4: a runtime-resolved target beside a policy path denies; no static read can follow it
+# - #5: a delivery tool sends a path to github without writing it here, so it denies too
 # @see plugins/operator/shared/commands.sh, plugins/operator/hooks/hooks.json, plugins/operator/shared/corpus.tsv, plugins/operator/skills/permissions/permissions.sh
 
 command -v jq >/dev/null 2>&1 || { echo "block-protected-paths: jq missing, refusing to run unguarded" >&2; exit 2; }
@@ -75,7 +76,7 @@ join_alternation() {
 }
 ALL_PROTECTED_PATHS=$(join_alternation "${DEFAULT_PROTECTED_PATHS[@]}")
 
-# ── CONFIGURED ─── `github.guarded_paths`, which only ever adds to the floor above ─────────────
+# ── CONFIGURED ─── `policy.protected_paths`, which only ever adds to the floor above ─────────────
 # missing, unreadable, unparseable or empty all leave PROTECTED exactly as compiled, so deleting
 # the config protects nothing extra rather than protecting nothing at all
 # entries are globs rather than regex: `**` spans directories, `*` stops at one segment
@@ -88,7 +89,7 @@ if [ -r "$CONFIG_FILE" ] && command -v jq >/dev/null 2>&1; then
   while IFS= read -r glob; do
     [ -n "$glob" ] || continue
     ALL_PROTECTED_PATHS="$ALL_PROTECTED_PATHS|$(glob_to_regex "$glob")$B"
-  done < <(jq -r '.github.guarded_paths[]? // empty' "$CONFIG_FILE" 2>/dev/null || true)
+  done < <(jq -r '.policy.protected_paths[]? // empty' "$CONFIG_FILE" 2>/dev/null || true)
 fi
 
 # `.claude` is matched whole above, which swept in this repo's own maintainer skills; blanking the
@@ -98,6 +99,9 @@ unpolicy() {
 }
 WRITERS='(^|[[:space:]])(cp|mv|rm|tee|ln|install|rsync|truncate|shred|chmod|chown|dd|touch)([[:space:]]|$)'
 INTERPRETER='(^|[[:space:]])(sed|perl|awk|python[0-9]?|ruby|node|deno|bun)([[:space:]]|$)'
+
+# a delivery tool writes to github rather than to this disk, so no rule above ever sees it (see #5)
+PUBLISHER='(^|[[:space:]]|/)(deliver\.sh[[:space:]]+(bucket|update)|gh)([[:space:]]|$)'
 
 # a heredoc's interpreter and program never meet in one segment, so judge the whole command (see #3)
 if printf '%s' "$CMD" | grep -q '<<' \
@@ -109,6 +113,10 @@ fi
 # a compound command splits first, so `cat .git/config > /tmp/x` is not misread as writing to .git
 while IFS= read -r segment; do
   if ! unpolicy "$segment" | grep -qE "$ALL_PROTECTED_PATHS"; then continue; fi
+  # a protected path leaves this machine only when the user sends it themselves
+  if printf '%s' "$segment" | grep -qE "$PUBLISHER"; then
+    deny "blocked by block-protected-paths: a deny-listed path cannot be delivered for you. run this bucket yourself."
+  fi
   # any interpreter beside a guarded path counts as a writer (see #2)
   if printf '%s' "$segment" | grep -qE "$WRITERS" || printf '%s' "$segment" | grep -qE "$INTERPRETER"; then
     deny "blocked by block-protected-paths: writes into a deny-listed path. run it yourself if you really mean to."
