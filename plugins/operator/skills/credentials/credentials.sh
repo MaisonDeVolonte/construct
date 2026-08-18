@@ -19,6 +19,10 @@ set -euo pipefail
 # own '## Help' section owns the output, which is why this prints a marker rather than a usage text
 case " $* " in *" --help "*|*" -h "*) echo "help: requested"; exit 0;; esac
 
+# the smoke case proves this file parses and its guards return; /test-skills reads the sources,
+# the @see paths and the tool guards statically, so nothing here runs a step of the skill
+case " $* " in *" --test "*) echo "test: ok"; exit 0;; esac
+
 # `--check` selects the validator half; anything else is the trigger, so the doc's own
 # bang-injected call keeps working untouched
 if [ "${1:-}" = "--check" ]; then
@@ -32,6 +36,15 @@ else
   # `--strict` turns the report into a gate: an exit code is the only verdict a caller can read
   STRICT_RUN=0
   case " $* " in *" --strict "*) STRICT_RUN=1;; esac
+
+  # a flag this branch does not know would otherwise run the full probe set and write a dated
+  # report under a posture nobody asked for, so an unknown argument refuses before any probe
+  for arg in "$@"; do
+    case "$arg" in
+      --quick|--strict) ;;
+      *) echo "fatal: /operator:credentials takes --quick or --strict; got '$arg'" >&2; exit 1;;
+    esac
+  done
 
   # the worst finding across every probe, since one breach anywhere is the run's verdict
   WORST=ok
