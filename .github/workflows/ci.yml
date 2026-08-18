@@ -12,9 +12,9 @@
 # - `/gitgud:ship` runs the exporter and `validate-skills --strict` against a clean tree instead
 # - `sidecars stay read-only` fails the build on an executed mutating git verb outside a handover
 # - it exists because `prune.sh` ran one for five deliveries and the sandbox half-applied each merge
-# - references are NOT gated here: `todo.sh` ranks opportunities, it never graded them
-# - a report shaped for judgement makes a poor required check, so its replacement is its own tool
-# - until that checker lands nothing gates references, and a broken `@see` reaches main unblocked
+# - `test-skills` is that reference checker, and it gates every `@see` a sidecar declares about itself
+# - it runs each sidecar's `--test` case, so a deleted-but-referenced script fails here not in a release
+# - it runs `--strict`, since all 32 sidecars carry the case and the warning count reached zero
 # - this is the required check that lets `gh pr merge --auto` engage (see plugins/gitgud/skills/deliver/SKILL.md)
 # @see README.md, plugins/gitgud/skills/deliver/SKILL.md, plugins/retardify/skills/file/SKILL.md, .claude/skills/export-readme/export-readme.sh
 
@@ -54,6 +54,11 @@ jobs:
       # every skill pair, including the apostrophe probe that used to run as its own step
       - name: skill pairs validate
         run: bash .claude/skills/validate-skills/validate-skills.sh
+
+      # the pair validator reads a sidecar; this one RUNS it, which is the only way a moved shared
+      # file or a stale `@see` is caught before someone's install dies on it
+      - name: skill sidecars smoke test
+        run: bash .claude/skills/test-skills/test-skills.sh --strict
 
       # one matcher of the wrong type discards a whole hooks file, silently under -p (#75081); ci
       # is the only gate a shipped hooks.json passes, since a user's own scope is never seen here
