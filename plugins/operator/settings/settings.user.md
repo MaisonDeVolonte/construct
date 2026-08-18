@@ -97,6 +97,7 @@
     { "path": "~/.aws",                   "mode": "deny" },
     { "path": "~/.bash_history",          "mode": "deny" },
     { "path": "~/.config/gcloud",         "mode": "deny" },
+    { "path": "~/.config/gh",             "mode": "deny" },
     { "path": "~/.gnupg",                 "mode": "deny" },
     { "path": "~/.kube",                  "mode": "deny" },
     { "path": "~/.netrc",                 "mode": "deny" },
@@ -118,7 +119,7 @@
     { "name": "npm_config_local_prefix",  "mode": "deny" },
     { "name": "npm_config_prefix",        "mode": "deny" },
 
-    { "name": "GH_TOKEN", "mode": "mask", "injectHosts": ["api.github.com", "github.com"] }
+    { "name": "GH_TOKEN_OPERATOR", "mode": "mask", "injectHosts": ["api.github.com"] }
   ]
 },
 ```
@@ -133,7 +134,7 @@
 - `~/.operator` must be chmod 700 on creation; umask gives 755
 - `IGCLI_SERP_KEY` came from probing the environment rather than any list
 - `NPM_TOKEN` is publish-only; installs are unaffected
-- `GITHUB_TOKEN` stays denied, an unrelated credential entirely
+- `GITHUB_TOKEN` stays denied, since `gh` hijacks that name and the masked one is `GH_TOKEN_OPERATOR`
 
 ## keys
 > one token per machine, named for the machine, so revoking it tells you exactly what breaks
@@ -155,7 +156,7 @@ every token inherits the same layers; the axis is the layer, never the token
 | `mask`               | the real value entering the sandbox |
 
 ### github
-`GH_TOKEN` is masked to `api.github.com` and `github.com`; `GITHUB_TOKEN` stays denied
+`GH_TOKEN_OPERATOR` is masked to `api.github.com`; `GH_TOKEN` and `GITHUB_TOKEN` stay unset
 
 | operation            | sandboxed | why                                          |
 |----------------------|-----------|----------------------------------------------|
@@ -298,8 +299,6 @@ every token inherits the same layers; the axis is the layer, never the token
 - one rule per verb, since everything under `plugins/` either executes or instructs
 - it replaced three narrower globs on 2026-08-04, which had left 19 markdown files ungated:
   the nine `@git*` triggers and the ten templates
-- a trigger doc is policy too: `git-fresh.md` carries the line telling an agent never to reset,
-  and `templates/git.md` is where the read-only contract for every sidecar is written
 - rewriting one never beats the deny floor, but it does mislead the next session
 - `AGENTS.md` and `README.md` joined on 2026-08-06: the symlink makes them one file, and it is
   the file `inject-readme.sh` injects, so an edit there rewrites what every future session believes
@@ -510,6 +509,7 @@ grouped most-destructive-first; any scope may add a deny, none may remove anothe
 "Read(~/.ssh/**)", "Write(~/.ssh/**)", "Edit(~/.ssh/**)",
 "Read(~/.aws/**)", "Write(~/.aws/**)", "Edit(~/.aws/**)",
 "Read(~/.config/gcloud/**)", "Write(~/.config/gcloud/**)", "Edit(~/.config/gcloud/**)",
+"Read(~/.config/gh/**)", "Write(~/.config/gh/**)", "Edit(~/.config/gh/**)",
 "Read(~/.kube/**)", "Write(~/.kube/**)", "Edit(~/.kube/**)",
 "Read(~/.gnupg/**)", "Write(~/.gnupg/**)", "Edit(~/.gnupg/**)",
 "Read(~/.netrc)", "Write(~/.netrc)", "Edit(~/.netrc)",

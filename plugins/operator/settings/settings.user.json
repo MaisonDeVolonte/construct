@@ -25,6 +25,7 @@
         { "path": "~/.aws",                   "mode": "deny" },
         { "path": "~/.bash_history",          "mode": "deny" },
         { "path": "~/.config/gcloud",         "mode": "deny" },
+        { "path": "~/.config/gh",             "mode": "deny" },
         { "path": "~/.gnupg",                 "mode": "deny" },
         { "path": "~/.kube",                  "mode": "deny" },
         { "path": "~/.netrc",                 "mode": "deny" },
@@ -37,6 +38,7 @@
         { "name": "ANTHROPIC_API_KEY",        "mode": "deny" },
         { "name": "AWS_ACCESS_KEY_ID",        "mode": "deny" },
         { "name": "AWS_SECRET_ACCESS_KEY",    "mode": "deny" },
+        { "name": "GH_TOKEN",                 "mode": "deny" },
         { "name": "GITHUB_TOKEN",             "mode": "deny" },
         { "name": "IGCLI_SERP_KEY",           "mode": "deny" },
         { "name": "NPM_TOKEN",                "mode": "deny" },
@@ -46,7 +48,7 @@
         { "name": "npm_config_local_prefix",  "mode": "deny" },
         { "name": "npm_config_prefix",        "mode": "deny" },
 
-        { "name": "GH_TOKEN", "mode": "mask", "injectHosts": ["api.github.com", "github.com"] }
+        { "name": "GH_TOKEN_OPERATOR", "mode": "mask", "injectHosts": ["api.github.com"] }
       ]
     },
 
@@ -234,6 +236,7 @@
       "Read(~/.ssh/**)", "Write(~/.ssh/**)", "Edit(~/.ssh/**)",
       "Read(~/.aws/**)", "Write(~/.aws/**)", "Edit(~/.aws/**)",
       "Read(~/.config/gcloud/**)", "Write(~/.config/gcloud/**)", "Edit(~/.config/gcloud/**)",
+      "Read(~/.config/gh/**)", "Write(~/.config/gh/**)", "Edit(~/.config/gh/**)",
       "Read(~/.kube/**)", "Write(~/.kube/**)", "Edit(~/.kube/**)",
       "Read(~/.gnupg/**)", "Write(~/.gnupg/**)", "Edit(~/.gnupg/**)",
       "Read(~/.netrc)", "Write(~/.netrc)", "Edit(~/.netrc)",
