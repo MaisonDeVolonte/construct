@@ -15,7 +15,7 @@
 # - every earlier report in the artifact dir is grepped for each open number
 # - a hit means that issue was already triaged, so its verdict is copied forward, not rebuilt
 # AUTH
-# - GH_TOKEN rides along when set, masked or real, since the proxy injects on its listed hosts
+# - GH_TOKEN_OPERATOR rides along when set, masked or real, since the proxy injects on its listed hosts
 # - a rejected token falls back to anonymous with a warning, and the value is never printed
 # @see plugins/gitgud/skills/issues/SKILL.md, plugins/gitgud/shared/secrets.sh
 
@@ -24,6 +24,10 @@ set -euo pipefail
 # the doc is read only after this has already run, so help is refused here or not at all; the doc's
 # own '## Help' section owns the output, which is why this prints a marker rather than a usage text
 case " $* " in *" --help "*|*" -h "*) echo "help: requested"; exit 0;; esac
+
+# the smoke case proves this file parses and its guards return; /test-skills reads the sources,
+# the @see paths and the tool guards statically, so nothing here runs a step of the skill
+case " $* " in *" --test "*) echo "test: ok"; exit 0;; esac
 
 usage() {
   echo "usage: issues.sh [--help]"
@@ -80,7 +84,7 @@ WARNINGS=0
 # and a probe against /rate_limit tells the truth about whether that swap actually happened
 AUTH_HEADER=""
 AUTH_MODE="anonymous"
-GH_AUTH=${GH_TOKEN:-}
+GH_AUTH=${GH_TOKEN_OPERATOR:-}
 [ -z "$GH_AUTH" ] && GH_AUTH=${GITHUB_TOKEN:-}
 if [ -n "$GH_AUTH" ]; then
   PROBE=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 \

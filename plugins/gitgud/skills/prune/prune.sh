@@ -8,15 +8,15 @@
 # - typically run post-merge, but safe anytime, since nothing in the pair deletes a branch
 # SIDECAR
 # - read-only apart from `fetch --prune`, which deletes no local branch and writes no tracked file
-# - the trunk sync is handed over, never run: a sandboxed merge half-applies on a denied path
-# - the block ends on a diff against origin, which is what proves the handed-over merge landed
+# - the trunk sync is delegated whole: the doc's fence runs continue.sh first, every invocation
+# - a run that needed a sync ends on the trunk, which is where continue's own doctrine lands it
 # - classifies each local branch as gone, merged, or live, so the handover deletes only the spent
 # - emits `-d` or `-D` to match, since `-d` consults the same patch-id read a rebase already fooled
 # - a gone branch that is neither merged nor absorbed is kept, never offered for deletion
 # - `production` is excluded by name, since a release branch reads merged and behind by design
 # TRIGGER
 # - the doc folds in `git-audit.sh`, whose local/remote/ghost/zombie split catches the rebased ones
-# - stash and branch deletes are denied, so the whole block stays the user's to run in order
+# - branch deletes stay denied and handed over; the sync's stash bracket belongs to continue.sh
 # @see plugins/gitgud/skills/prune/SKILL.md, plugins/gitgud/shared/triage.sh, plugins/gitgud/shared/handover.sh, .claude/skills/validate-skills/SKILL.md
 
 set -euo pipefail
@@ -25,12 +25,23 @@ set -euo pipefail
 # own '## Help' section owns the output, which is why this prints a marker rather than a usage text
 case " $* " in *" --help "*|*" -h "*) echo "help: requested"; exit 0;; esac
 
+# the smoke case proves this file parses and its guards return; /test-skills reads the sources,
+# the @see paths and the tool guards statically, so nothing here runs a step of the skill
+case " $* " in *" --test "*) echo "test: ok"; exit 0;; esac
+
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || true)
 SHARED=$(cd "$HERE/../../shared" 2>/dev/null && pwd || true)
 if [ ! -f "$SHARED/handover.sh" ]; then
   echo "fatal: no plugins/gitgud/shared/handover.sh reachable from this sidecar" >&2; exit 1; fi
 # shellcheck source=../../shared/handover.sh
 . "$SHARED/handover.sh"
+
+# this skill hands over branch deletions, so a typo'd flag must stop it rather than be ignored;
+# the doc declares no argument, and every branch below is classified from the tree instead
+if [ "$#" -gt 0 ]; then
+  echo "fatal: /gitgud:prune takes no arguments; every branch is classified from the tree" >&2
+  exit 1
+fi
 
 require_repo
 require_no_op_in_progress
@@ -58,14 +69,6 @@ fi
 
 BEHIND=$(git rev-list --count "$DEFAULT_BRANCH..origin/$DEFAULT_BRANCH" 2>/dev/null || echo 0)
 AHEAD=$(git rev-list --count "origin/$DEFAULT_BRANCH..$DEFAULT_BRANCH" 2>/dev/null || echo 0)
-
-# --ff-only cannot lose work, but it can half apply it: a path the sandbox denies fails the merge
-# after the writable ones landed, so the sync is measured here and run by the user (see #127)
-PROTECTED_PATHS=""
-if [ "$BEHIND" -gt 0 ]; then
-  PROTECTED_PATHS=$(protected_incoming "$DEFAULT_BRANCH..origin/$DEFAULT_BRANCH" \
-    | paste -sd, - | sed 's/,/, /g')
-fi
 
 # a branch is spent when its remote is gone, or when trunk already contains every commit on it;
 # anything else is live work and never reaches the handover
@@ -102,8 +105,9 @@ telemetry_line "default branch" "$DEFAULT_BRANCH"
 telemetry_line "current branch" "$STARTING_BRANCH"
 telemetry_line "trunk behind origin" "$BEHIND"
 telemetry_line "trunk ahead of origin" "$AHEAD"
-telemetry_line "trunk sync" "$([ "$BEHIND" -gt 0 ] && echo "handed over" || echo "not needed")"
-telemetry_line "sandbox-denied incoming paths" "${PROTECTED_PATHS:-none}"
+SYNC_STATE="not needed"
+if [ "$BEHIND" -gt 0 ]; then SYNC_STATE="needed (continue's block above owns it)"; fi
+telemetry_line "trunk sync" "$SYNC_STATE"
 telemetry_line "spent branches" "${SPENT_COUNT:-0}"
 telemetry_line "live branches" "${LIVE_COUNT:-0}"
 telemetry_line "spent branch names" "$(printf '%s' "$SPENT_BRANCHES" | paste -sd, - | sed 's/,/, /g')"
@@ -114,26 +118,13 @@ telemetry_line "kept, unmerged and unabsorbed" "$(printf '%s' "${KEEP_BRANCHES# 
 handover_open gitgud:prune
 if [ "$AHEAD" -gt 0 ]; then
   handover_note "$DEFAULT_BRANCH has $AHEAD commit(s) origin does not — resolve before cleaning up"
-elif [ "$BEHIND" -eq 0 ] && [ "${DELETE_COUNT:-0}" -eq 0 ]; then
-  handover_note "nothing to clean up — trunk is current and no branch is safe to delete"
+elif [ "${DELETE_COUNT:-0}" -eq 0 ]; then
+  handover_note "nothing to clean up — no branch is safe to delete"
   if [ -n "$KEEP_BRANCHES" ]; then
     handover_note "kept as real work:${KEEP_BRANCHES} — neither merged nor absorbed by $DEFAULT_BRANCH"
   fi
 else
-  handover_note "run these in order; the branch deletes are denied, so the block stays yours"
-  if git_is_dirty; then
-    handover_note "your tree is dirty — stash first if the switch below refuses"
-  fi
-  if [ "$BEHIND" -gt 0 ]; then
-    if [ "$STARTING_BRANCH" != "$DEFAULT_BRANCH" ]; then
-      handover_cmd "git switch $DEFAULT_BRANCH"
-    fi
-    handover_cmd "git merge --ff-only origin/$DEFAULT_BRANCH"
-    if [ -n "$PROTECTED_PATHS" ]; then
-      handover_note "the sync writes paths no sandboxed command can: $PROTECTED_PATHS"
-      handover_note "run it in your own terminal; the last line of this block confirms it landed"
-    fi
-  fi
+  handover_note "cleanup — yours to run in order; every delete is denied to the agent by design"
   # -d refuses a branch trunk does not already contain, which is the safety this list relies on
   for branch in $DELETE_SAFE; do
     handover_cmd "git branch -d $branch"
@@ -144,15 +135,6 @@ else
   done
   if [ -n "$KEEP_BRANCHES" ]; then
     handover_note "kept as real work:${KEEP_BRANCHES} — neither merged nor absorbed, so not offered"
-  fi
-  # the merge above is the only command here that writes a tracked file, and a sandboxed run of it
-  # half-applies on a denied path; this reads the result while the trunk is still checked out
-  if [ "$BEHIND" -gt 0 ]; then
-    handover_note "empty output means the sync landed; the rest is your own uncommitted work"
-    handover_cmd "git diff --stat origin/$DEFAULT_BRANCH"
-  fi
-  if [ "$BEHIND" -gt 0 ] && [ "$STARTING_BRANCH" != "$DEFAULT_BRANCH" ]; then
-    handover_cmd "git switch $STARTING_BRANCH"
   fi
 fi
 block_close

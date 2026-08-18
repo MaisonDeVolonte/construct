@@ -5,10 +5,8 @@ effort: high
 license: MIT
 compatibility: requires bash, git
 description: prune the dead tracking refs, report the trunk delta, then hand back every merged branch delete command
-argument-hint: "[--help]"
+argument-hint: "[--help] [--test]"
 disable-model-invocation: true
-metadata:
-  kind: trigger
 ---
 **one sweep for every ref already spent:** merged branches named, unmerged left alone
 - prunes dead tracking refs, then reports the trunk delta
@@ -19,13 +17,17 @@ metadata:
 
 ## Telemetry
 ```!
+"${CLAUDE_PLUGIN_ROOT}"/skills/continue/continue.sh $ARGUMENTS
+echo "continue exit: $?"
 "${CLAUDE_PLUGIN_ROOT}"/skills/prune/prune.sh $ARGUMENTS
 echo "sidecar exit: $?"
 ```
 - `help: requested` → the run was refused before it started; `## Help` below is the whole turn
-- it already ran, so there is no command to issue
-- fail (`sidecar exit` > 0) → abort and report: "<raw terminal error>"
-- success (`sidecar exit` = 0) → report "/gitgud:prune telemetry" and continue to step 1
+- BOTH sidecars already ran, continue first and unconditionally, so there is no command to issue
+- fail (`continue exit` > 0 or `sidecar exit` > 0) → abort and report: "<raw terminal error>"
+- obey the notes continue's handover prints; they name who runs what, and nothing here restates them
+- a sync continue marked trigger-run happens BEFORE any cleanup, one command per tool call
+- success (`sidecar exit` = 0) → report both telemetries and continue to step 1
 
 1. run the native shell command exactly as specified
   ```bash
@@ -69,7 +71,6 @@ echo "sidecar exit: $?"
     - `-D` is required for any absorbed branch, since `-d` consults the same patch-id check
       that got it wrong
     - close with one copy-paste bash block holding every command above, in that same order
-    - keep the trailing `git diff --stat` line, since it is what proves the handed-over merge landed
     - the deny list and `block-destructive-git.sh` both refuse these commands, which is the design rather
       than an obstacle to work around: they are the user's to run, never the agent's
 

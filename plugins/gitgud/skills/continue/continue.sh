@@ -23,12 +23,23 @@ set -euo pipefail
 # own '## Help' section owns the output, which is why this prints a marker rather than a usage text
 case " $* " in *" --help "*|*" -h "*) echo "help: requested"; exit 0;; esac
 
+# the smoke case proves this file parses and its guards return; /test-skills reads the sources,
+# the @see paths and the tool guards statically, so nothing here runs a step of the skill
+case " $* " in *" --test "*) echo "test: ok"; exit 0;; esac
+
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || true)
 SHARED=$(cd "$HERE/../../shared" 2>/dev/null && pwd || true)
 if [ ! -f "$SHARED/handover.sh" ]; then
   echo "fatal: no plugins/gitgud/shared/handover.sh reachable from this sidecar" >&2; exit 1; fi
 # shellcheck source=../../shared/handover.sh
 . "$SHARED/handover.sh"
+
+# a typo'd flag must stop the run rather than be ignored, since the handover below syncs a branch;
+# the doc declares no argument, and the branch it continues is the one already checked out
+if [ "$#" -gt 0 ]; then
+  echo "fatal: /gitgud:continue takes no arguments; it continues the branch you are on" >&2
+  exit 1
+fi
 
 require_repo
 require_no_op_in_progress

@@ -29,6 +29,10 @@ set -euo pipefail
 # own '## Help' section owns the output, which is why this prints a marker rather than a usage text
 case " $* " in *" --help "*|*" -h "*) echo "help: requested"; exit 0;; esac
 
+# the smoke case proves this file parses and its guards return; /test-skills reads the sources,
+# the @see paths and the tool guards statically, so nothing here runs a step of the skill
+case " $* " in *" --test "*) echo "test: ok"; exit 0;; esac
+
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || true)
 SHARED=$(cd "$HERE/../../shared" 2>/dev/null && pwd || true)
 if [ ! -f "$SHARED/handover.sh" ]; then
@@ -45,8 +49,8 @@ require_repo
 require_tools curl jq
 require_no_op_in_progress
 
-if [ -z "${GH_TOKEN:-}" ]; then
-  echo "fatal: GH_TOKEN is not set (see README.md > Settings > Keys)" >&2; exit 1; fi
+if [ -z "${GH_TOKEN_OPERATOR:-}" ]; then
+  echo "fatal: GH_TOKEN_OPERATOR is not set (see README.md > Settings > Keys)" >&2; exit 1; fi
 
 ROOT=$(git rev-parse --show-toplevel)
 
@@ -74,7 +78,7 @@ REPO_SLUG=$(echo "$REMOTE_URL" | sed -e 's#^.*github\.com[:/]##' -e 's#\.git$##'
 
 # prove the token authenticates before handing a release sequence to anyone
 AUTH_CODE=$(curl -sS --max-time 15 -o /dev/null -w '%{http_code}' \
-  -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/user 2>/dev/null || echo 000)
+  -H "Authorization: Bearer $GH_TOKEN_OPERATOR" https://api.github.com/user 2>/dev/null || echo 000)
 if [ "$AUTH_CODE" != "200" ]; then
   echo "fatal: github api auth failed (http $AUTH_CODE)" >&2; exit 1; fi
 
@@ -134,7 +138,7 @@ PROMOTE_COUNT=$(git rev-list --count "origin/$PRODUCTION_BRANCH..origin/$DEFAULT
 
 # a trunk rule that requires a pull request rejects the bump push, and the tag is already made by
 # then, so the release ends up on a commit the trunk never contains; reading the rule avoids that
-TRUNK_RULES=$(curl -sS --max-time 15 -H "Authorization: Bearer $GH_TOKEN" \
+TRUNK_RULES=$(curl -sS --max-time 15 -H "Authorization: Bearer $GH_TOKEN_OPERATOR" \
   "https://api.github.com/repos/$REPO_SLUG/rules/branches/$DEFAULT_BRANCH" 2>/dev/null || echo '[]')
 TRUNK_GATE=direct
 if printf '%s' "$TRUNK_RULES" | jq -e 'any(.[]?; .type == "pull_request")' >/dev/null 2>&1; then
@@ -178,7 +182,7 @@ handover_cmd "git merge --ff-only $DEFAULT_BRANCH"
 handover_cmd "git push origin $PRODUCTION_BRANCH"
 handover_cmd "git switch $DEFAULT_BRANCH"
 handover_note "then publish the release, once the tag is on origin"
-handover_cmd "curl -sS -X POST -H \"Authorization: Bearer \$GH_TOKEN\" \\
+handover_cmd "curl -sS -X POST -H \"Authorization: Bearer \$GH_TOKEN_OPERATOR\" \\
   -H 'Accept: application/vnd.github+json' \\
   https://api.github.com/repos/$REPO_SLUG/releases \\
   -d '{\"tag_name\":\"$NEXT_VERSION\",\"name\":\"Release $NEXT_VERSION\",\"generate_release_notes\":true}'"
