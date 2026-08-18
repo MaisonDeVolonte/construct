@@ -1,5 +1,4 @@
-# downstream guard: paths listed here require @MaisonDeVolonte's review before merge
-# self-referential on purpose, so this file can't be quietly narrowed from under itself
+# paths listed here require human admin review before merge
 
-/.github/workflows/ @MaisonDeVolonte
 /.github/CODEOWNERS @MaisonDeVolonte
+/.github/workflows/ @MaisonDeVolonte
