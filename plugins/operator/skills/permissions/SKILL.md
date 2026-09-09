@@ -34,12 +34,7 @@ echo "sidecar exit: $?"
   - `no deny rule names X, and an allow wildcard covers it` is the one to act on first: that
     command is auto-approved today with no prompt at all
 
-2. report inline, and read `allow rules to add next` as work rather than trivia
-  - each line is a rule `suggest-allow-rules` logged because that command shape is documented to
-    prompt, ranked by how often it asked, so the top line is the one costing the most turns
-  - carry every one into `resolutions` verbatim, naming the scope file the user pastes it into
-  - `suggested: 0` means no command tripped the hook, which is a clean result rather than a gap
-3. append one entry to `[audit_file]`, in the shape defined under `## the shape` below
+2. append one entry to `[audit_file]`, in the shape defined under `## the shape` below
   - the heading reads `## Permissions Audit #[next_audit]: [timestamp]`, both from the telemetry
   - `state` is what the run measured, as hyphen bullets, one clause each
   - `findings` lead with the label the sidecar printed, one bullet each, naming what it hit
@@ -47,7 +42,7 @@ echo "sidecar exit: $?"
   - `telemetry` is the sidecar's whole output, fenced and unedited, pasted last
   - CREATE the file first if it does not exist, with `# <audit_file>` as its only line
 
-4. STOP
+3. STOP
 
     NEVER edit a settings file to fix a finding, and never offer to; the audit is the deliverable
 
