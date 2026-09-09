@@ -104,9 +104,14 @@ done
 if [ "$PR_MERGESTATE" = "dirty" ]; then
   echo "fatal: pr #$PR_NUMBER conflicts with $DEFAULT_BRANCH (resolve locally; ci won't clear on its own)" >&2; exit 1; fi
 
-# sync the branches we compare; forks aren't supported (their head isn't on origin)
-if ! git fetch origin "$DEFAULT_BRANCH" "$PR_HEAD" --quiet 2>/dev/null; then
-  echo "fatal: could not fetch $PR_HEAD or $DEFAULT_BRANCH from origin (same-repo prs only)" >&2; exit 1; fi
+# syncs branches to compare (no fork support); a sandboxed fetch exit is not trusted below
+FETCH_RC=0
+git fetch origin "$DEFAULT_BRANCH" "$PR_HEAD" --quiet 2>/dev/null || FETCH_RC=$?
+if ! git rev-parse --verify --quiet "origin/$DEFAULT_BRANCH" >/dev/null \
+  || ! git rev-parse --verify --quiet "origin/$PR_HEAD" >/dev/null; then
+  echo "fatal: $PR_HEAD or $DEFAULT_BRANCH unresolved after fetch (exit $FETCH_RC; same-repo prs only)" >&2
+  exit 1
+fi
 
 # how many commits the trunk has that this pr hasn't absorbed — the staleness signal
 BEHIND_COUNT=$(git rev-list --count "origin/$PR_HEAD..origin/$DEFAULT_BRANCH" 2>/dev/null || echo "0")
