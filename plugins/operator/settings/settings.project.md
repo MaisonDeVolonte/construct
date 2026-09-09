@@ -60,9 +60,15 @@
 
 ### generated — repo paths no agent should write
 ```json
-"Edit(**/.git/**)", "Write(**/.git/**)",
-"Edit(webflow/**)", "Write(webflow/**)"
+"Edit(**/.git/hooks/**)", "Write(**/.git/hooks/**)",
+"Edit(**/.git/config)", "Write(**/.git/config)",
+"Edit(**/.git/info/**)", "Write(**/.git/info/**)",
+"Edit(**/.git/modules/**/config)", "Write(**/.git/modules/**/config)"
 ```
+- narrowed from the whole `.git` directory on 2026-09-09, since the wide rule killed `git fetch`
+- the sandbox compiles a Write deny into its own boundary, so `.git/FETCH_HEAD` returned EPERM
+- these four are the exec and identity surface: hooks run code, config names the remote and helper
+- the object store stays writable, which is what every mutating git command needs
 - stays deny despite the tracked-path rule: `.git/` is generated, never tracked
 - a bad write corrupts history rather than editing it
 - refusing `.git/config` is the point: `credential.helper` and `core.fsmonitor` execute shell

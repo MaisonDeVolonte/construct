@@ -1,5 +1,6 @@
 {
   "outputStyle": "operator",
+
   "sandbox": {
     "enabled": true,
     "failIfUnavailable": true,
@@ -65,72 +66,9 @@
   },
 
   "permissions": {
-    "allow": [
-      "Read", "Write", "Edit", "WebSearch",
+    "allow": [],
 
-      "Bash(plugins/**/*.sh*)", "Bash(bash plugins/**/*.sh*)",
-      "Bash(bash plugins/**/*.sh* | sed *)", "Bash(bash plugins/**/*.sh* | grep *)",
-
-      "Bash(ls)", "Bash(ls *)", "Bash(pwd)", "Bash(cd *)",
-      "Bash(stat *)", "Bash(file *)", "Bash(du *)", "Bash(df *)", "Bash(wc *)", "Bash(md5 *)",
-      "Bash(which *)", "Bash(command -v *)", "Bash(realpath *)", "Bash(basename *)", "Bash(dirname *)",
-      "Bash(cat *)", "Bash(head *)", "Bash(tail *)", "Bash(diff *)",
-      "Bash(grep *)", "Bash(/usr/bin/grep *)", "Bash(rg *)", "Bash(awk *)", "Bash(sed -n *)", "Bash(find *)",
-      "Bash(sort *)", "Bash(uniq *)", "Bash(cut *)", "Bash(tr *)", "Bash(comm *)",
-      "Bash(jq *)", "Bash(echo *)", "Bash(printf *)", "Bash(date*)", "Bash(env)",
-      "Bash(uname *)", "Bash(whoami)", "Bash(top -l 1*)", "Bash(mkdir *)", "Bash(touch *)", "Bash(cp *)",
-
-      "Bash(npm run*)", "Bash(npm test*)", "Bash(npm ls*)", "Bash(npm list*)",
-      "Bash(npm ci --ignore-scripts*)", "Bash(npm install --ignore-scripts*)",
-      "Bash(pnpm run*)", "Bash(pnpm test*)", "Bash(pnpm ls*)", "Bash(pnpm list*)",
-      "Bash(pnpm install --ignore-scripts*)",
-      "Bash(yarn run*)", "Bash(yarn test*)",
-      "Bash(tsc*)", "Bash(eslint*)", "Bash(prettier*)", "Bash(shellcheck *)",
-      "Bash(vitest*)", "Bash(jest*)", "Bash(playwright test*)",
-      "Bash(node *)", "Bash(python3 *)", "Bash(bash -n *)", "Bash(make *)",
-
-      "Bash(git status*)", "Bash(git diff*)", "Bash(git log*)", "Bash(git show*)",
-      "Bash(git blame*)", "Bash(git grep *)", "Bash(git shortlog*)", "Bash(git range-diff*)",
-      "Bash(git ls-files*)", "Bash(git ls-tree*)", "Bash(git ls-remote*)", "Bash(git for-each-ref*)",
-      "Bash(git rev-parse*)", "Bash(git rev-list*)", "Bash(git merge-base*)", "Bash(git merge-tree*)",
-      "Bash(git describe*)", "Bash(git name-rev*)", "Bash(git cat-file*)",
-      "Bash(git diff-tree*)", "Bash(git diff-index*)", "Bash(git diff-files*)",
-      "Bash(git check-ignore*)", "Bash(git check-attr*)", "Bash(git count-objects*)",
-      "Bash(git verify-commit*)", "Bash(git verify-tag*)",
-      "Bash(git branch)", "Bash(git branch -a*)", "Bash(git branch -r*)", "Bash(git branch -v*)",
-      "Bash(git branch --list*)", "Bash(git branch --all*)", "Bash(git branch --remotes*)",
-      "Bash(git branch --contains*)", "Bash(git branch --merged*)", "Bash(git branch --no-merged*)",
-      "Bash(git branch --show-current*)",
-      "Bash(git tag)", "Bash(git tag -l*)", "Bash(git tag -n*)", "Bash(git tag --list*)",
-      "Bash(git tag --contains*)", "Bash(git tag --points-at*)",
-      "Bash(git remote)", "Bash(git remote -v*)", "Bash(git remote show*)", "Bash(git remote get-url*)",
-      "Bash(git stash list*)", "Bash(git stash show*)",
-      "Bash(git reflog)", "Bash(git reflog show*)",
-      "Bash(git fetch*)", "Bash(git version*)",
-
-      "Bash(git stash push -u -m 'auto-stash: @git-continue')", "Bash(git stash pop)",
-      "Bash(git stash push -u -m 'git-fresh-*')",
-      "Bash(git merge --ff-only origin/main)", "Bash(git merge --ff-only origin/master)",
-      "Bash(git switch main)", "Bash(git switch master)"
-    ],
-
-    "ask": [
-      "Bash(dangerouslyDisableSandbox:true)",
-
-      "Edit(README.md)", "Write(README.md)",
-      "Edit(AGENTS.md)", "Write(AGENTS.md)",
-      "Edit(plugins/**)", "Write(plugins/**)",
-
-      "Write(.claude/agents/**)", "Edit(.claude/agents/**)",
-      "Write(.claude/commands/**)", "Edit(.claude/commands/**)",
-      "Write(.claude/output-styles/**)", "Edit(.claude/output-styles/**)",
-
-      "Bash(git mv *)", "Bash(git rm *)",
-
-      "Bash(deno run*)", "Bash(deno -* run*)",
-      "Bash(go run*)", "Bash(go -* run*)",
-      "Bash(find * -exec *)"
-    ],
+    "ask": [ "Bash(dangerouslyDisableSandbox:true)" ],
 
     "deny": [
       "Write(~/.claude/**)", "Edit(~/.claude/**)",
@@ -171,6 +109,11 @@
       "Bash(uv tool run*)", "Bash(uv -* tool run*)",
 
       "Bash(*fs.rm*)", "Bash(*fs.unlink*)", "Bash(*fs.rmdir*)", "Bash(*rimraf*)",
+
+      "Edit(**/.git/hooks/**)",  "Write(**/.git/hooks/**)",
+      "Edit(**/.git/config)",    "Write(**/.git/config)",
+      "Edit(**/.git/info/**)",   "Write(**/.git/info/**)",
+      "Edit(**/.git/modules/**/config)", "Write(**/.git/modules/**/config)",
 
       "Bash(git -c *)", "Bash(git -C *)", "Bash(git --exec-path*)",
       "Bash(git --git-dir*)", "Bash(git --work-tree*)", "Bash(git --namespace*)",
@@ -226,6 +169,10 @@
       "Bash(git format-patch*)", "Bash(git bugreport*)", "Bash(git diagnose*)",
       "Bash(git svn*)", "Bash(git p4*)", "Bash(git cvsimport*)", "Bash(git cvsexportcommit*)",
 
+      "Bash(git config *credential.helper*)", "Bash(git config *sshCommand*)",
+      "Bash(git config *core.fsmonitor*)",    "Bash(git config *filter.*)",
+      "Bash(git remote set-url*)",
+
       "Bash(dropdb *)", "Bash(db:drop*)", "Bash(prisma migrate reset*)",
 
       "Read(//**/.env*)", "Write(//**/.env*)", "Edit(//**/.env*)",
@@ -236,7 +183,6 @@
       "Read(~/.ssh/**)", "Write(~/.ssh/**)", "Edit(~/.ssh/**)",
       "Read(~/.aws/**)", "Write(~/.aws/**)", "Edit(~/.aws/**)",
       "Read(~/.config/gcloud/**)", "Write(~/.config/gcloud/**)", "Edit(~/.config/gcloud/**)",
-      "Read(~/.config/gh/**)", "Write(~/.config/gh/**)", "Edit(~/.config/gh/**)",
       "Read(~/.kube/**)", "Write(~/.kube/**)", "Edit(~/.kube/**)",
       "Read(~/.gnupg/**)", "Write(~/.gnupg/**)", "Edit(~/.gnupg/**)",
       "Read(~/.netrc)", "Write(~/.netrc)", "Edit(~/.netrc)",
