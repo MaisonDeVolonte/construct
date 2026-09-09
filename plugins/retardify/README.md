@@ -1075,8 +1075,8 @@ name: continue
 model: opus
 effort: high
 license: MIT
-compatibility: requires bash, git
-description: snapshot, then measure the trunk delta, then run the sync against four narrow allows
+compatibility: requires bash, git, curl, jq
+description: snapshot, measure the trunk delta over the api, then sync against five narrow allows
 argument-hint: "[--help] [--test]"
 disable-model-invocation: true
 metadata:
