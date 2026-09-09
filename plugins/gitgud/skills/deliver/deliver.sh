@@ -395,10 +395,11 @@ if [ -z "$CURRENT_BRANCH" ]; then
 if ! git_is_dirty; then
   echo "fatal: working tree clean" >&2; exit 1; fi
 
-FETCH_ERR=""
-if ! FETCH_ERR=$(git fetch origin "$DEFAULT_BRANCH" --quiet 2>&1); then
-  echo "fatal: could not fetch origin/$DEFAULT_BRANCH" >&2
-  echo "$FETCH_ERR" >&2
+# a sandboxed fetch exits nonzero after its objects land, so only a stale tracking ref fails here
+FETCH_RC=0
+git fetch origin "$DEFAULT_BRANCH" --quiet 2>/dev/null || FETCH_RC=$?
+if ! git rev-parse --verify --quiet "origin/$DEFAULT_BRANCH" >/dev/null; then
+  echo "fatal: origin/$DEFAULT_BRANCH unresolved after fetch (exit $FETCH_RC)" >&2
   exit 1
 fi
 
