@@ -1,7 +1,7 @@
 #!/bin/bash
-# ====================================================
+# ======================================================
 # @file upstream.sh - upstream claude-code issue tracker
-# ====================================================
+# ======================================================
 # @description
 # PAIR
 # - sidecar for `/operator:upstream` — fetches issue movement, then hands the telemetry to the doc
@@ -16,26 +16,23 @@
 # - `--tracked`, `--sandbox`, `--hooks`, `--plugins`, `--permissions` each carry one query
 # - `--since <days>` overrides the window; the default is the newest report date, else 14 days
 # AUTH
-# - GH_TOKEN_OPERATOR rides along when set, masked or real, since the proxy injects on its listed hosts
+# - GH_TOKEN_OPERATOR rides along when set, masked or real, since the proxy injects on its hosts
 # - a rejected token falls back to anonymous with a warning, and the value is never printed
 # - anonymous runs at 60 core calls an hour, so the telemetry carries the remaining quota
 # @see plugins/operator/skills/upstream/SKILL.md, plugins/operator/shared/secrets.sh, README.md
 
 set -euo pipefail
 
-# the doc is read only after this has already run, so help is refused here or not at all; the doc's
-# own '## Help' section owns the output, which is why this prints a marker rather than a usage text
+# the doc's '## Help' section owns the output, so this prints a marker and refuses the run
 case " $* " in *" --help "*|*" -h "*) echo "help: requested"; exit 0;; esac
 
-# the smoke case proves this file parses and its guards return; /test-skills reads the sources,
-# the @see paths and the tool guards statically, so nothing here runs a step of the skill
+# the smoke case proves this file parses and its guards return, without running a step of the skill
 case " $* " in *" --test "*) echo "test: ok"; exit 0;; esac
 
 # ==============
 # PREFLIGHT
 # ==============
-# the secret patterns sit in the shared tree: resolve from this file before anything cds,
-# since BASH_SOURCE arrives relative and cwd holds no plugins/ once installed from a marketplace
+# the shared tree resolves from this file, since BASH_SOURCE arrives relative to an unknown cwd
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || true)
 SHARED=$(cd "$HERE/../../shared" 2>/dev/null && pwd || true)
 if [ ! -f "$SHARED/secrets.sh" ]; then
@@ -94,8 +91,7 @@ SCOPE=""
 # ==============
 # WINDOW
 # ==============
-# the window answers "since when counts as movement": an explicit --since wins, then the newest
-# report date, since that is literally the last time anyone looked, then a two week default
+# the window is --since when passed, else the newest report date, else a two week default
 if [ -n "$SINCE_DAYS" ]; then
   case "$SINCE_DAYS" in
     ''|*[!0-9]*) echo "fatal: --since wants a day count, got '$SINCE_DAYS'" >&2; exit 2;;
@@ -116,8 +112,7 @@ fi
 # ==============
 # AUTH
 # ==============
-# the masked value is sent as-is on purpose: the sandbox proxy swaps it on its inject hosts,
-# and a probe against /rate_limit tells the truth about whether that swap actually happened
+# the masked value is sent as-is, since the proxy swaps it and /rate_limit proves the swap
 AUTH_HEADER=""
 AUTH_MODE="anonymous"
 GH_AUTH=${GH_TOKEN_OPERATOR:-}
@@ -133,7 +128,7 @@ if [ -n "$GH_AUTH" ]; then
 fi
 RATE=$(curl -sS --max-time 20 ${AUTH_HEADER:+-H "$AUTH_HEADER"} "$API/rate_limit" 2>/dev/null \
   | jq -r '"\(.resources.core.remaining)/\(.resources.core.limit) core, " +
-           "\(.resources.search.remaining)/\(.resources.search.limit) search"' 2>/dev/null \
+    "\(.resources.search.remaining)/\(.resources.search.limit) search"' 2>/dev/null \
   || echo "unreadable")
 case "$RATE" in
   unreadable) WARNINGS=$((WARNINGS+1));;
@@ -153,6 +148,22 @@ gh_api() {
 SEP=$(printf '\001')
 redact() {
   LC_ALL=C sed -E "s${SEP}${SECRET_PATTERNS}${SEP}[redacted]${SEP}g"
+}
+
+# one issue's comments inside the window, printed under it; a failed fetch returns 1 to the caller
+window_comments() {
+  WCODE=$(gh_api "$API/repos/$REPO/issues/$1/comments?since=${SINCE}T00:00:00Z&per_page=20")
+  if [ "$WCODE" != 200 ]; then
+    echo "        comments fetch failed (http $WCODE)"; return 1
+  fi
+  echo "        comments in window: $(jq 'length' "$BODY")"
+  # no \uXXXX in this jq's class, so tr strips the exotic control chars instead
+  jq -r '.[-3:][] | [.created_at[:10], .user.login,
+    (.body // "" | gsub("[\\t\\n\\r|]"; " "))] | join("|")' "$BODY" \
+  | while IFS='|' read -r CDATE CUSER CBODY; do
+      EXCERPT=$(printf '%s' "$CBODY" | redact | LC_ALL=C tr '\000-\037' ' ' | cut -c1-160)
+      echo "        $CDATE $CUSER: $EXCERPT"
+    done
 }
 
 # ==============
@@ -181,8 +192,7 @@ TRACKED_LIST=""
 MOVED=0
 TRACKED_FAILED=0
 if [ "$RUN_TRACKED" = 1 ]; then
-  # a citation is a full url, so short #NNNN mentions never register; .construct/ is excluded
-  # to keep yesterday's report from tracking whatever yesterday's search happened to surface
+  # a bare #NNNN never registers, since only a full url counts as a citation
   # shellcheck disable=SC2086
   TRACKED_LIST=$(grep -rhoE "$REPO/issues/[0-9]+" "$ROOT" $EXCLUDES 2>/dev/null \
     | grep -oE '[0-9]+$' | sort -un | tr '\n' ' ' || true)
@@ -198,8 +208,7 @@ if [ "$RUN_TRACKED" = 1 ]; then
       echo "#$N fetch failed (http $CODE)"
       TRACKED_FAILED=$((TRACKED_FAILED+1)); ERRORS=$((ERRORS+1)); continue
     fi
-    # joined on a sanitized pipe: tab is ifs whitespace, so an empty closed_at would collapse
-    # and pull the title left a field, and this bash strips a \001 outright inside read
+    # joined on a sanitized pipe, since tab is ifs whitespace and this bash strips \001 inside read
     LINE=$(jq -r '[.state, .updated_at[:10], (.comments|tostring),
       ((.closed_at // "")[:10]), (.state_reason // ""),
       (.title | gsub("[\\t\\n\\r|]"; " ") | .[:58])] | join("|")' "$BODY")
@@ -218,21 +227,7 @@ EOF
     echo "        cited: ${CITED:-unresolved}"
     if [ "$MOVEMENT" != quiet ]; then
       MOVED=$((MOVED+1))
-      WCODE=$(gh_api "$API/repos/$REPO/issues/$N/comments?since=${SINCE}T00:00:00Z&per_page=20")
-      if [ "$WCODE" = 200 ]; then
-        WCOUNT=$(jq 'length' "$BODY")
-        echo "        comments in window: $WCOUNT"
-        # no \uXXXX in the class: this jq reads it as literal chars, birthing a 0-u range
-        # that spaces out digits and a through u; tr strips the exotic control chars instead
-        jq -r '.[-3:][] | [.created_at[:10], .user.login,
-          (.body // "" | gsub("[\\t\\n\\r|]"; " "))] | join("|")' "$BODY" \
-        | while IFS='|' read -r CDATE CUSER CBODY; do
-            EXCERPT=$(printf '%s' "$CBODY" | redact | LC_ALL=C tr '\000-\037' ' ' | cut -c1-160)
-            echo "        $CDATE $CUSER: $EXCERPT"
-          done
-      else
-        echo "        comments fetch failed (http $WCODE)"; WARNINGS=$((WARNINGS+1))
-      fi
+      window_comments "$N" || WARNINGS=$((WARNINGS+1))
     fi
   done
 fi
@@ -240,8 +235,7 @@ fi
 # ==============
 # TOPICS
 # ==============
-# each topic is one boolean query, sorted by update so the window's noise floats its own signal;
-# total_count sizes the tail the fifteen printed rows leave unseen
+# each topic is one boolean query sorted by update, and total_count sizes the unprinted tail
 TOPICS_RUN=0
 TOPIC_HITS=0
 TOPICS_FAILED=0
