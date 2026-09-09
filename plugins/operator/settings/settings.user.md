@@ -185,47 +185,40 @@ every token inherits the same layers; the axis is the layer, never the token
   - [#82255](https://github.com/anthropics/claude-code/issues/82255): the macos proxy drops git-over-ssh credentials; a second push path if it lands
 
 ## permissions.allow
-> what an agent may do unattended; this list converges rather than grows
-```json
-"allow": [
-  "Read", "Write", "Edit", "WebSearch",
-  "Bash(plugins/**/*.sh*)",
-],
-```
+> ships empty on purpose; the recipe that fills it sits beside this file
+
+- every shipped scope carries an empty array, so a fresh install prompts on anything not denied
+- no recipe ships beside it, because an enumerated allowlist goes stale the moment it is written
+- `/fewer-permission-prompts` reads your own transcripts and proposes rules you actually needed
+- an operator running bypassPermissions can skip the list entirely, since it is inert in that mode
+- the reasoning below is why each group existed, and it holds for whatever list you build
+- the four groups are the sidecars, inspection, toolchain and git
+
+### sidecars — the scripts this suite runs
 - broad verbs by design: the deny floor carries the weight, and an enumerated allowlist goes stale
 - `WebSearch` egresses nothing from the repo
 - the sidecars run in regular-permissions mode; the `*` tail matches arguments, a bare `.sh` matched only a bare invocation
+- `bash plugins/...` is the second form, since a sidecar invoked through the interpreter is a
+  different command string than the same path run directly
+- the two piped forms exist because the matcher reads a compound command as one string (#16561),
+  so `bash x.sh | grep y` never matches the unpiped rule
 
 ### inspection — reads and local scratch
-```json
-"Bash(ls)", "Bash(ls *)", "Bash(pwd)", "Bash(cd *)",
-"Bash(stat *)", "Bash(file *)", "Bash(du *)", "Bash(df *)", "Bash(wc *)",
-"Bash(which *)", "Bash(realpath *)", "Bash(basename *)", "Bash(dirname *)",
-"Bash(cat *)", "Bash(head *)", "Bash(tail *)", "Bash(diff *)",
-"Bash(grep *)", "Bash(rg *)", "Bash(find *)",
-"Bash(sort *)", "Bash(uniq *)", "Bash(cut *)", "Bash(tr *)", "Bash(comm *)",
-"Bash(jq *)", "Bash(echo *)", "Bash(printf *)", "Bash(date*)", "Bash(env)",
-"Bash(uname *)", "Bash(whoami)", "Bash(mkdir *)", "Bash(touch *)", "Bash(cp *)",
-```
+- 40 rules covering listing, stat, read, search, sort, format and three scratch writers
 - the space form is deliberate, since a spaceless ls rule would also match lsof
 - bare entries exist only where a no-argument call is ordinary, as a trailing star matches empty
-- `sed` and `awk` are absent on purpose: sed rewrites in place and awk has system()
-- `xargs` and `tee` are absent for the same reason, and both take their payload from elsewhere
+- `awk *` is here because awk needs `system()` or a `print > file` spelled into the program, and
+  the `block-protected-paths` hook already counts any interpreter beside a protected path as a write
+- `sed -n *` is the print-only flag, so the rule cannot match `sed -i`, which rewrites in place
+- `/usr/bin/grep *` is listed beside `grep *` because a shell function or alias shadows the bare name
+- `command -v *` and `md5 *` are reads; `top -l 1*` is the one-shot form, never the interactive one
+- `xargs` and `tee` are absent on purpose, and both take their payload from elsewhere
 - `curl` and `wget` are absent because `-o` writes files, though the pipe-to-shell forms are denied
 - `mkdir`, `touch` and `cp` are here because the sandbox already confines writes to cwd, and
   the `block-protected-paths` hook refuses any of them that names a protected path
 
 ### toolchain — build, typecheck, test
-```json
-"Bash(npm run*)", "Bash(npm test*)", "Bash(npm ls*)", "Bash(npm list*)",
-"Bash(npm ci --ignore-scripts*)", "Bash(npm install --ignore-scripts*)",
-"Bash(pnpm run*)", "Bash(pnpm test*)", "Bash(pnpm ls*)", "Bash(pnpm list*)",
-"Bash(pnpm install --ignore-scripts*)",
-"Bash(yarn run*)", "Bash(yarn test*)",
-"Bash(tsc*)", "Bash(eslint*)", "Bash(prettier*)", "Bash(shellcheck *)",
-"Bash(vitest*)", "Bash(jest*)", "Bash(playwright test*)",
-"Bash(node *)", "Bash(python3 *)", "Bash(bash -n *)", "Bash(make *)",
-```
+- 24 rules covering the three package managers, four linters, three test runners and four interpreters
 - this tier is what makes unattended work possible; without it an agent stalls on its own test run
 - the sandbox is the bound here, not the rule: each of these is contained to cwd and five domains
 - `node *` and `python3 *` run a file, while `node -e` and `python -c` stay denied, and deny wins
@@ -235,36 +228,7 @@ every token inherits the same layers; the axis is the layer, never the token
 - an ask rule for it would be wrong, since ask beats allow and would swallow the safe form above
 
 ### git — the reads an agent reasons with
-```json
-"Bash(git status*)", "Bash(git diff*)", "Bash(git log*)", "Bash(git show*)",
-"Bash(git blame*)", "Bash(git grep *)", "Bash(git shortlog*)", "Bash(git range-diff*)",
-"Bash(git ls-files*)", "Bash(git ls-tree*)", "Bash(git ls-remote*)", "Bash(git for-each-ref*)",
-"Bash(git rev-parse*)", "Bash(git rev-list*)", "Bash(git merge-base*)", "Bash(git merge-tree*)",
-"Bash(git describe*)", "Bash(git name-rev*)", "Bash(git cat-file*)",
-"Bash(git diff-tree*)", "Bash(git diff-index*)", "Bash(git diff-files*)",
-"Bash(git check-ignore*)", "Bash(git check-attr*)", "Bash(git count-objects*)",
-"Bash(git verify-commit*)", "Bash(git verify-tag*)",
-
-"Bash(git branch)", "Bash(git branch -a*)", "Bash(git branch -r*)", "Bash(git branch -v*)",
-"Bash(git branch --list*)", "Bash(git branch --all*)", "Bash(git branch --remotes*)",
-"Bash(git branch --contains*)", "Bash(git branch --merged*)", "Bash(git branch --no-merged*)",
-"Bash(git branch --show-current*)",
-
-"Bash(git tag)", "Bash(git tag -l*)", "Bash(git tag -n*)", "Bash(git tag --list*)",
-"Bash(git tag --contains*)", "Bash(git tag --points-at*)",
-
-"Bash(git remote)", "Bash(git remote -v*)", "Bash(git remote show*)", "Bash(git remote get-url*)",
-
-"Bash(git stash list*)", "Bash(git stash show*)",
-"Bash(git reflog)", "Bash(git reflog show*)",
-
-"Bash(git fetch*)", "Bash(git version*)",
-
-"Bash(git stash push -u -m 'auto-stash: /gitgud:continue')", "Bash(git stash pop)",
-"Bash(git stash push -u -m 'git-fresh-*')",
-"Bash(git merge --ff-only origin/main)", "Bash(git merge --ff-only origin/master)",
-"Bash(git switch main)", "Bash(git switch master)"
-```
+- 59 read rules, then a 7-rule mutating exception the gitgud triggers depend on
 - enumerated rather than one broad git allow, since a plain push to a feature branch is not denied
 - an incomplete allowlist costs a prompt; an incomplete denylist costs a silent hole
 - `git branch`, `git tag`, `git remote` and `git reflog` are bare-only, so the mutating forms miss
@@ -278,24 +242,24 @@ every token inherits the same layers; the axis is the layer, never the token
 - these mirror `settings.project.json` exactly; a deny here would outrank the allow there
 
 ## permissions.ask
+> ships with the escape hatch alone; the rest is yours to add
+
+- the shipped scopes carry one rule, and the groups below describe what used to sit beside it
+- an ask rule outranks an allow rule, so pasting the recipe's ask list narrows the allow list too
+- ask is inert under bypassPermissions, exactly like allow, so it only shapes a default-mode session
 
 ### escape — the visible hatch
 ```json
 "Bash(dangerouslyDisableSandbox:true)",
 ```
 - every unsandboxed retry stays visible, which is what makes `allowUnsandboxedCommands` safe
+- this is the one ask rule that ships, since a sandbox escape should never be silent
 
 ### policy — hand-edited only
-```json
-"Write(.claude/**)", "Edit(.claude/**)",
-
-"Edit(plugins/**)", "Write(plugins/**)",
-"Edit(AGENTS.md)", "Write(AGENTS.md)",
-"Edit(README.md)", "Write(README.md)",
-```
+- 12 rules over the three `.claude` instruction subtrees, `plugins/`, `README.md` and `AGENTS.md`
 - an agent that can rewrite these can grant itself anything
-- `.claude/**` is the tree, not the gate: the four files that ARE the gate are denied outright below,
-  and deny beats ask, so the prompt here only ever covers skills, agents and commands
+- the three `.claude` globs name agents, commands and output styles, each read back as instructions
+- the four files that ARE the gate are denied outright below, and deny beats ask either way
 - one rule per verb, since everything under `plugins/` either executes or instructs
 - it replaced three narrower globs on 2026-08-04, which had left 19 markdown files ungated:
   the nine `@git*` triggers and the ten templates
@@ -311,10 +275,7 @@ every token inherits the same layers; the axis is the layer, never the token
 - it had covered `.claude/` alone until 2026-08-04, leaving the AGENTS paths on the prompt by itself
 
 ### runners — local source, run in place
-```json
-"Bash(deno run*)", "Bash(deno -* run*)",
-"Bash(go run*)", "Bash(go -* run*)",
-```
+- 4 rules over `deno run` and `go run`, each with an interposed-flag twin
 - both usually run a file already in the repo, so a prompt fits where a refusal would not
 - `deno run` also accepts a url, which is the registry-fetching shape the deny block now holds
 - the interposed twin is `-*`, never a bare `*`, so the wildcard covers flags rather than subcommands
@@ -322,9 +283,7 @@ every token inherits the same layers; the axis is the layer, never the token
 - the package runners left on 2026-08-16, since ask is a verdict this repo no longer trusts
 
 ### find — arbitrary execution, ordinary work
-```json
-"Bash(find * -exec *)"
-```
+- 1 rule, on the `-exec` form only
 - `-exec` runs anything, but wrapped around everyday search work, so a prompt fits
 
 ## permissions.deny
@@ -345,6 +304,11 @@ grouped most-destructive-first; any scope may add a deny, none may remove anothe
 "Write(.claude/hooks/**)", "Edit(.claude/hooks/**)",
 "Write(.mcp.json)", "Edit(.mcp.json)",
 "Write(plugins/*/hooks/**)", "Edit(plugins/*/hooks/**)",
+"Write(construct.config.json)", "Edit(construct.config.json)",
+"Write(**/.git/hooks/**)", "Edit(**/.git/hooks/**)",
+"Write(**/.git/config)", "Edit(**/.git/config)",
+"Write(**/.git/info/**)", "Edit(**/.git/info/**)",
+"Write(**/.git/modules/**/config)", "Edit(**/.git/modules/**/config)",
 "Write(.husky/**)", "Edit(.husky/**)",
 "Write(.devin/**)", "Edit(.devin/**)",
 "Write(.cursor/**)", "Edit(.cursor/**)",
@@ -359,6 +323,12 @@ grouped most-destructive-first; any scope may add a deny, none may remove anothe
   and `block-protected-paths.sh` says it plainly — neither the deny list nor the hook sees inside a `.sh`
 - `.mcp.json` earns the same rule for the same reason: a server definition is a command
 - `plugins/*/hooks/**` covers the cloned-repo install; the marketplace install sits under `~/.claude/`
+- `construct.config.json` names more protected paths, so it is guarded here and never from itself
+- the four `.git` rules are the exec and identity surface: a pre-commit hook is arbitrary execution
+- git config holds `core.hooksPath`, `credential.helper` and the remote urls, so it earns the same
+- they replaced a whole-directory deny on 2026-09-09, which the sandbox compiled into its own
+  boundary and which returned EPERM on `.git/FETCH_HEAD`, killing every `git fetch`
+- the object store stays writable, since every mutating git command needs it and none of it executes
 - the last four are other agents' policy directories, and they are here because `block-protected-paths.sh`
   already named them: the two gates are one policy, so a path in either belongs in both
 - anchored on the dot-directory, never on `hooks`: `**/hooks/**` reads as a source folder in most
@@ -511,7 +481,6 @@ grouped most-destructive-first; any scope may add a deny, none may remove anothe
 "Read(~/.ssh/**)", "Write(~/.ssh/**)", "Edit(~/.ssh/**)",
 "Read(~/.aws/**)", "Write(~/.aws/**)", "Edit(~/.aws/**)",
 "Read(~/.config/gcloud/**)", "Write(~/.config/gcloud/**)", "Edit(~/.config/gcloud/**)",
-"Read(~/.config/gh/**)", "Write(~/.config/gh/**)", "Edit(~/.config/gh/**)",
 "Read(~/.kube/**)", "Write(~/.kube/**)", "Edit(~/.kube/**)",
 "Read(~/.gnupg/**)", "Write(~/.gnupg/**)", "Edit(~/.gnupg/**)",
 "Read(~/.netrc)", "Write(~/.netrc)", "Edit(~/.netrc)",
@@ -535,9 +504,13 @@ grouped most-destructive-first; any scope may add a deny, none may remove anothe
 
 "Bash(launchctl *)", "Bash(osascript *)", "Bash(defaults write *)",
 "Bash(git config *core.hooksPath*)", "Bash(git config *alias.*)",
+"Bash(git config *credential.helper*)", "Bash(git config *sshCommand*)",
+"Bash(git config *core.fsmonitor*)", "Bash(git config *filter.*)",
 ```
 - anything installed here runs in every future shell, escaping every layer above it
 - `core.hooksPath` turns every later git command into arbitrary execution
+- `credential.helper`, `sshCommand`, `core.fsmonitor` and `filter.*` each name a program git runs
+- all six are already covered by the broad `git config` deny above, and are listed for the record
 - the rc files carry `Read` too, since they name where the token store lives
 - `crontab` needs no rule; seatbelt refuses it outright, measured 2026-08-03
 
