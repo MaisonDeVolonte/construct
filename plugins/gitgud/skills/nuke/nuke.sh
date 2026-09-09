@@ -64,10 +64,11 @@ if [ -d ".git/rebase-merge" ] || [ -d ".git/rebase-apply" ]; then OP_IN_PROGRESS
 elif [ -f ".git/MERGE_HEAD" ]; then OP_IN_PROGRESS=merge
 elif [ -f ".git/CHERRY_PICK_HEAD" ]; then OP_IN_PROGRESS=cherry-pick; fi
 
-FETCH_ERR=""
-if ! FETCH_ERR=$(git fetch --prune origin --quiet 2>&1); then
-  echo "fatal: could not fetch origin" >&2
-  echo "$FETCH_ERR" >&2
+# a sandboxed fetch exits nonzero after its objects land, so only a stale tracking ref fails here
+FETCH_RC=0
+git fetch --prune origin --quiet 2>/dev/null || FETCH_RC=$?
+if ! git rev-parse --verify --quiet "origin/$DEFAULT_BRANCH" >/dev/null; then
+  echo "fatal: origin/$DEFAULT_BRANCH unresolved after fetch (exit $FETCH_RC)" >&2
   exit 1
 fi
 
