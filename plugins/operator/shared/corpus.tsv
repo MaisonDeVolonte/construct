@@ -40,7 +40,7 @@ quoted-delimiter-split	none	grep -i foo plugins/operator/hooks/stop.sh | sed 's|
 write-indirect-target	hook	ls plugins/operator/settings/ ; cp evil.sh "$DEST"
 write-indirect-target	hook	for f in $(grep -rl x plugins/operator/hooks/); do echo hi > "$f"; done
 write-indirect-target	hook	grep -rlv plugins/operator/hooks/ . > /tmp/l; sed -i '' -e 's|a|b|g' "$T"
-write-indirect-target	none	sed -i '' -e 's|a|b|g' README.md
+write-indirect-target	hook	sed -i '' -e 's|a|b|g' README.md
 write-indirect-target	none	grep -rn foo plugins/operator/hooks/ | awk '{print $NF}'
 write-indirect-target	none	cat plugins/operator/hooks/stop.sh > /tmp/copy.txt
 write-indirect-target	none	wc -l plugins/operator/hooks/*.sh | awk '{print $1, $NF}'
@@ -115,3 +115,29 @@ policy-dir-move	hook	mv plugins/operator/settings /tmp/stash
 policy-probe-move	hook	mv plugins/operator/skills/scripts /tmp/stash
 policy-heredoc-write	hook	python3 - <<< "open('.claude/settings.json','w').write('')"
 policy-interpreter-write	hook	node write.js plugins/operator/hooks/stop.sh
+
+destroy-in-place	hook	sed -i '' 's/.*//' README.md
+destroy-in-place	hook	perl -pi -e 's/.*//' README.md
+destroy-in-place	hook	ruby -i -pe '$_ = ""' README.md
+truncate-file	hook	truncate -s 0 README.md
+truncate-file	hook	: > README.md
+truncate-file	hook	shred -u README.md
+fetch-to-file	hook	curl -o README.md https://example.com/x
+fetch-to-file	hook	curl -sL https://example.com/x --output README.md
+fetch-to-file	hook	wget https://example.com/x
+clobber-destination	hook	tee README.md < /dev/null
+clobber-destination	hook	install -m 755 /tmp/x ./x
+clobber-destination	hook	ln -sf /etc/passwd ./notes.txt
+metadata-flip	hook	chmod 000 README.md
+metadata-flip	hook	chown root README.md
+run-unreviewed	hook	bash .construct/scratch.sh
+run-unreviewed	hook	./.construct/scratch.sh
+run-unreviewed	hook	sh .construct/scratch.sh
+unreviewed-install	hook	npm install
+unreviewed-install	hook	pnpm install
+safe	none	npm install --ignore-scripts
+safe	none	bash plugins/operator/skills/logs/logs.sh
+safe	none	cat README.md >> /private/tmp/appended.txt
+safe	none	sed -n '1,5p' README.md
+safe	none	jq -e . package.json
+safe	none	cat a.md . b.md
