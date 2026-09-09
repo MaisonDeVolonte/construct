@@ -58,12 +58,12 @@ if [ -z "$DEFAULT_BRANCH" ]; then
 if [ -z "$STARTING_BRANCH" ]; then
   echo "fatal: detached HEAD" >&2; exit 1; fi
 
-# --prune drops tracking refs for branches deleted on the remote, which is what marks their local
-# counterparts 'gone' below; it deletes no local branch, so it stays inside the read-only contract
-PRUNE_ERR=""
-if ! PRUNE_ERR=$(git fetch --prune origin --quiet 2>&1); then
-  echo "fatal: could not fetch origin" >&2
-  echo "$PRUNE_ERR" >&2
+# --prune drops tracking refs for branches deleted on the remote, marking their local counterparts
+# 'gone' below; a sandboxed fetch exits nonzero after its objects land, so only a stale ref fails
+FETCH_RC=0
+git fetch --prune origin --quiet 2>/dev/null || FETCH_RC=$?
+if ! git rev-parse --verify --quiet "origin/$DEFAULT_BRANCH" >/dev/null; then
+  echo "fatal: origin/$DEFAULT_BRANCH unresolved after fetch (exit $FETCH_RC)" >&2
   exit 1
 fi
 
