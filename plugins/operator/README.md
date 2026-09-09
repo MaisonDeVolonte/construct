@@ -18,7 +18,7 @@ TABLE OF CONTENTS
 ├─ Hooks & Actions
 ├─ /sessionstart ── inject-readme · inject-log · inject-changes · inject-support
 ├─ /stop ────────── retardify-output · synthesize-log
-├─ /pretooluse ──── block-protected-paths · block-destructive-git · block-outside-moves · suggest-allow-rules
+├─ /pretooluse ──── block-protected-paths · block-destructive-git · block-destructive-writes · block-untracked-exec · block-outside-moves
 ├─ /posttooluse ─── eslint · retardify-code · retardify-file
 ├─ /taskcompleted ─ append-log
 ├─ Styles ───────── output style · subagent style
@@ -764,7 +764,6 @@ metadata:
 **what it does:** 
 - skill
   - runs permissions.sh, treating its replay result as measured fact over any lead
-  - surfaces "allow rules to add next," ranked by how often each command was asked about
   - appends a dated entry to `.construct/operator/permissions/`, header seeded if new
   - never edits a settings file — a live gap gets added to the shared corpus
 - sidecar
@@ -2000,6 +1999,46 @@ description: denies force pushes, force branch deletes, non-ff merges and unsafe
 - deny rules are prefix-anchored and miss trailing flags, which is the gap this action closes
 - costs one process spawn per Bash call, measured at roughly 60ms
 
+#### pretooluse/block-destructive-writes
+```
+plugins/operator/hooks/pretooluse/block-destructive-writes.sh
+```
+```yaml
+---
+name: block-destructive-writes
+description: denies write shapes that leave no undo, on any path rather than only a protected one
+---
+```
+
+**a write with no undo is refused wherever it lands:** the path never enters the decision
+- depends on no sibling plugin; needs `shared/commands.sh` beside it, and `jq`
+- decides one thing: does a Bash segment carry a write whose previous bytes survive nowhere
+- five classes: in-place editors, truncators, metadata flips, clobbering copies, fetch-to-file
+- a single `>` denies only when its target already exists, so `>>` and new files pass
+- `rm` is deliberately absent, since a single-file delete is ordinary and `rm -r` is already denied
+- the sibling `block-protected-paths.sh` asks where a write lands; this one asks what it does
+- costs one process spawn per Bash call, measured at roughly 60ms
+
+#### pretooluse/block-untracked-exec
+```
+plugins/operator/hooks/pretooluse/block-untracked-exec.sh
+```
+```yaml
+---
+name: block-untracked-exec
+description: denies running a script no commit holds, since its contents are opaque to a matcher
+---
+```
+
+**a script's bytes cannot be matched, so provenance is judged instead:** git decides
+- depends on no sibling plugin; needs `shared/commands.sh` beside it, `git`, and `jq`
+- decides one thing: has git stored what this segment is about to execute, unchanged
+- two calls answer it: `git ls-files --error-unmatch`, then `git diff --quiet HEAD`
+- covers `./x`, `bash x`, `sh x`, `source x`, `make`, and the package-manager install forms
+- an install denies without `--ignore-scripts`, since a tracked manifest never vouches for a postinstall
+- outside a git repo it exits silently, since the premise it tests is absent there
+- costs one process spawn per Bash call, plus two git calls only when a target is named
+
 #### pretooluse/block-outside-moves
 ```
 plugins/operator/hooks/pretooluse/block-outside-moves.sh
@@ -2016,27 +2055,6 @@ description: denies any mv whose destination lands outside the repo, where git c
 - decides one thing: does an `mv` segment's destination resolve outside the repo root
 - an in-repo rename passes silently, so ordinary refactors never pay for the check
 - costs one process spawn per Bash call, measured at roughly 60ms
-
-#### pretooluse/suggest-allow-rules
-```
-plugins/operator/hooks/pretooluse/suggest-allow-rules.sh
-```
-```yaml
----
-name: suggest-allow-rules
-description: names the allow rule a command needs when a documented shape prompts despite the rules
----
-```
-
-**the prompt no settings file explains:** three shapes prompt even under a matching prefix rule
-- depends on no sibling plugin; needs `shared/commands.sh` beside it, and `jq`
-- decides one thing: is this command about to prompt for a reason the allow list cannot show
-- an unquoted glob beside `find`, `sort`, `sed` or `git`, since the glob could expand into a flag
-- an exec wrapper, `watch`, `setsid`, `ionice` or `flock`, which runs whatever follows it
-- `find -exec` and `find -delete`, the two forms `Bash(find *)` is documented not to cover
-- casts no vote, since a hook `allow` never beats an `ask` or a `deny` rule
-- prints the paste-ready rule as `systemMessage`, then logs it for `/operator:permissions` to rank
-- costs one process spawn per Bash call, plus one awk pass per compound segment
 
 ### posttooluse
 > fires after every Write or Edit lands; findings return as context, never as failures

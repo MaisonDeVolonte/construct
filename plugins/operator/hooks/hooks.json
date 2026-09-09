@@ -15,8 +15,9 @@
     "PreToolUse": [{ "matcher": "Bash", "hooks": [
       { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pretooluse/block-protected-paths.sh" },
       { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pretooluse/block-destructive-git.sh" },
-      { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pretooluse/block-outside-moves.sh" },
-      { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pretooluse/suggest-allow-rules.sh" }
+      { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pretooluse/block-destructive-writes.sh" },
+      { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pretooluse/block-untracked-exec.sh" },
+      { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pretooluse/block-outside-moves.sh" }
     ] }],
 
     "PostToolUse": [{ "matcher": "Write|Edit", "hooks": [
