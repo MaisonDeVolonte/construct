@@ -3,8 +3,8 @@ name: continue
 model: opus
 effort: high
 license: MIT
-compatibility: requires bash, git
-description: snapshot, then measure the trunk delta, then run the sync against four narrow allows
+compatibility: requires bash, git, curl, jq
+description: snapshot, measure the trunk delta over the api, then sync against five narrow allows
 argument-hint: "[--help] [--test]"
 disable-model-invocation: true
 metadata:
@@ -44,9 +44,15 @@ echo "sidecar exit: $?"
 - a conflicted `git stash pop` leaves the stash entry intact, so say so and let the user resolve it
 - close by reporting the new state: branch, ahead/behind, and whether the tree came back dirty
 
-    The floor allows this trigger four forms: `git stash push -u -m 'auto-stash: /gitgud:continue'`,
-    `git switch main|master`, `git merge --ff-only origin/main|master`, and `git stash pop`.
+    The floor allows this trigger five forms: `git fetch origin main|master`,
+    `git stash push -u -m 'auto-stash: /gitgud:continue'`, `git switch main|master`,
+    `git merge --ff-only origin/main|master`, and `git stash pop`.
     Anything the sidecar prints beyond those is handed over, never reshaped to fit through the gate.
+
+    The delta itself is read over the github api, never from `git fetch`, since a sandboxed fetch
+    exits 255 writing `.git/FETCH_HEAD` even after its objects and tracking ref have landed.
+    The sidecar still runs that fetch to move the objects, records its exit code, and then verifies
+    `origin/<trunk>` against the api sha; a ref that did not move sends the sync to a handover.
 
     The branch names are literal because settings.json cannot read the trunk the sidecar resolved.
     A repo whose trunk is neither prompts instead of running, which is the safe direction: approve
