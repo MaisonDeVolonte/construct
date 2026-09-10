@@ -60,8 +60,8 @@ telemetry_line "plugins" "$({ find plugins -maxdepth 1 -mindepth 1 -type d 2>/de
 for p in plugins/*/; do
   [ -d "$p" ] || continue
   name=$(basename "$p")
-  skills=$({ find "$p/skills" -maxdepth 1 -mindepth 1 -type d 2>/dev/null || true; } | wc -l | tr -d ' ')
-  hooks=$({ find "$p/hooks" -maxdepth 1 -name '*.sh' 2>/dev/null || true; } | wc -l | tr -d ' ')
+  skills=$({ find "$p/skills" -maxdepth 1 -mindepth 1 -type d -name '[!.]*' 2>/dev/null || true; } | wc -l | tr -d ' ')
+  hooks=$({ find "$p/hooks" -type f -name '*.sh' 2>/dev/null || true; } | wc -l | tr -d ' ')
   telemetry_line "plugin_$name" "skills: $skills | hooks: $hooks"
 done
 
@@ -121,8 +121,8 @@ echo "--- artifacts ---"
 for d in .construct/*/*/; do
   [ -d "$d" ] || continue
   label=${d#.construct/}; label=${label%/}
-  count=$({ find "$d" -name '*.md' 2>/dev/null || true; } | wc -l | tr -d ' ')
-  latest=$({ find "$d" -name '*.md' 2>/dev/null || true; } | sort | tail -1)
+  count=$({ find "$d" -type f 2>/dev/null || true; } | wc -l | tr -d ' ')
+  latest=$({ find "$d" -type f 2>/dev/null || true; } | sort | tail -1)
   telemetry_line "$label" "files: $count | latest: ${latest:-none}"
 done
 
