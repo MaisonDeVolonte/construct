@@ -91,6 +91,26 @@ protected_incoming() {
 # ==============
 # a sidecar using these prints the same two blocks in the same order; `rerun.sh` opts out
 # the name is the INVOCATION, `gitgud:audit`, so a block header and a `/` menu entry never disagree
+# ==============
+# RESOLUTION
+# ==============
+# a handed-over path runs in the CALLER's cwd, which is not always this repo; two installs exist
+# 1. cloner: the caller's repo IS this repo, so the tracked relative path resolves as written
+# 2. installer: the plugin sits outside the caller's repo, so only CLAUDE_PLUGIN_ROOT resolves
+# neither hit returns nonzero, so a caller omits the line rather than handing over a dead path
+gitgud_path() {
+  local rel="$1"
+  if [ -f "plugins/gitgud/$rel" ]; then printf 'plugins/gitgud/%s\n' "$rel"; return 0; fi
+  if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/$rel" ]; then
+    printf '%s/%s\n' "${CLAUDE_PLUGIN_ROOT}" "$rel"; return 0; fi
+  return 1
+}
+
+# repo-local maintainer tools ship to the cloner only, so the installer gets no path at all
+repo_path() {
+  [ -f "$1" ] && printf '%s\n' "$1"
+}
+
 telemetry_open() {
   printf '\n=== /%s telemetry ===\n' "$1"
 }

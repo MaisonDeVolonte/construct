@@ -49,8 +49,10 @@ echo "sidecar exit: $?"
   - CREATE the file first if it does not exist, with `# <audit_file>` as its only line
 
 4. close with the two reads this sidecar deliberately does not perform
-  - `bash plugins/gitgud/shared/triage.sh` for branch, remote and team state
-  - `bash .claude/skills/validate-skills/validate-skills.sh` for the graded shape errors behind `pairing`
+  - `triage.sh` for branch, remote and team state
+  - `validate-skills.sh` for the graded shape errors behind `pairing`
+  - the sidecar resolves and prints both paths in its handover; run what it printed, never a literal
+  - a path it omitted is not installed here, so that read is skipped rather than retyped
 
 ## the shape
 > the artifact this skill appends to; the sidecar grades what landed on its next run
