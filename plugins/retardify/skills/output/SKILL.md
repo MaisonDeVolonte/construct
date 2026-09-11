@@ -29,7 +29,7 @@ echo "sidecar exit: $?"
 | rule | what it caught |
 |---|---|
 | `B1` | markup outside a list, table, fence or backtick: bold, italics, emoji, fenced plaintext |
-| `B2` | a prose line, or past the tolerance, a reply that has gone fully paragraphs |
+| `B2` | a prose line, past the tolerance a reply gone fully paragraphs, or one fence around it all |
 | `B6` | a banned sentence shape standing in for a plain statement |
 | `C2` | a line wider than the spec's character cap |
 | `C8` | a reply taller than the spec's line ceiling |
@@ -38,6 +38,8 @@ echo "sidecar exit: $?"
 | `F1` | a reply that never lands on an action, so the user has to ask for one |
 
 - line 0 names a whole-reply finding: the ceiling, the prose tolerance, or one of the action rules
+- a reply with no plain line and `SIGNAL_FLOOR` or more fenced ones is a wrapper, graded HARD `B2`
+- `C10` exempts fenced content, so a wrapper would otherwise leave the sidecar nothing to read
 - `V2` and `F5` are SOFT, so they surface only when a HARD finding is already blocking
 - `F1` is HARD, and a reply shorter than `SIGNAL_FLOOR` lines is exempt from it
 - a reply satisfies `F1` with a final `NUMBERED SIGNAL:` line, or by closing on a fenced block

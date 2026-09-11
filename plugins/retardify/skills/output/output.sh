@@ -145,6 +145,7 @@ EMOJI_WARN=$'\xe2\x9a'
 
 FENCE_LEN=0
 COUNTED=0
+FENCED_LINES=0
 LINE=0
 while IFS= read -r raw; do
   LINE=$((LINE + 1))
@@ -170,7 +171,7 @@ while IFS= read -r raw; do
     continue
   fi
   if [ "$FENCE_LEN" -ne 0 ]; then
-    if [ -n "$text" ]; then LAST_KIND=fence; fi
+    if [ -n "$text" ]; then LAST_KIND=fence; FENCED_LINES=$((FENCED_LINES + 1)); fi
     continue
   fi
 
@@ -226,6 +227,11 @@ CITE=''
 
 if [ "$FENCE_LEN" -ne 0 ]; then
   soft B1 0 "a fence opened and never closed; everything after it went ungraded"
+fi
+
+# C10 exempts fenced content, so one fence around the whole reply leaves nothing to grade
+if [ "$COUNTED" -eq 0 ] && [ "$FENCED_LINES" -ge "$SIGNAL_FLOOR" ]; then
+  hard B2 0 "$FENCED_LINES fenced lines and no plain line; the reply is wrapped in one fence"
 fi
 
 if [ "$COUNTED" -gt "$MAX_LINES" ]; then
