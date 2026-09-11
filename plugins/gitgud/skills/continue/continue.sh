@@ -17,6 +17,8 @@
 # - path, a local edit at a sandbox-denied path, or a path both incoming and locally dirty at once
 # - the last one is the silent-loss shape: a merge writes that path first, stash pop then refuses
 # - to restore over what's already there, and the edit is stranded inside the stash unseen
+# - unless the local bytes already equal the incoming ones, which a drain leaves behind routinely
+# - that case is graded self-colliding from the compare blob shas, and never blocks the sync
 # ARTIFACT
 # - every run, clean or refused, writes one manifest to `.construct/gitgud/continue/`
 # @see plugins/gitgud/skills/continue/SKILL.md, plugins/gitgud/skills/backup/SKILL.md,
@@ -131,11 +133,38 @@ LOCAL_PATHS=$(git status --porcelain=v1 --no-renames 2>/dev/null | cut -c4-)
 LOCAL_PROTECTED=$(printf '%s\n' "$LOCAL_PATHS" | protected_paths | paste -sd, - | sed 's/,/, /g')
 
 # the join between incoming and local dirty: a merge writes it first, pop then refuses to restore
-COLLIDING=""
+OVERLAP=""
 if [ "$BEHIND" -gt 0 ] && [ -n "$LOCAL_PATHS" ]; then
-  COLLIDING=$(comm -12 <(printf '%s\n' "$INCOMING_PATHS" | sort -u) <(printf '%s\n' "$LOCAL_PATHS" | sort -u) \
-    | grep -v '^$' | paste -sd, - | sed 's/,/, /g' || true)
+  OVERLAP=$(comm -12 <(printf '%s\n' "$INCOMING_PATHS" | sort -u) <(printf '%s\n' "$LOCAL_PATHS" | sort -u) \
+    | grep -v '^$' || true)
 fi
+
+# a self-collision is a path whose local bytes ALREADY equal what the merge would write, which is
+# what a drain leaves behind after its own work lands upstream; it reads as a conflict and is not
+# `.files[].sha` is the blob sha at the compare head, so the same read git hash-object does locally
+# no extra request is made here: the compare body was already fetched for the counts above
+COLLIDING=""
+BENIGN=""
+if [ -n "$OVERLAP" ]; then
+  while IFS= read -r path; do
+    [ -n "$path" ] || continue
+    INCOMING_BLOB=$(printf '%s' "$COMPARE" \
+      | jq -r --arg p "$path" '.files[]? | select(.filename == $p and .status != "removed") | .sha // empty')
+    LOCAL_BLOB=""
+    if [ -f "$path" ]; then LOCAL_BLOB=$(git hash-object "$path" 2>/dev/null || true); fi
+    if [ -n "$INCOMING_BLOB" ] && [ "$INCOMING_BLOB" = "$LOCAL_BLOB" ]; then
+      BENIGN="$BENIGN$path
+"
+    else
+      COLLIDING="$COLLIDING$path
+"
+    fi
+  done <<EOF
+$OVERLAP
+EOF
+fi
+COLLIDING=$(printf '%s' "$COLLIDING" | grep -v '^$' | paste -sd, - | sed 's/,/, /g' || true)
+BENIGN=$(printf '%s' "$BENIGN" | grep -v '^$' | paste -sd, - | sed 's/,/, /g' || true)
 
 # ==============
 # OBJECT CHECK
@@ -182,6 +211,7 @@ telemetry_line "sync state" "$SYNC_STATE"
 telemetry_line "sandbox-denied incoming paths" "${INCOMING_PROTECTED:-none}"
 telemetry_line "sandbox-denied local paths" "${LOCAL_PROTECTED:-none}"
 telemetry_line "colliding paths" "${COLLIDING:-none}"
+telemetry_line "self-colliding paths (identical)" "${BENIGN:-none}"
 
 # ==============
 # ARTIFACT
@@ -208,6 +238,7 @@ ARTIFACT="$DEST/$STAMP.txt"
   printf 'sandbox-denied incoming paths: %s\n' "${INCOMING_PROTECTED:-none}"
   printf 'sandbox-denied local paths: %s\n' "${LOCAL_PROTECTED:-none}"
   printf 'colliding paths: %s\n' "${COLLIDING:-none}"
+  printf 'self-colliding paths (identical): %s\n' "${BENIGN:-none}"
 } > "$ARTIFACT"
 telemetry_line "artifact" "$ARTIFACT"
 
