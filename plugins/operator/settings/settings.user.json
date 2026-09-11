@@ -54,13 +54,15 @@
     },
 
     "network": {
-      "strictAllowlist": true,
+      "allowLocalBinding": true,
       "tlsTerminate": {},
+      "strictAllowlist": true,
       "allowedDomains": [
         "code.claude.com", "docs.claude.com", "zed.dev",
         "github.com", "api.github.com",
         "registry.npmjs.org",
-        "agentskills.io"
+        "agentskills.io",
+        "fonts.googleapis.com", "fonts.gstatic.com"
       ]
     }
   },
