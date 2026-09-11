@@ -35,6 +35,8 @@ echo "sidecar exit: $?"
     - `colliding, the sync is yours to run` → STOP and hand the block over; a path is both
       incoming and locally uncommitted at once, and a merge would write it before stash pop got
       a chance to restore yours, so the collision is the user's to resolve, never a script's guess
+      a path whose local bytes already match the incoming ones is graded `self-colliding` instead,
+      reported in telemetry only, since writing it changes nothing and strands no edit
     - `diverged` → STOP and hand the block over; local commits origin lacks need a rebase or a
       merge commit, and both rewrite history, so both stay the user's call
 - name the artifact path from the telemetry, so the user can read the full manifest later
