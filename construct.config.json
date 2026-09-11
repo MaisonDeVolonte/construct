@@ -1,19 +1,24 @@
 {
   "github": {
-    "api_base":                  "https://api.github.com",
-    "remote":                    "origin",
-    "main_branch":               "main",
-    "production_branch":         "production",
-    "staging_branch":            "",
-    "commit_types":              [ "new", "fix", "improve", "update", "debug", "test" ],
-    "commit_scopes":             [ "docs", "tools", "skills", "hooks", "styles", "config" ],
-    "branch_pattern":            "{type}/{scope}/{slug}",
-    "merge_method":              "rebase",
-    "auto_merge":                true,
-    "watch_merge":               true,
-    "merge_queue":               false
+    "api_base":               "https://api.github.com",
+    "remote":                 "origin",
+    "main_branch":            "main",
+    "production_branch":      "production",
+    "staging_branch":         "",
+    "commit_types":           [ "new", "fix", "improve", "update", "debug", "test" ],
+    "commit_scopes":          [ "docs", "tools", "skills", "hooks", "styles", "config" ],
+    "branch_pattern":         "{type}/{scope}/{slug}",
+    "merge_method":           "rebase",
+    "auto_merge":             true,
+    "watch_merge":            true,
+    "merge_queue":            false
   },
+
   "policy": {
-    "protected_paths":           [ "webflow" ]
+    "protected_paths":        []
+  },
+
+  "gitgud": {
+    "backup_retention":       5
   }
 }
