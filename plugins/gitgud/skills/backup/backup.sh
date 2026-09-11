@@ -14,6 +14,10 @@
 # - ignored files are skipped on purpose, the same reason `/gitgud:nuke` stashes with -u not -a
 # - the destination is fixed at gitignored `.construct/gitgud/backup/`, never a copy-anywhere tool
 # - it is not `tmp/`, since scratch is always free to be emptied and a snapshot must outlive that
+# RETENTION
+# - `gitgud.backup_retention` in `construct.config.json` sets how many snapshots survive, default 5
+# - the deletes are handed over as one full path per stale stamp, since the deny list holds `rm -r`
+# - `0` keeps every snapshot and emits nothing, which is the only value that disables the block
 # HANDOVER
 # - the restore is handed over, never run: putting files back overwrites what sits there now
 # - `cp` here is invisible to the deny list and the hook, since script lines are not tool calls
@@ -43,7 +47,7 @@ if [ "$#" -gt 0 ]; then
 fi
 
 require_repo
-require_tools cp find
+require_tools cp find jq
 
 # every path is relative to the repo root, so a run from a subdirectory still lands in one place
 ROOT=$(git rev-parse --show-toplevel)
@@ -100,6 +104,21 @@ BACKUP_TOTAL=$(du -sh .construct/gitgud/backup 2>/dev/null | awk '{print $1}')
 BACKUP_COUNT=$(find .construct/gitgud/backup -mindepth 1 -maxdepth 1 -type d | grep -c . || true)
 
 # ==============
+# RETENTION
+# ==============
+# stamps sort lexically, so a reverse sort is newest first and the tail is what retention drops
+RETAIN=$(cfg .gitgud.backup_retention 5)
+# a non-numeric or negative value would make the arithmetic below decide on garbage
+case "$RETAIN" in ''|*[!0-9]*) RETAIN=5;; esac
+
+STALE=""
+if [ "$RETAIN" -gt 0 ] && [ "${BACKUP_COUNT:-0}" -gt "$RETAIN" ]; then
+  STALE=$(find .construct/gitgud/backup -mindepth 1 -maxdepth 1 -type d \
+    | sort -r | tail -n +$((RETAIN + 1)))
+fi
+STALE_COUNT=$(printf '%s\n' "$STALE" | grep -c . || true)
+
+# ==============
 # MANIFEST
 # ==============
 # written into the backup so it explains itself months later, without this sidecar to read it
@@ -129,6 +148,11 @@ telemetry_line "local branches" "$BRANCH_COUNT"
 telemetry_line "stash entries" "$STASH_COUNT"
 telemetry_line "snapshot size" "$BACKUP_SIZE"
 telemetry_line "backups on disk" "${BACKUP_COUNT:-0} totalling ${BACKUP_TOTAL:-0}"
+if [ "$RETAIN" -eq 0 ]; then
+  telemetry_line "retention" "0, keep every snapshot"
+else
+  telemetry_line "retention" "$RETAIN, marking $STALE_COUNT stale"
+fi
 telemetry_line "verified" "object counts match at $SOURCE_OBJECTS"
 
 # the restore is handed over rather than run: putting files back overwrites whatever sits there
@@ -140,8 +164,12 @@ handover_cmd "git clone $DEST/git restored-$STAMP"
 handover_note "or put a single working file back exactly where it was:"
 handover_cmd "cp $DEST/worktree/<path> <path>"
 handover_note "read $DEST/MANIFEST.txt for what this snapshot holds"
-if [ "${BACKUP_COUNT:-0}" -gt 5 ]; then
-  handover_note "$BACKUP_COUNT snapshots now hold $BACKUP_TOTAL; delete the stale ones yourself:"
-  handover_cmd "rm -rf .construct/gitgud/backup/<stamp>"
+if [ "$STALE_COUNT" -gt 0 ]; then
+  handover_note "$BACKUP_COUNT snapshots hold $BACKUP_TOTAL; retention keeps $RETAIN, so delete these:"
+  while IFS= read -r stale; do
+    [ -n "$stale" ] && handover_cmd "rm -rf $stale"
+  done <<STALE_LIST
+$STALE
+STALE_LIST
 fi
 block_close

@@ -37,6 +37,11 @@ echo "sidecar exit: $?"
     - the snapshot lives inside the repo, so `git clean -fdx` is the one command that eats it
     - `clean` is denied to the agent in every scope, so only the user can destroy a backup
 
+    - IF `retention` names any stale snapshot, the handover carries one `rm -rf` per stale stamp
+    - say how many the retention marks and what they total, then leave the deletes in the block
+    - never run one; `rm -r` is denied in every scope, and the paste is the whole mechanism
+    - IF `retention` reads `0, keep every snapshot`, say nothing about deletion at all
+
 ## Help
 > IF the invocation carries `--help` or `-h`, this section is the whole turn:
 
