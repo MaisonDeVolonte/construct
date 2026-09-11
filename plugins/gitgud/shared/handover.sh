@@ -92,6 +92,23 @@ protected_incoming() {
 # a sidecar using these prints the same two blocks in the same order; `rerun.sh` opts out
 # the name is the INVOCATION, `gitgud:audit`, so a block header and a `/` menu entry never disagree
 # ==============
+# CONFIG
+# ==============
+# a project key wins over a user key, and a missing key falls back to the caller's own default
+PROJECT_CONFIG="${PROJECT_CONFIG:-$(git rev-parse --show-toplevel 2>/dev/null)/construct.config.json}"
+USER_CONFIG="${USER_CONFIG:-$HOME/.construct/config.json}"
+
+# `cfg .github.merge_method rebase` is the whole shape; every caller must require jq itself
+cfg() {
+  local path=$1 fallback=${2:-} value=''
+  if [ -r "$PROJECT_CONFIG" ]; then
+    value=$(jq -r "$path // empty" "$PROJECT_CONFIG" 2>/dev/null || true); fi
+  if [ -z "$value" ] && [ -r "$USER_CONFIG" ]; then
+    value=$(jq -r "$path // empty" "$USER_CONFIG" 2>/dev/null || true); fi
+  printf '%s' "${value:-$fallback}"
+}
+
+# ==============
 # RESOLUTION
 # ==============
 # a handed-over path runs in the CALLER's cwd, which is not always this repo; two installs exist
