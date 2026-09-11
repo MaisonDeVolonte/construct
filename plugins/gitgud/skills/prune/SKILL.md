@@ -27,7 +27,7 @@ echo "sidecar exit: $?"
 
 1. run the native shell command exactly as specified
   ```bash
-  plugins/gitgud/shared/triage.sh
+  T=plugins/gitgud/shared/triage.sh; [ -f "$T" ] || T="${CLAUDE_PLUGIN_ROOT}/shared/triage.sh"; bash "$T"
   ```
   - fail (`sidecar exit` > 0) → abort and report: "<raw terminal error>"
   - success (`sidecar exit` = 0): merge its classification into the handover, then STOP

@@ -314,8 +314,12 @@ echo "--- end ---"
 block_close
 
 handover_open "gitgud:audit"
-handover_note "branch, remote and team state is a separate read; this sidecar never re-walks them"
-handover_cmd "bash plugins/gitgud/shared/triage.sh"
-handover_note "shape errors are graded in detail by /skills, the maintainer skill this repo keeps"
-handover_cmd "bash .claude/skills/validate-skills/validate-skills.sh"
+if TRIAGE=$(gitgud_path "shared/triage.sh"); then
+  handover_note "branch, remote and team state is a separate read; this sidecar never re-walks them"
+  handover_cmd "bash $TRIAGE"
+fi
+if VALIDATOR=$(repo_path ".claude/skills/validate-skills/validate-skills.sh"); then
+  handover_note "shape errors are graded in detail by /skills, the maintainer skill this repo keeps"
+  handover_cmd "bash $VALIDATOR"
+fi
 block_close
