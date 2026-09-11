@@ -71,20 +71,7 @@ SLUG=$(git remote get-url origin 2>/dev/null \
   | sed -e 's|^git@github\.com:||' -e 's|^ssh://git@github\.com/||' \
         -e 's|^https://github\.com/||' -e 's|\.git$||')
 
-PROJECT_CONFIG="$ROOT/construct.config.json"
-USER_CONFIG="$HOME/.construct/config.json"
-
-# one key, read from the project first and the user second, so a repo setting wins over a personal
-# one and an absent file costs nothing; `cfg .github.merge_method rebase` is the whole shape
-cfg() {
-  local path=$1 fallback=${2:-} value=''
-  if [ -r "$PROJECT_CONFIG" ]; then
-    value=$(jq -r "$path // empty" "$PROJECT_CONFIG" 2>/dev/null || true); fi
-  if [ -z "$value" ] && [ -r "$USER_CONFIG" ]; then
-    value=$(jq -r "$path // empty" "$USER_CONFIG" 2>/dev/null || true); fi
-  printf '%s' "${value:-$fallback}"
-}
-
+# `cfg` and both config paths live in shared/handover.sh, so every sidecar reads one config
 MERGE_METHOD=$(cfg .github.merge_method rebase)
 AUTO_MERGE=$(cfg .github.auto_merge true)
 MERGE_QUEUE=$(cfg .github.merge_queue false)
