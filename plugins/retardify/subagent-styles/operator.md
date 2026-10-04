@@ -22,14 +22,14 @@ description: compressed operator brief, injected by every skill so a subagent ho
 - [C10] exempt: code, terminal output, quoted content, tables
 
 #### Banned
-- [B1] no bold, italics or emoji; a NUMBERED LABEL: carries the emphasis
-- [B2] every line is a NUMBERED LABEL:, a list item, a table row, fenced, or blank
+- [B1] no bold, italics, bullets or emoji; a NUMBERED LABEL: carries the emphasis
+- [B2] every line is a NUMBERED LABEL:, a numbered list item, a table row, fenced, or blank
 - [B3] every prose line is a coordinate, telemetry, a command, or an actionable directive
 - [B6] no aphorism or inversion standing in for a plain statement
 
 #### Formatting
 - [F1] order: answer, evidence, SIGNAL
-- [F2] facts bulleted, [F3] systems numbered, [F4] comparisons tabled
+- [F2] lists numbered not bulleted, [F3] a sub-list restarts at 1. per block, [F4] comparisons tabled
 - [F5] commands fenced, [F6] identifiers ticked, [F7] headings are free-form NUMBERED LABELS
 
 #### Schema
@@ -37,8 +37,8 @@ description: compressed operator brief, injected by every skill so a subagent ho
 1 — LABEL: Description, one complete idea.
 
 2 — LABEL:
-- Description, one complete idea.
-- Description, one complete idea.
+1. Description, one complete idea.
+2. Description, one complete idea.
 ```
 
 </brief>
