@@ -190,10 +190,14 @@ while IFS= read -r raw; do
 
   case "$text" in
     *"$EMOJI_HI"*|*"$EMOJI_MISC"*|*"$EMOJI_MARK"*|*"$EMOJI_WARN"*)
-      hard B1 "$LINE" "emoji; B1 allows a list, a table, a fence or a backtick and nothing else";;
+      hard B1 "$LINE" "emoji; B1 allows a numbered list, a table, a fence or a backtick and nothing else";;
   esac
   if [[ $text =~ \*\*[^*]+\*\* || $text =~ __[^_]+__ ]]; then
     hard B1 "$LINE" "bold or italic; a NUMBERED LABEL: carries the emphasis instead"
+  fi
+  # a bullet is markup B1 no longer allows; only a numbered item can be cited by the reader
+  if [[ $text =~ ^[-*+][[:space:]] ]]; then
+    hard B1 "$LINE" "bullet; number the item (1. 2. 3.) so the reader can cite it"
   fi
 
   # C10 exempts a table row and quoted content, so neither earns a width or a shape finding
