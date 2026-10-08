@@ -76,10 +76,10 @@ MERGE_METHOD=$(cfg .github.merge_method rebase)
 AUTO_MERGE=$(cfg .github.auto_merge true)
 MERGE_QUEUE=$(cfg .github.merge_queue false)
 WATCH_MERGE=$(cfg .github.watch_merge true)
-COMMIT_AUTHOR=$(cfg .github.commit_author_username)
-COMMIT_EMAIL=$(cfg .github.commit_author_email)
-CO_AUTHOR=$(cfg .github.co_author_username)
-CO_EMAIL=$(cfg .github.co_author_email)
+AUTHOR_USER=$(cfg .github.author_username)
+AUTHOR_EMAIL=$(cfg .github.author_email)
+COMMITTER_USER=$(cfg .github.committer_username)
+COMMITTER_EMAIL=$(cfg .github.committer_email)
 
 # ==============
 # API
@@ -152,28 +152,18 @@ tree_entry() {
     '{path: $p, mode: $m, type: "blob", sha: $s}'
 }
 
-# the trailer credits the other identity, since a commit carries one author and a pr one opener
-commit_body() {
-  local body=$1
-  if [ -n "$CO_AUTHOR" ] && [ -n "$CO_EMAIL" ]; then
-    printf '%s\n\nCo-Authored-By: %s <%s>\n' "$body" "$CO_AUTHOR" "$CO_EMAIL"
-  else
-    printf '%s\n' "$body"
-  fi
-}
-
 # an omitted committer copies the author rather than the token's account, so both are sent by name;
 # the human wrote it and the machine created the commit, which is what %an and %cn then report
 commit_payload() {
   local message=$1 tree=$2 parent=$3 payload
   payload=$(jq -n --arg m "$message" --arg t "$tree" --arg p "$parent" \
     '{message: $m, tree: $t, parents: [$p]}')
-  if [ -n "$COMMIT_AUTHOR" ] && [ -n "$COMMIT_EMAIL" ]; then
-    payload=$(printf '%s' "$payload" | jq --arg n "$COMMIT_AUTHOR" --arg e "$COMMIT_EMAIL" \
+  if [ -n "$AUTHOR_USER" ] && [ -n "$AUTHOR_EMAIL" ]; then
+    payload=$(printf '%s' "$payload" | jq --arg n "$AUTHOR_USER" --arg e "$AUTHOR_EMAIL" \
       '. + {author: {name: $n, email: $e}}')
   fi
-  if [ -n "$CO_AUTHOR" ] && [ -n "$CO_EMAIL" ]; then
-    payload=$(printf '%s' "$payload" | jq --arg n "$CO_AUTHOR" --arg e "$CO_EMAIL" \
+  if [ -n "$COMMITTER_USER" ] && [ -n "$COMMITTER_EMAIL" ]; then
+    payload=$(printf '%s' "$payload" | jq --arg n "$COMMITTER_USER" --arg e "$COMMITTER_EMAIL" \
       '. + {committer: {name: $n, email: $e}}')
   fi
   printf '%s' "$payload"
@@ -204,7 +194,7 @@ cmd_bucket() {
   basetree=$(api GET "/repos/$SLUG/git/commits/$basesha" | jq -r '.tree.sha')
   treesha=$(tree_of "$basetree" "$@")
 
-  body=$(commit_body "$(cat "$bodyfile")")
+  body=$(cat "$bodyfile")
   commitsha=$(api POST "/repos/$SLUG/git/commits" \
     "$(commit_payload "$title
 
@@ -224,7 +214,7 @@ $body" "$treesha" "$basesha")" | jq -r '.sha')
   fi
 
   printf 'branch: %s\ncommit: %s\npr: %s\nauthor: %s\nauto-merge: %s\nfiles: %s\n' \
-    "$branch" "${commitsha:0:7}" "$prnum" "${COMMIT_AUTHOR:-token account}" "$armed" "$#"
+    "$branch" "${commitsha:0:7}" "$prnum" "${AUTHOR_USER:-token account}" "$armed" "$#"
 }
 
 # a red bucket is fixed in place: same branch, new commit on its tip, and the pr updates itself
@@ -238,7 +228,7 @@ cmd_update() {
   tiptree=$(api GET "/repos/$SLUG/git/commits/$tipsha" | jq -r '.tree.sha')
   treesha=$(tree_of "$tiptree" "$@")
 
-  body=$(commit_body "$(cat "$bodyfile")")
+  body=$(cat "$bodyfile")
   commitsha=$(api POST "/repos/$SLUG/git/commits" \
     "$(commit_payload "$title
 
@@ -298,8 +288,8 @@ cmd_state() {
     "$(api GET "/repos/$SLUG/pulls?state=open&per_page=100" | jq 'length')"
   printf 'merge method: %s\nauto-merge: %s\nmerge queue: %s\nwatch merge: %s\n' \
     "$MERGE_METHOD" "$AUTO_MERGE" "$MERGE_QUEUE" "$WATCH_MERGE"
-  printf 'commit author: %s\nco-author: %s\n' \
-    "${COMMIT_AUTHOR:-token account}" "${CO_AUTHOR:-none}"
+  printf 'author: %s\ncommitter: %s\n' \
+    "${AUTHOR_USER:-token account}" "${COMMITTER_USER:-token account}"
 }
 
 # replays the drain's own command through the live gate, the way operator:permissions replays
