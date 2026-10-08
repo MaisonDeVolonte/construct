@@ -1,19 +1,19 @@
 {
   "github": {
     "api_base":                  "https://api.github.com",
-    "remote":                    "origin",
-    "main_branch":               "main",
-    "production_branch":         "production",
+    "remote":                    "your-remote-alias",
+    "main_branch":               "your-main-branch",
+    "production_branch":         "your-production-branch",
     "staging_branch":            "",
     "commit_types":              [ "new", "fix", "improve", "update", "debug", "test" ],
-    "commit_scopes":             [ "docs", "tools", "skills", "hooks", "styles", "config" ],
+    "commit_scopes":             [ "your", "projects", "main", "scopes" ],
     "branch_pattern":            "{type}/{scope}/{slug}",
-    "merge_method":              "rebase",
+    "merge_method":              "your-merge-method",
     "auto_merge":                true,
     "watch_merge":               true,
     "merge_queue":               false
   },
   "policy": {
-    "protected_paths":           [ "webflow" ]
+    "protected_paths":           [ "your/protected", "directories" ]
   }
 }
