@@ -1,0 +1,8 @@
+{
+  "github": {
+    "author_email":        "human@email.com",
+    "author_username":     "HumanUsername",
+    "committer_email":     "operator@email.com",
+    "committer_username":  "HumanUsername-Operator"
+  }
+}

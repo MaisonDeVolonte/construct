@@ -469,7 +469,7 @@ claude
 | agent uses   | no, keychain deny       | yes, proxy              |
 | client       | gh, git, curl via gh    | curl, node, python      |
 | reach        | any host, no proxy      | api.github.com          |
-| attribution  | commit author           | pr author, co-author    |
+| attribution  | commit author           | commit committer        |
 | absent       | gh prompts a login      | dead preflight → 401    |
 
 > 1. github allows every human account one additional account for automation purposes;
@@ -517,10 +517,10 @@ github.com/.../.../invitations
 // 8. add machine account email and username to ~/.construct/config.json
 {
   "github": {
-    "commit_author_email":      "youremail@domain.com",
-    "commit_author_username":   "yourusername",
-    "co_author_email":          "youremail-operator@domain.com",
-    "co_author_username":       "yourusername-operator"
+    "author_email":             "youremail@domain.com",
+    "author_username":          "yourusername",
+    "committer_email":          "youremail-operator@domain.com",
+    "committer_username":       "yourusername-operator"
   }
 }
 ```
@@ -2718,7 +2718,7 @@ managed → cli → local → project → user (scalars override, arrays merge)
 [hooks.json](plugins/operator/hooks/hooks.json)
 - `hooks`: twelve actions across SessionStart, PreToolUse, PostToolUse, TaskCompleted and Stop
 
-[config.project.json](plugins/operator/config/config.project.json)
+[project.config.json](plugins/operator/config/project.config.json)
 - `github`: remote, branches, commit shapes and merge mechanics (lands as `construct.config.json`)
 - `policy`: protected_paths, additive write-deny globs read by the PreToolUse hook and deliver
 
