@@ -87,12 +87,16 @@ CO_EMAIL=$(cfg .github.co_author_email)
 # every call carries the same headers, and every failure prints the api's own message rather than
 # a paraphrase, since a 422 body names the field that was wrong
 api() {
-  local method=$1 path=$2 body=${3:-} out code
+  local method=$1 path=$2 body=${3:-} out code bodyf
   out=$(mktemp "${TMPDIR:-/tmp}/gitgud-api.XXXXXX")
   if [ -n "$body" ]; then
+    # body goes through a file, not -d "$body"; a blob payload over ARG_MAX overflows curl's argv
+    bodyf=$(mktemp "${TMPDIR:-/tmp}/gitgud-body.XXXXXX")
+    printf '%s' "$body" > "$bodyf"
     code=$(curl -sS --max-time 30 -o "$out" -w '%{http_code}' -X "$method" \
       -H "Authorization: Bearer $GH_TOKEN_OPERATOR" -H "Accept: application/vnd.github+json" \
-      -d "$body" "$API$path" || echo 000)
+      --data-binary @"$bodyf" "$API$path" || echo 000)
+    rm -f "$bodyf"
   else
     code=$(curl -sS --max-time 30 -o "$out" -w '%{http_code}' -X "$method" \
       -H "Authorization: Bearer $GH_TOKEN_OPERATOR" -H "Accept: application/vnd.github+json" \
@@ -136,9 +140,13 @@ tree_entry() {
   fi
   mode=100644
   [ -x "$path" ] && mode=100755
+  # base64 lands in a file read by --rawfile; --arg with a blob over ARG_MAX overflows jq's argv
+  local b64f; b64f=$(mktemp "${TMPDIR:-/tmp}/gitgud-blob.XXXXXX")
+  base64 < "$path" | tr -d '\n' > "$b64f"
   sha=$(api POST "/repos/$SLUG/git/blobs" \
-    "$(jq -n --arg c "$(base64 < "$path" | tr -d '\n')" '{content: $c, encoding: "base64"}')" \
+    "$(jq -n --rawfile c "$b64f" '{content: $c, encoding: "base64"}')" \
     | jq -r '.sha')
+  rm -f "$b64f"
   [ -n "$sha" ] && [ "$sha" != null ] || die "blob upload returned no sha for $path"
   jq -n --arg p "$path" --arg m "$mode" --arg s "$sha" \
     '{path: $p, mode: $m, type: "blob", sha: $s}'
