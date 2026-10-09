@@ -20,17 +20,14 @@ echo "sidecar exit: $?"
 ```
 - `help: requested` → the run was refused before it started; `## Help` below is the whole turn
 - BOTH sidecars already ran, continue first and unconditionally, so there is no command to issue
+- prune.sh ends by running `triage.sh`, printed under `=== /gitgud:prune triage ===`
 - fail (`continue exit` > 0 or `sidecar exit` > 0) → abort and report: "<raw terminal error>"
 - obey the notes continue's handover prints; they name who runs what, and nothing here restates them
 - a sync continue marked trigger-run happens BEFORE any cleanup, one command per tool call
 - success (`sidecar exit` = 0) → report both telemetries and continue to step 1
 
-1. run the native shell command exactly as specified
-  ```bash
-  T=plugins/gitgud/shared/triage.sh; [ -f "$T" ] || T="${CLAUDE_PLUGIN_ROOT}/shared/triage.sh"; bash "$T"
-  ```
-  - fail (`sidecar exit` > 0) → abort and report: "<raw terminal error>"
-  - success (`sidecar exit` = 0): merge its classification into the handover, then STOP
+1. read the triage block printed above; it already ran, so there is no command to issue
+  - merge its classification into the handover, then STOP
 
     NEVER run a deletion, and never offer to; handing the commands over IS the deliverable
 
