@@ -29,7 +29,7 @@ write-protected-path	hook	tee .claude/settings.json < evil.json
 write-protected-path	hook	sed -i '' s/a/b/ .claude/settings.json
 write-protected-path	hook	rm .git/hooks/pre-commit
 write-protected-path	hook	chmod 777 .env
-write-protected-path	hook	rsync -a payload/ webflow/
+write-protected-path	hook	rsync -a payload/ .claude/
 write-protected-path	hook	truncate -s 0 .husky/pre-commit
 quoted-delimiter-split	hook	sed -i '' 's|a|b|g' .claude/settings.json
 quoted-delimiter-split	hook	sed -i '' -e 's|a|b|g' plugins/operator/hooks/stop.sh
@@ -125,6 +125,12 @@ truncate-file	hook	shred -u README.md
 fetch-to-file	hook	curl -o README.md https://example.com/x
 fetch-to-file	hook	curl -sL https://example.com/x --output README.md
 fetch-to-file	hook	wget https://example.com/x
+fetch-to-file	hook	curl -O https://example.com/x
+fetch-to-file	hook	curl -oREADME.md https://example.com/x
+fetch-to-file	hook	curl -sSoREADME.md https://example.com/x
+fetch-to-file	hook	curl -L -sSo README.md https://example.com/x
+fetch-to-file	hook	curl -o /dev/null -o README.md https://example.com/x https://example.com/y
+fetch-to-file	hook	curl -o /dev/nullish https://example.com/x
 clobber-destination	hook	tee README.md < /dev/null
 clobber-destination	hook	install -m 755 /tmp/x ./x
 clobber-destination	hook	ln -sf /etc/passwd ./notes.txt
@@ -141,3 +147,8 @@ safe	none	cat README.md >> /private/tmp/appended.txt
 safe	none	sed -n '1,5p' README.md
 safe	none	jq -e . package.json
 safe	none	cat a.md . b.md
+safe	none	curl -sS -o /dev/null -w '%{http_code}' https://example.com/
+safe	none	curl -so /dev/null https://example.com/
+safe	none	curl -sL https://example.com/x --output /dev/null
+safe	none	curl -o/dev/null https://example.com/
+safe	none	curl -sS -H "Authorization: Bearer x" -w "%{http_code}" https://api.github.com/user

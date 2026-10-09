@@ -13,6 +13,7 @@
 # - #2: a fetch-to-file writes whatever a remote sent, which no diff was shown before it landed
 # - #3: a single `>` is judged only when the target already exists, so `>>` and new files pass
 # - #4: `rm` stays out on purpose; a single-file delete is ordinary and the deny list holds `rm -r`
+# - #5: `-o /dev/null` discards the body, so a status probe like `curl -so /dev/null -w` passes
 # @see plugins/operator/shared/commands.sh, plugins/operator/hooks/hooks.json, plugins/operator/shared/corpus.tsv, plugins/operator/skills/permissions/permissions.sh
 
 command -v jq >/dev/null 2>&1 || { echo "block-destructive-writes: jq missing, refusing to run unguarded" >&2; exit 2; }
@@ -55,16 +56,21 @@ CLOBBER='(^|[[:space:]])ln[[:space:]]+-[a-zA-Z]*f'
 CLOBBER="$CLOBBER"'|(^|\|[[:space:]]*)install([[:space:]]|$)'
 CLOBBER="$CLOBBER"'|(^|[[:space:]])tee([[:space:]]|$)'
 
-# ── FETCH ─── the bytes come from a remote and land on disk unreviewed (see #2)
-FETCH='(^|[[:space:]])curl[[:space:]].*[[:space:]]-(o|O|-output)([[:space:]]|$)'
-FETCH="$FETCH"'|(^|[[:space:]])curl[[:space:]]+-[a-zA-Z]*[oO]([[:space:]]|$)'
+# ── FETCH ─── remote bytes land on disk unreviewed (see #2), via any `-o`/`-O` cluster after curl
+CURL='(^|[[:space:]])curl[[:space:]]+([^[:space:]]+[[:space:]]+)*'
+FETCH="$CURL"'(-[a-zA-Z]*[oO]|--output)([[:space:]]|$)'
+# an attached target writes too; a data flag like `-dfoo` also matches, which fails closed
+FETCH="$FETCH|$CURL"'-[a-zA-Z]*o[^[:space:]]'
 FETCH="$FETCH"'|(^|[[:space:]])wget([[:space:]]|$)'
+
+# a discard target keeps nothing, so it is stripped before the classes match (see #5)
+DISCARD='(^|[[:space:]])(-[a-zA-Z]*o|--output)[[:space:]]*/dev/null([[:space:]]|$)'
 
 # `rm` is absent from every class above, and the deny list still holds its recursive forms (see #4)
 DESTRUCTIVE="$INPLACE|$TRUNCATE|$METADATA|$CLOBBER|$FETCH"
 
 while IFS= read -r segment; do
-  if printf '%s' "$segment" | grep -qE "$DESTRUCTIVE"; then
+  if printf '%s' "$segment" | sed -E "s#$DISCARD# #g" | grep -qE "$DESTRUCTIVE"; then
     deny "blocked by block-destructive-writes: a write with no undo. run it yourself if you really mean to."
   fi
   # a single `>` is judged by its target, so only an existing file denies (see #3)
