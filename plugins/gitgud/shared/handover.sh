@@ -39,8 +39,7 @@ require_tools() {
 # ==============
 # QUERIES
 # ==============
-# ls-remote reads the remote's own HEAD, so it needs no local origin/HEAD to have been set;
-# that matters because `git remote set-head` and `git symbolic-ref` are both denied now
+# ls-remote reads the remote's own HEAD, since `remote set-head` and `symbolic-ref` are denied
 git_default_branch() {
   local name
   name=$(git ls-remote --symref origin HEAD 2>/dev/null \
@@ -61,8 +60,7 @@ git_is_dirty() {
   [ -n "$(git status --porcelain 2>/dev/null)" ]
 }
 
-# absorbed: would merging $2 into $1 change anything? trees, not patch-ids, so a rebase survives it
-# a conflict, or a git too old for --write-tree, reports no — the fail-safe answer is "keep it"
+# absorbed: merging $2 into $1 leaves $1's tree unchanged; a conflict or an old git reports no
 is_absorbed() {
   local merged_tree trunk_tree
   merged_tree=$(git merge-tree --write-tree "$1" "$2" 2>/dev/null) || { echo no; return; }
@@ -70,8 +68,14 @@ is_absorbed() {
   if [ "$merged_tree" = "$trunk_tree" ]; then echo yes; else echo no; fi
 }
 
-# mirrors block-protected-paths.sh's PROTECTED list, over-approximating on purpose
-# reads a newline-separated path list on stdin, so incoming or local paths both work
+# patch-merged: does $1 already hold every patch on $2? a failed cherry read prints nothing, so no
+is_patch_merged() {
+  local cherry
+  cherry=$(git cherry "$1" "$2" 2>/dev/null) || { echo no; return; }
+  if printf '%s\n' "$cherry" | grep -q '^+'; then echo no; else echo yes; fi
+}
+
+# mirrors block-protected-paths.sh's PROTECTED list over newline-separated paths on stdin
 protected_paths() {
   local boundary protected
   boundary='([/[:space:]"'"'"']|$)'
@@ -89,8 +93,7 @@ protected_incoming() {
 # ==============
 # OUTPUT
 # ==============
-# a sidecar using these prints the same two blocks in the same order; `rerun.sh` opts out
-# the name is the INVOCATION, `gitgud:audit`, so a block header and a `/` menu entry never disagree
+# every sidecar prints these two blocks, headed by its invocation name; `rerun.sh` opts out
 # ==============
 # CONFIG
 # ==============
@@ -111,13 +114,12 @@ cfg() {
 # ==============
 # RESOLUTION
 # ==============
-# a handed-over path runs in the CALLER's cwd, which is not always this repo; two installs exist
-# 1. cloner: the caller's repo IS this repo, so the tracked relative path resolves as written
-# 2. installer: the plugin sits outside the caller's repo, so only CLAUDE_PLUGIN_ROOT resolves
-# neither hit returns nonzero, so a caller omits the line rather than handing over a dead path
+# resolves a handed-over path for the caller's cwd, returning nonzero so a dead path is omitted
 gitgud_path() {
   local rel="$1"
+  # cloner: the caller's repo is this repo, so the tracked relative path resolves as written
   if [ -f "plugins/gitgud/$rel" ]; then printf 'plugins/gitgud/%s\n' "$rel"; return 0; fi
+  # installer: the plugin sits outside the caller's repo, so only CLAUDE_PLUGIN_ROOT resolves
   if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/$rel" ]; then
     printf '%s/%s\n' "${CLAUDE_PLUGIN_ROOT}" "$rel"; return 0; fi
   return 1
@@ -136,14 +138,12 @@ telemetry_line() {
   printf '%s: %s\n' "$1" "$2"
 }
 
-# HANDOVER is the block the agent fences and the user pastes; it stays copy/paste clean, so
-# notes are commented rather than prose, and every line is runnable as written
+# HANDOVER is the block the user pastes, so notes are comments and every line runs as written
 handover_open() {
   printf '\n=== /%s handover ===\n' "$1"
 }
 
-# TRIGGER is the counterpart block: what the trigger runs itself against a narrow allow, never
-# what the user pastes; a step earns a place here only by adding safety rather than spending it
+# TRIGGER is the block the trigger runs itself; a step belongs here only if it adds safety
 trigger_open() {
   printf '\n=== /%s trigger ===\n' "$1"
 }

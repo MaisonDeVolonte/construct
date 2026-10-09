@@ -116,7 +116,7 @@ for branch in $(git for-each-ref --sort=-committerdate --format='%(refname:short
   B_BEHIND=$(git rev-list --count "$branch..$DEFAULT_BRANCH" 2>/dev/null || echo '?')
   if git merge-base --is-ancestor "$branch" "$DEFAULT_BRANCH" 2>/dev/null; then B_REACHABLE=yes; else B_REACHABLE=no; fi
   if git rev-parse --verify --quiet "refs/remotes/origin/$branch" >/dev/null; then B_REMOTE=yes; else B_REMOTE=no; fi
-  if [ -n "$(git cherry "origin/$DEFAULT_BRANCH" "$branch" 2>/dev/null | grep '^+')" ]; then B_MERGED=no; else B_MERGED=yes; fi
+  B_MERGED=$(is_patch_merged "origin/$DEFAULT_BRANCH" "$branch")
   # both reads use origin, since a stale local trunk reads a landed branch as unmerged
   B_ABSORBED=$(is_absorbed "origin/$DEFAULT_BRANCH" "$branch")
   echo "branch: $branch | last: $B_LAST | ahead: $B_AHEAD | behind: $B_BEHIND | upstream: ${B_TRACK:-none} | reachable: $B_REACHABLE | remote: $B_REMOTE | merged: $B_MERGED | absorbed: $B_ABSORBED | last_commit: $(git log -1 --format='%s' "$branch" 2>/dev/null)"
@@ -129,7 +129,7 @@ for branch in $(git for-each-ref --sort=-committerdate --format='%(refname)' ref
   R_LAST=$(git log -1 --format='%cr' "origin/$branch" 2>/dev/null || echo n/a)
   R_AHEAD=$(git rev-list --count "origin/$DEFAULT_BRANCH..origin/$branch" 2>/dev/null || echo '?')
   if git merge-base --is-ancestor "origin/$branch" "origin/$DEFAULT_BRANCH" 2>/dev/null; then R_REACHABLE=yes; else R_REACHABLE=no; fi
-  if [ -n "$(git cherry "origin/$DEFAULT_BRANCH" "origin/$branch" 2>/dev/null | grep '^+')" ]; then R_MERGED=no; else R_MERGED=yes; fi
+  R_MERGED=$(is_patch_merged "origin/$DEFAULT_BRANCH" "origin/$branch")
   R_ABSORBED=$(is_absorbed "origin/$DEFAULT_BRANCH" "origin/$branch")
   echo "remote_branch: $branch | last: $R_LAST | ahead: $R_AHEAD | reachable: $R_REACHABLE | merged: $R_MERGED | absorbed: $R_ABSORBED | last_commit: $(git log -1 --format='%s' "origin/$branch" 2>/dev/null)"
 done
