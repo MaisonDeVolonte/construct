@@ -86,9 +86,7 @@ for branch in $SPENT_BRANCHES; do
     DELETE_SAFE="$DELETE_SAFE $branch"
   elif [ "$(is_absorbed "origin/$DEFAULT_BRANCH" "$branch")" = "yes" ]; then
     DELETE_FORCE="$DELETE_FORCE $branch"
-  elif CHERRY=$(git cherry "origin/$DEFAULT_BRANCH" "$branch" 2>/dev/null) \
-    && ! printf '%s\n' "$CHERRY" | grep -q '^+'; then
-    # a failed cherry read prints nothing, so its exit code gates the delete and keeps the branch
+  elif [ "$(is_patch_merged "origin/$DEFAULT_BRANCH" "$branch")" = "yes" ]; then
     DELETE_FORCE="$DELETE_FORCE $branch"
   else
     KEEP_BRANCHES="$KEEP_BRANCHES $branch"
