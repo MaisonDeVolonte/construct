@@ -27,8 +27,7 @@ if [ ! -f "$SHARED/handover.sh" ]; then
 
 require_repo
 
-# setup: targets the default remote branch, falling back when origin/HEAD is missing
-# prunes stale tracking refs so the branch loop below reads the real remote state
+# setup: targets the default remote branch and prunes stale refs before the branch loop reads them
 DEFAULT_BRANCH=$(git_default_branch)
 DEFAULT_BRANCH=${DEFAULT_BRANCH:-main}
 CURRENT_BRANCH=$(git_current_branch)
@@ -36,7 +35,7 @@ PROTECTED="$DEFAULT_BRANCH|production"
 git fetch --prune origin >/dev/null 2>&1 || true
 
 
-# local: current branch, last activity, staged/unstaged/untracked files, hidden stashes
+# local: the current branch, its activity and file counts, plus hidden stashes
 echo "--- local ---"
 echo "current_branch: ${CURRENT_BRANCH:-detached}"
 echo "last_activity: $(git log -1 --format='%cr' 2>/dev/null || echo n/a)"
@@ -70,16 +69,14 @@ if [ -n "$FORK" ]; then
   echo "conflict_risk_files: $COUNT"
 else echo "conflict_risk_files: n/a"; fi
 
-# team: last build, active PRs, review PRs, assigned issues
-# probed through curl + the rest api since gh cannot verify tls from inside the sandbox
+# team: build, pr and issue counts via curl, since gh cannot verify tls inside the sandbox
 echo "--- team ---"
 GITHUB_API="https://api.github.com"
 
 # owner/repo parsed from the origin url, handling https and ssh shapes alike
 REPO_SLUG=$(git remote get-url origin 2>/dev/null | grep 'github\.com' | sed -e 's#^.*github\.com[:/]##' -e 's#\.git$##')
 
-# bearer auth is the one shape the mask proxy can substitute; basic auth would base64 the
-# sentinel out of its reach (see README.md > Settings > Keys > GitHub)
+# bearer auth is the only shape the mask proxy substitutes (see README.md > Settings > Keys)
 github_api() {
   curl -sS --max-time 15 \
     -H "Authorization: Bearer $GH_TOKEN_OPERATOR" \
@@ -110,7 +107,7 @@ else echo "github: api unavailable (team probes skipped)"; fi
 
 # is_absorbed now lives in handover.sh, since /gitgud:prune needs the same deletion gate
 
-# branches: last commit, ahead/behind, upstream tracking, reachable, remote, merged, absorbed
+# branches: one row per local branch with its tracking state and both merge reads
 echo "--- branches ---"
 for branch in $(git for-each-ref --sort=-committerdate --format='%(refname:short)' refs/heads/ | grep -vx "$DEFAULT_BRANCH"); do
   B_LAST=$(git log -1 --format='%cr' "$branch" 2>/dev/null || echo n/a)
@@ -119,9 +116,8 @@ for branch in $(git for-each-ref --sort=-committerdate --format='%(refname:short
   B_BEHIND=$(git rev-list --count "$branch..$DEFAULT_BRANCH" 2>/dev/null || echo '?')
   if git merge-base --is-ancestor "$branch" "$DEFAULT_BRANCH" 2>/dev/null; then B_REACHABLE=yes; else B_REACHABLE=no; fi
   if git rev-parse --verify --quiet "refs/remotes/origin/$branch" >/dev/null; then B_REMOTE=yes; else B_REMOTE=no; fi
-  if [ -n "$(git cherry "$DEFAULT_BRANCH" "$branch" 2>/dev/null | grep '^+')" ]; then B_MERGED=no; else B_MERGED=yes; fi
-  # against origin, not local: absorbed answers "is work lost by deleting", and a stale local
-  # trunk reads a landed branch as unmerged; the fetch above keeps this baseline current
+  if [ -n "$(git cherry "origin/$DEFAULT_BRANCH" "$branch" 2>/dev/null | grep '^+')" ]; then B_MERGED=no; else B_MERGED=yes; fi
+  # both reads use origin, since a stale local trunk reads a landed branch as unmerged
   B_ABSORBED=$(is_absorbed "origin/$DEFAULT_BRANCH" "$branch")
   echo "branch: $branch | last: $B_LAST | ahead: $B_AHEAD | behind: $B_BEHIND | upstream: ${B_TRACK:-none} | reachable: $B_REACHABLE | remote: $B_REMOTE | merged: $B_MERGED | absorbed: $B_ABSORBED | last_commit: $(git log -1 --format='%s' "$branch" 2>/dev/null)"
 done
