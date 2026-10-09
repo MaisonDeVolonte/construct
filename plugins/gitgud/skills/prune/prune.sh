@@ -12,7 +12,8 @@
 # - a run that needed a sync ends on the trunk, which is where continue's own doctrine lands it
 # - classifies each local branch as gone, merged, or live, so the handover deletes only the spent
 # - emits `-d` or `-D` to match, since `-d` consults the same patch-id read a rebase already fooled
-# - a gone branch that is neither merged nor absorbed is kept, never offered for deletion
+# - a rebased copy trunk later edited fails the tree read, so a patch-id read also earns `-D`
+# - a gone branch that is neither merged, absorbed nor patch-equivalent is kept, never offered
 # - `production` is excluded by name, since a release branch reads merged and behind by design
 # TRIGGER
 # - runs `triage.sh` last, whose local/remote/ghost/zombie split catches the rebased ones
@@ -76,8 +77,7 @@ MERGED_BRANCHES=$(git branch --merged "origin/$DEFAULT_BRANCH" --format='%(refna
 SPENT_BRANCHES=$(printf '%s\n%s\n' "$GONE_BRANCHES" "$MERGED_BRANCHES" | grep -v '^$' | sort -u || true)
 SPENT_COUNT=$(printf '%s' "$SPENT_BRANCHES" | grep -c . || true)
 
-# -d succeeds only when the trunk contains the tip, which a rebase merge never leaves true
-# those earn -D by proving absorption; a gone branch that is neither is kept, never offered
+# -d needs trunk to contain the tip, so a rebased branch earns -D by its tree or its patch-ids
 DELETE_SAFE=""
 DELETE_FORCE=""
 KEEP_BRANCHES=""
@@ -85,6 +85,10 @@ for branch in $SPENT_BRANCHES; do
   if printf '%s\n' "$MERGED_BRANCHES" | grep -qx "$branch"; then
     DELETE_SAFE="$DELETE_SAFE $branch"
   elif [ "$(is_absorbed "origin/$DEFAULT_BRANCH" "$branch")" = "yes" ]; then
+    DELETE_FORCE="$DELETE_FORCE $branch"
+  elif CHERRY=$(git cherry "origin/$DEFAULT_BRANCH" "$branch" 2>/dev/null) \
+    && ! printf '%s\n' "$CHERRY" | grep -q '^+'; then
+    # a failed cherry read prints nothing, so its exit code gates the delete and keeps the branch
     DELETE_FORCE="$DELETE_FORCE $branch"
   else
     KEEP_BRANCHES="$KEEP_BRANCHES $branch"
@@ -107,8 +111,8 @@ telemetry_line "spent branches" "${SPENT_COUNT:-0}"
 telemetry_line "live branches" "${LIVE_COUNT:-0}"
 telemetry_line "spent branch names" "$(printf '%s' "$SPENT_BRANCHES" | paste -sd, - | sed 's/,/, /g')"
 telemetry_line "deletable with -d" "$(printf '%s' "${DELETE_SAFE# }" | sed 's/ /, /g')"
-telemetry_line "deletable with -D (absorbed)" "$(printf '%s' "${DELETE_FORCE# }" | sed 's/ /, /g')"
-telemetry_line "kept, unmerged and unabsorbed" "$(printf '%s' "${KEEP_BRANCHES# }" | sed 's/ /, /g')"
+telemetry_line "deletable with -D (absorbed or patch-equal)" "$(printf '%s' "${DELETE_FORCE# }" | sed 's/ /, /g')"
+telemetry_line "kept, unmerged, unabsorbed, patch-distinct" "$(printf '%s' "${KEEP_BRANCHES# }" | sed 's/ /, /g')"
 
 handover_open gitgud:prune
 if [ "$AHEAD" -gt 0 ]; then
@@ -116,7 +120,7 @@ if [ "$AHEAD" -gt 0 ]; then
 elif [ "${DELETE_COUNT:-0}" -eq 0 ]; then
   handover_note "nothing to clean up — no branch is safe to delete"
   if [ -n "$KEEP_BRANCHES" ]; then
-    handover_note "kept as real work:${KEEP_BRANCHES} — neither merged nor absorbed by $DEFAULT_BRANCH"
+    handover_note "kept as real work:${KEEP_BRANCHES} — $DEFAULT_BRANCH holds neither its tree nor its patches"
   fi
 else
   handover_note "cleanup — yours to run in order; every delete is denied to the agent by design"
@@ -124,12 +128,12 @@ else
   for branch in $DELETE_SAFE; do
     handover_cmd "git branch -d $branch"
   done
-  # -D skips that check, so it is spent only where the tree comparison above already proved it safe
+  # -D skips that check, so it is spent only where the tree or patch-id read above proved it safe
   for branch in $DELETE_FORCE; do
     handover_cmd "git branch -D $branch"
   done
   if [ -n "$KEEP_BRANCHES" ]; then
-    handover_note "kept as real work:${KEEP_BRANCHES} — neither merged nor absorbed, so not offered"
+    handover_note "kept as real work:${KEEP_BRANCHES} — trunk holds neither its tree nor its patches, so not offered"
   fi
 fi
 block_close

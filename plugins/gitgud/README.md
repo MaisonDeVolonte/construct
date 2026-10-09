@@ -1175,6 +1175,7 @@ disable-model-invocation: true
   - runs `triage.sh` last for branch, remote, and team state, since the hook denies `bash "$T"`
   - classifies merged branches by ancestry, and gone branches by their vanished upstream
   - proves an unmerged branch is actually absorbed by comparing merge-tree output, not shas
+  - falls back to patch-ids, since a rebased copy trunk later edited fails the tree comparison
   - keeps anything it can't prove absorbed, failing safe rather than naming it for deletion
 
 #### Nuke
