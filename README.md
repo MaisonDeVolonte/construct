@@ -1167,11 +1167,12 @@ disable-model-invocation: true
 **what it does:**
 - skill
   - runs continue.sh then prune.sh, aborting on either's nonzero exit before suggesting anything
-  - runs `triage.sh` itself to fold branch, remote, and team state into the handover
+  - folds the sidecar's triage block into the handover, issuing no command of its own
   - flags an absorbed-but-not-merged branch, since it needs a force delete, not a plain one
   - ends with one copy-paste block listing every delete command, in the order it named them
 - sidecar
   - prunes only remote-tracking refs via `fetch --prune`, never touching a local branch
+  - runs `triage.sh` last for branch, remote, and team state, since the hook denies `bash "$T"`
   - classifies merged branches by ancestry, and gone branches by their vanished upstream
   - proves an unmerged branch is actually absorbed by comparing merge-tree output, not shas
   - keeps anything it can't prove absorbed, failing safe rather than naming it for deletion

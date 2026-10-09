@@ -15,18 +15,16 @@
 # - a gone branch that is neither merged nor absorbed is kept, never offered for deletion
 # - `production` is excluded by name, since a release branch reads merged and behind by design
 # TRIGGER
-# - the doc folds in `git-audit.sh`, whose local/remote/ghost/zombie split catches the rebased ones
+# - runs `triage.sh` last, whose local/remote/ghost/zombie split catches the rebased ones
 # - branch deletes stay denied and handed over; the sync's stash bracket belongs to continue.sh
 # @see plugins/gitgud/skills/prune/SKILL.md, plugins/gitgud/shared/triage.sh, plugins/gitgud/shared/handover.sh, .claude/skills/validate-skills/SKILL.md
 
 set -euo pipefail
 
-# the doc is read only after this has already run, so help is refused here or not at all; the doc's
-# own '## Help' section owns the output, which is why this prints a marker rather than a usage text
+# the doc's '## Help' owns the output, so help prints a marker here instead of usage text
 case " $* " in *" --help "*|*" -h "*) echo "help: requested"; exit 0;; esac
 
-# the smoke case proves this file parses and its guards return; /test-skills reads the sources,
-# the @see paths and the tool guards statically, so nothing here runs a step of the skill
+# the smoke case proves this file parses and its guards return, without running a skill step
 case " $* " in *" --test "*) echo "test: ok"; exit 0;; esac
 
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || true)
@@ -36,8 +34,7 @@ if [ ! -f "$SHARED/handover.sh" ]; then
 # shellcheck source=../../shared/handover.sh
 . "$SHARED/handover.sh"
 
-# this skill hands over branch deletions, so a typo'd flag must stop it rather than be ignored;
-# the doc declares no argument, and every branch below is classified from the tree instead
+# this skill hands over branch deletions, so any argument stops it rather than being ignored
 if [ "$#" -gt 0 ]; then
   echo "fatal: /gitgud:prune takes no arguments; every branch is classified from the tree" >&2
   exit 1
@@ -49,8 +46,7 @@ require_no_op_in_progress
 DEFAULT_BRANCH=$(git_default_branch)
 STARTING_BRANCH=$(git_current_branch)
 
-# a release branch reads merged and behind by design, which is exactly the shape a spent branch
-# has, so it is excluded by name before the classification ever sees it (see the doc's ignored row)
+# a release branch looks spent by design, so it is excluded by name (see the doc's ignored row)
 PRODUCTION_BRANCH="production"
 
 if [ -z "$DEFAULT_BRANCH" ]; then
@@ -70,8 +66,7 @@ fi
 BEHIND=$(git rev-list --count "$DEFAULT_BRANCH..origin/$DEFAULT_BRANCH" 2>/dev/null || echo 0)
 AHEAD=$(git rev-list --count "origin/$DEFAULT_BRANCH..$DEFAULT_BRANCH" 2>/dev/null || echo 0)
 
-# a branch is spent when its remote is gone, or when trunk already contains every commit on it;
-# anything else is live work and never reaches the handover
+# a branch is spent when its remote is gone or trunk holds every commit; the rest is live work
 GONE_BRANCHES=$(git for-each-ref --format='%(refname:short) %(upstream:track)' refs/heads/ \
   | awk '$2 == "[gone]" { print $1 }' \
   | grep -vx "$DEFAULT_BRANCH" | grep -vx "$PRODUCTION_BRANCH" || true)
@@ -138,3 +133,7 @@ else
   fi
 fi
 block_close
+
+# triage runs here because block-untracked-exec denied the doc's `bash "$T"`; set -e fails on it
+echo "=== /gitgud:prune triage ==="
+"$SHARED/triage.sh"
