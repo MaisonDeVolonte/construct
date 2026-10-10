@@ -85,6 +85,12 @@ protected_paths() {
   grep -E "$protected" || true
 }
 
+# mirrors the sandbox read-deny globs in settings over newline-separated paths on stdin
+# - a sandboxed git cannot lstat a match, so a stash or merge that touches one fails partway
+read_denied_paths() {
+  grep -E '(^|/)\.env[^/]*$|\.(pem|crt|key|p12)$' || true
+}
+
 # incoming policy paths specifically: whatever a range would write, filtered through the same list
 protected_incoming() {
   git diff --name-only "$1" 2>/dev/null | protected_paths

@@ -32,6 +32,8 @@ echo "sidecar exit: $?"
       commits or your own dirty tree write a path the sandbox denies, and a sandboxed merge
       half-applies rather than refusing, leaving the writable files checked out against a HEAD
       that never moved
+      the same state covers a tracked path the sandbox will not read, such as `.env.example`,
+      and a `git status` that exited non-zero, since either one fails the stash partway
     - `colliding, the sync is yours to run` → STOP and hand the block over; a path is both
       incoming and locally uncommitted at once, and a merge would write it before stash pop got
       a chance to restore yours, so the collision is the user's to resolve, never a script's guess

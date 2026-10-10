@@ -124,13 +124,20 @@ INCOMING_PROTECTED=""
 INCOMING_TRUNCATED=0
 if [ "$BEHIND" -gt 0 ]; then
   INCOMING_PATHS=$(printf '%s' "$COMPARE" | jq -r '.files[]?.filename // empty')
-  INCOMING_PROTECTED=$(printf '%s\n' "$INCOMING_PATHS" | protected_paths | paste -sd, - | sed 's/,/, /g')
+  INCOMING_PROTECTED=$({ printf '%s\n' "$INCOMING_PATHS" | protected_paths
+    printf '%s\n' "$INCOMING_PATHS" | read_denied_paths; } | sort -u | paste -sd, - | sed 's/,/, /g')
   # compare caps its file list at 300, and a capped list hides whatever falls off the end
   if [ "$(printf '%s\n' "$INCOMING_PATHS" | grep -c .)" -ge 300 ]; then INCOMING_TRUNCATED=1; fi
 fi
 
-LOCAL_PATHS=$(git status --porcelain=v1 --no-renames 2>/dev/null | cut -c4-)
+# a refused lstat fails git status, and a swallowed failure used to read as a clean tree
+STATUS_RC=0
+LOCAL_PATHS=$(git status --porcelain=v1 --no-renames 2>/dev/null | cut -c4-) || STATUS_RC=$?
 LOCAL_PROTECTED=$(printf '%s\n' "$LOCAL_PATHS" | protected_paths | paste -sd, - | sed 's/,/, /g')
+
+# a clean tracked match still counts, since `stash -u` was seen failing on an lstat of one
+READ_DENIED=$({ git ls-files 2>/dev/null; printf '%s\n' "$LOCAL_PATHS"; } | read_denied_paths \
+  | sort -u | paste -sd, - | sed 's/,/, /g')
 
 # the join between incoming and local dirty: a merge writes it first, pop then refuses to restore
 OVERLAP=""
@@ -188,6 +195,10 @@ elif [ -n "$COLLIDING" ]; then SYNC_STATE="colliding, the sync is yours to run"
 elif [ "$INCOMING_TRUNCATED" -eq 1 ]; then SYNC_STATE="behind, but the sync is yours to run"
 elif [ "$BEHIND" -gt 0 ] && [ "$TRACKING" = "stale" ]; then
   SYNC_STATE="behind, but the sync is yours to run"
+elif [ "$STATUS_RC" -ne 0 ] && [ "$NEEDS_MOVE" -eq 1 ]; then
+  SYNC_STATE="behind, but the sync is yours to run"
+elif [ -n "$READ_DENIED" ] && [ "$NEEDS_MOVE" -eq 1 ]; then
+  SYNC_STATE="behind, but the sync is yours to run"
 elif [ -n "$INCOMING_PROTECTED" ]; then SYNC_STATE="behind, but the sync is yours to run"
 elif [ -n "$LOCAL_PROTECTED" ] && [ "$DIRTY" -eq 1 ] && [ "$NEEDS_MOVE" -eq 1 ]; then
   SYNC_STATE="behind, but the sync is yours to run"
@@ -210,6 +221,8 @@ telemetry_line "incoming list truncated" "$INCOMING_TRUNCATED"
 telemetry_line "sync state" "$SYNC_STATE"
 telemetry_line "sandbox-denied incoming paths" "${INCOMING_PROTECTED:-none}"
 telemetry_line "sandbox-denied local paths" "${LOCAL_PROTECTED:-none}"
+telemetry_line "sandbox read-denied paths" "${READ_DENIED:-none}"
+telemetry_line "status exit" "$STATUS_RC"
 telemetry_line "colliding paths" "${COLLIDING:-none}"
 telemetry_line "self-colliding paths (identical)" "${BENIGN:-none}"
 
@@ -237,6 +250,8 @@ ARTIFACT="$DEST/$STAMP.txt"
   printf 'sync state: %s\n' "$SYNC_STATE"
   printf 'sandbox-denied incoming paths: %s\n' "${INCOMING_PROTECTED:-none}"
   printf 'sandbox-denied local paths: %s\n' "${LOCAL_PROTECTED:-none}"
+  printf 'sandbox read-denied paths: %s\n' "${READ_DENIED:-none}"
+  printf 'status exit: %s\n' "$STATUS_RC"
   printf 'colliding paths: %s\n' "${COLLIDING:-none}"
   printf 'self-colliding paths (identical): %s\n' "${BENIGN:-none}"
 } > "$ARTIFACT"
@@ -266,6 +281,12 @@ elif [ "$SYNC_STATE" = "behind, but the sync is yours to run" ]; then
     handover_note "the sandboxed fetch exited $FETCH_RC without leaving the objects behind"
     handover_note "run the fetch first, since the merge below reads the tracking ref"
     handover_cmd "git fetch origin $DEFAULT_BRANCH"
+  elif [ "$STATUS_RC" -ne 0 ]; then
+    handover_note "DO NOT RUN THESE — git status exited $STATUS_RC here, so the dirty check is blind"
+    handover_note "run git status first, and stash before the sync if it lists changes"
+  elif [ -n "$READ_DENIED" ]; then
+    handover_note "DO NOT RUN THESE — the sync must lstat paths the sandbox will not read:"
+    handover_note "read-denied: $READ_DENIED"
   else
     handover_note "DO NOT RUN THESE — the sync writes paths no sandboxed command can:"
     handover_note "incoming: ${INCOMING_PROTECTED:-none}"
