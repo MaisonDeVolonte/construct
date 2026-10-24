@@ -1281,7 +1281,7 @@ disable-model-invocation: true
 /retardify:output
 ```
 **every reply is linted:** against the output style rules to keep conversations consistent
-- catch bold, italics, emoji, or fenced plaintext outside a list, table, or fence (B1)
+- catch bold, italics, emoji, or bullets outside a numbered list, table, fence, or code span (B1)
 - catch a reply that goes fully prose, past the wrap tolerance, or past the line ceiling
 - catch a reply wrapped whole in one fence, which the fenced-content exemption would pass clean
 - catch a reply that never lands on a closing action, costing the user another turn to ask

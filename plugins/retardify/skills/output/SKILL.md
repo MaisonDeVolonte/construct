@@ -28,7 +28,7 @@ echo "sidecar exit: $?"
 
 | rule | what it caught |
 |---|---|
-| `B1` | markup outside a list, table, fence or backtick: bold, italics, emoji, fenced plaintext |
+| `B1` | markup outside a list, table, fence or backtick: bold, italics, emoji, bullets |
 | `B2` | a prose line, past the tolerance a reply gone fully paragraphs, or one fence around it all |
 | `B6` | a banned sentence shape standing in for a plain statement |
 | `C2` | a line wider than the spec's character cap |
