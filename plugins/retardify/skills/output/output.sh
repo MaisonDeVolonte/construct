@@ -35,7 +35,9 @@
 # - a fence closes only on a delimiter at least as long as the one that opened it
 # - that is what stops a nested block from ending the wider fence around it early
 # - a fence, a table or a quote may sit indented under a list item, so leading space is shed first
-# - a bare fence is left alone, since quoting a draft has no language to name
+# - a fence of any language is left alone, text included, since skills hand plans over in one
+# - an inline code span is shed before the markup tests, so `nav__menu__icon` never reads as bold
+# - a NUMBERED LABEL holds anything up to its first colon, since F7 calls labels free-form
 # COST
 # - every test is a bash builtin; a fork per line would put 3 subprocesses per line in a stop hook
 # @see plugins/retardify/skills/output/SKILL.md, plugins/retardify/output-styles/operator.md, plugins/operator/hooks/stop/retardify-output.sh
@@ -161,10 +163,6 @@ while IFS= read -r raw; do
     LAST_KIND=fence
     if [ "$FENCE_LEN" -eq 0 ]; then
       FENCE_LEN=${#ticks}
-      case "${text#"$ticks"}" in
-        text|plaintext|txt)
-          hard B1 "$LINE" "fenced plaintext; name a language or use a list";;
-      esac
       continue
     fi
     if [ "${#ticks}" -ge "$FENCE_LEN" ] && [ -z "${text#"$ticks"}" ]; then FENCE_LEN=0; fi
@@ -192,7 +190,10 @@ while IFS= read -r raw; do
     *"$EMOJI_HI"*|*"$EMOJI_MISC"*|*"$EMOJI_MARK"*|*"$EMOJI_WARN"*)
       hard B1 "$LINE" "emoji; B1 allows a numbered list, a table, a fence or a backtick and nothing else";;
   esac
-  if [[ $text =~ \*\*[^*]+\*\* || $text =~ __[^_]+__ ]]; then
+  # a code span is quoted content under C10, so its underscores and asterisks are not markup
+  plain=$text
+  while [[ $plain =~ (\`[^\`]*\`) ]]; do plain=${plain/"${BASH_REMATCH[1]}"/}; done
+  if [[ $plain =~ \*\*[^*]+\*\* || $plain =~ __[^_]+__ ]]; then
     hard B1 "$LINE" "bold or italic; a NUMBERED LABEL: carries the emphasis instead"
   fi
   # a bullet is markup B1 no longer allows; only a numbered item can be cited by the reader
@@ -220,7 +221,7 @@ fi
 
   # b2's own definition: anything that is none of the allowed shapes is a wrapped prose line
   if [[ ! $text =~ ^([-*+]|[0-9]+\.)[[:space:]] && ! $text =~ ^#{1,6}[[:space:]] \
-     && ! $text =~ ^[0-9]+[[:space:]]—[[:space:]][A-Z][A-Z0-9\ /_-]*: ]]; then
+     && ! $text =~ ^[0-9]+[[:space:]]—[[:space:]][^:]+: ]]; then
     WRAPPED=$((WRAPPED + 1))
     soft B2 "$LINE" "prose line; every line is a NUMBERED LABEL:, a list item, a table row, or fenced"
   fi
