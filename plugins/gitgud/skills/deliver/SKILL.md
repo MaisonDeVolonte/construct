@@ -119,6 +119,8 @@ files:   $ATOMIC_FILES
 body:    $ATOMIC_DESCRIPTION
 ```
 - a linked bucket ends `$ATOMIC_DESCRIPTION` with one `Closes #n` line per issue, below the bullets
+- the body ends at its bullets or `Closes` lines; never append a `Co-Authored-By` trailer
+- `deliver.sh` refuses a body file carrying one, so the rule holds even if this line is skipped
 - name which buckets are INDEPENDENT, since a red one only invalidates the buckets that follow it
 - probe every bucket through the live gate, so a handback is named by the hook rather than guessed:
 ```bash
