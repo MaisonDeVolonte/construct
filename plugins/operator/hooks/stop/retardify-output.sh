@@ -5,6 +5,7 @@
 # @description
 # - fires when a turn tries to end: grades the last reply through the `/retardify:output` linter
 # - blocks the turn on hard findings, so the reply the user reads is the one that conforms
+# - the blocked reply has already streamed, so the retry restates all of it under a RETRY label
 # - `.construct/operator/style/off` disables the gate outright; delete the file to re-enable
 # - grades only the reply that ends the turn, which is the transcript's last main-chain message
 # - a transcript still mid-turn is skipped rather than graded, since the reply is not written yet
@@ -86,8 +87,10 @@ printf '%s' "$HASH" > "$STAMP"
 # only the block is withheld here, which is what keeps the stand-down from latching
 [ "$COUNT" -gt "$ATTEMPT_LIMIT" ] && exit 0
 
-REASON="this reply broke the output style; each finding quotes the line it read, \
-so fix those lines and move on rather than restating the whole reply: $FINDINGS"
+REASON="this reply broke the output style, and the user has already read it; \
+write the whole corrected reply again, opened by the line \
+'1 — RETRY $COUNT of $ATTEMPT_LIMIT: <what changed>', so the user reads one complete reply; \
+each finding quotes the line it read: $FINDINGS"
 if [ "$COUNT" -ge "$ATTEMPT_LIMIT" ]; then
   REASON="$REASON; that was style block $COUNT of $ATTEMPT_LIMIT, \
 so the next reply ends the turn whatever it reads, and a clean one re-arms the gate"
