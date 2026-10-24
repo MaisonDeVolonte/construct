@@ -169,6 +169,13 @@ commit_payload() {
   printf '%s' "$payload"
 }
 
+# no commit carries a co-author trailer, matched case-insensitively the way git reads trailer keys
+require_no_trailer() {
+  local hit
+  hit=$(grep -in '^co-authored-by:' "$1" | head -1 || true)
+  [ -z "$hit" ] || die "body file $1 carries a Co-Authored-By trailer at line $hit"
+}
+
 # every path in one tree, built on the base commit's tree so untouched files carry through
 tree_of() {
   local basetree=$1; shift
@@ -188,6 +195,7 @@ cmd_bucket() {
   local base=$1 branch=$2 title=$3 bodyfile=$4; shift 4
   [ $# -gt 0 ] || die "bucket needs at least one path"
   [ -f "$bodyfile" ] || die "no commit body file at $bodyfile"
+  require_no_trailer "$bodyfile"
 
   local basesha basetree treesha commitsha body prnum prid armed=off
   basesha=$(trunk_sha "$base")
@@ -222,6 +230,7 @@ cmd_update() {
   local branch=$1 title=$2 bodyfile=$3; shift 3
   [ $# -gt 0 ] || die "update needs at least one path"
   [ -f "$bodyfile" ] || die "no commit body file at $bodyfile"
+  require_no_trailer "$bodyfile"
 
   local tipsha tiptree treesha commitsha body
   tipsha=$(trunk_sha "$branch")
