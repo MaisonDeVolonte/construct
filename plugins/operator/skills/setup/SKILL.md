@@ -47,6 +47,8 @@ echo "sidecar exit: $?"
     - a `[done]` step was seen by a probe, so name the probe rather than claiming the work
     - `deps` outranks every step below it, since jq is what every later probe reads with
     - install is the reader's to run, since a skill cannot install the plugin that carries it
+    - a `STALE` style line means `~/.claude/output-styles/operator.md` drifted from the plugin copy
+    - that copy can teach rules the stop hook's linter blocks, so step 3 hands over its `cp`
     - the managed scope needs sudo and lands outside the project, so it is always their call
     - close by naming step 7, since `--audit` is what proves the six steps above it
 
