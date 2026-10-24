@@ -467,8 +467,18 @@ state_route() {
   fi
 }
 
+# a user-scope style shares the plugin style's name, so a stale one teaches retired rules
+STYLE_SOURCE="$(cd "$HERE/../../output-styles" 2>/dev/null && pwd || true)/operator.md"
+STYLE_USER="$HOME/.claude/output-styles/operator.md"
+style_stale() {
+  [ -r "$STYLE_USER" ] && [ -r "$STYLE_SOURCE" ] && ! cmp -s "$STYLE_USER" "$STYLE_SOURCE"
+}
+
 state_style() {
   local scope
+  if style_stale; then
+    printf 'style      STALE ~/.claude/output-styles/operator.md differs from the plugin copy\n'
+  fi
   for scope in "$PROJECT_SCOPE" "$USER_SCOPE"; do
     if jq_query "$scope" '.outputStyle == "operator"'; then
       printf 'style      operator, set in %s\n' "${scope/#$HOME/~}"
@@ -603,7 +613,9 @@ if [ -L "$HOME/.claude/skills/operator" ] || [ -d "$HOME/.claude/plugins/marketp
 else
   step need 2 install 'pick option A, B or C in the readme; a skill cannot install its own plugin'
 fi
-if jq_query "$PROJECT_SCOPE" '.outputStyle == "operator"' || jq_query "$USER_SCOPE" '.outputStyle == "operator"'; then
+if style_stale; then
+  step need 3 style "cp $STYLE_SOURCE ~/.claude/output-styles/operator.md"
+elif jq_query "$PROJECT_SCOPE" '.outputStyle == "operator"' || jq_query "$USER_SCOPE" '.outputStyle == "operator"'; then
   step have 3 style 'the operator output style is set'
 else
   step need 3 style '/config > Output style > operator'
