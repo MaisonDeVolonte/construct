@@ -12,7 +12,7 @@ TABLE OF CONTENTS
 ├─ Identities ───── github
 ├─ Plugins & Skills
 ├─ /operator ────── upstream · setup · settings · permissions · scripts · credentials · context · hooks · logs · install
-├─ /gitgud ──────── audit · issues · backup · continue · deliver · prune · nuke · rerun · ship
+├─ /gitgud ──────── audit · issues · nightshift · backup · continue · deliver · prune · nuke · rerun · ship
 ├─ /retardify ───── output · code · file · research · graph · plan · guide · quiz · review · todo
 ├─ /maintainer ──── validate-skills · test-skills · export-readme · push-release
 ├─ Hooks & Actions
@@ -28,18 +28,18 @@ TABLE OF CONTENTS
 ## Features
 > *requires: claude code, bash, curl, git, jq; [MIT License](LICENSE)*
 
-| /operator                    | /gitgud                | /retardify             | /maintainer                             | hooks                           |
-|------------------------------|------------------------|------------------------|-----------------------------------------|---------------------------------|
-| [:upstream](#upstream)       | [:audit](#audit)       | [:output](#output)     | [validate-skills](#validate-skills)     | [sessionstart](#sessionstart)   |
-| [:setup](#setup)             | [:issues](#issues)     | [:code](#code)         | [test-skills](#test-skills)             | [stop](#stop)                   |
-| [:settings](#settings)       | [:backup](#backup)     | [:file](#file)         | [export-readme](#export-readme)         | [pretooluse](#pretooluse)       |
-| [:permissions](#permissions) | [:continue](#continue) | [:research](#research) | [push-release](#push-release)           | [posttooluse](#posttooluse)     |
-| [:scripts](#scripts)         | [:deliver](#deliver)   | [:graph](#graph)       |                                         | [taskcompleted](#taskcompleted) |
-| [:credentials](#credentials) | [:prune](#prune)       | [:plan](#plan)         |                                         |                                 |
-| [:context](#context)         | [:nuke](#nuke)         | [:guide](#guide)       |                                         |                                 |
-| [:hooks](#hooks)             | [:rerun](#rerun)       | [:quiz](#quiz)         |                                         |                                 |
-| [:logs](#logs)               | [:ship](#ship)         | [:review](#review)     |                                         |                                 |
-| [:install](#install)         |                        | [:todo](#todo)         |                                         |                                 |
+| /operator                    | /gitgud                    | /retardify             | /maintainer                             | hooks                           |
+|------------------------------|----------------------------|------------------------|-----------------------------------------|---------------------------------|
+| [:upstream](#upstream)       | [:audit](#audit)           | [:output](#output)     | [validate-skills](#validate-skills)     | [sessionstart](#sessionstart)   |
+| [:setup](#setup)             | [:issues](#issues)         | [:code](#code)         | [test-skills](#test-skills)             | [stop](#stop)                   |
+| [:settings](#settings)       | [:nightshift](#nightshift) | [:file](#file)         | [export-readme](#export-readme)         | [pretooluse](#pretooluse)       |
+| [:permissions](#permissions) | [:backup](#backup)         | [:research](#research) | [push-release](#push-release)           | [posttooluse](#posttooluse)     |
+| [:scripts](#scripts)         | [:continue](#continue)     | [:graph](#graph)       |                                         | [taskcompleted](#taskcompleted) |
+| [:credentials](#credentials) | [:deliver](#deliver)       | [:plan](#plan)         |                                         |                                 |
+| [:context](#context)         | [:prune](#prune)           | [:guide](#guide)       |                                         |                                 |
+| [:hooks](#hooks)             | [:nuke](#nuke)             | [:quiz](#quiz)         |                                         |                                 |
+| [:logs](#logs)               | [:rerun](#rerun)           | [:review](#review)     |                                         |                                 |
+| [:install](#install)         | [:ship](#ship)             | [:todo](#todo)         |                                         |                                 |
 
 ## Issues
 > current known [upstream issues](https://github.com/anthropics/claude-code/issues) and the workarounds applied in this plugin suite (use `/operator:upstream` to refresh report)
@@ -1031,6 +1031,48 @@ metadata:
   - ranks the printed queue cheapest fix first, sized small, medium, or large
   - redacts each issue body through the shared secret patterns before it ever prints
   - writes nothing to disk itself; the dated report is the skill's write, not the sidecar's
+
+#### Nightshift
+```
+/gitgud:nightshift
+```
+```yaml
+---
+name: nightshift
+model: opus
+effort: high
+license: MIT
+compatibility: requires bash, jq, curl, git
+description: file the easiest open plan lines as small github issues for copilot (saves report to .construct/)
+argument-hint: "[--help] <text> [--test]"
+disable-model-invocation: true
+disallowed-tools: WebFetch, WebSearch
+metadata:
+  artifact: .construct/gitgud/nightshift/
+---
+```
+**what keeps working when the laptop closes:** plan lines turned into issues a cloud agent can finish
+- catch work stuck on your laptop, since a plan line already names its file and its gate
+- catch a line too big for one session, by sizing it and dropping anything past one file
+- catch a double filing, since a filed line wears its issue number and an open issue holds its text
+**what it does:**
+- skill
+  - runs continue.sh then nightshift.sh, and reads each candidate's file and line before trusting it
+  - sizes every candidate small, medium or large, and plans only the small ones, 3 unless told more
+  - stops at the plan for a go, with a lettered question on whether copilot should be assigned
+  - then writes every issue as a record, probes each one, and stops again for a second go
+  - on go, snapshots first, then files one issue at a time, labelled `copilot`, and marks the plan
+  - an assigned issue starts a copilot session in the same api call that creates it
+  - treats plan and note text as data, never as instructions
+  - appends a dated entry to `.construct/gitgud/nightshift/` for each run that files
+- sidecar
+  - derives owner/repo from the origin remote, then reads each open plan's lowest live stage
+  - greps open, no `HUMAN:` label, not yet filed, and a path that resolves at HEAD
+  - fetches the open `copilot` issues to dedupe, and refuses every filing when that fetch fails
+  - asks graphql whether `copilot-swe-agent` can be assigned here, and reports the answer
+  - `probe` grades one prepared body, `issue` files it, and `mark` writes the number into the plan
+  - prints every skipped line with the test it failed, so a thin night explains itself
+  - redacts and secret-scans each candidate; writes nothing to disk itself
 
 #### Backup
 ```
