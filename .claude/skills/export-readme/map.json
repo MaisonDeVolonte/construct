@@ -26,6 +26,7 @@
   "#### Install": "plugins/operator/skills/install/SKILL.md",
   "#### Audit": "plugins/gitgud/skills/audit/SKILL.md",
   "#### Issues": "plugins/gitgud/skills/issues/SKILL.md",
+  "#### Nightshift": "plugins/gitgud/skills/nightshift/SKILL.md",
   "#### Backup": "plugins/gitgud/skills/backup/SKILL.md",
   "#### Continue": "plugins/gitgud/skills/continue/SKILL.md",
   "#### Deliver": "plugins/gitgud/skills/deliver/SKILL.md",

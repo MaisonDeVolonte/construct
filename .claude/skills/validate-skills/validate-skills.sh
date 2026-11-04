@@ -135,11 +135,12 @@ plugins/retardify/skills/graph
 plugins/retardify/skills/quiz
 plugins/retardify/skills/guide
 plugins/gitgud/skills/deliver
+plugins/gitgud/skills/nightshift
 "
 
 # only the skills that mint a new artifact from prose can be run with an arbitrary goal; guide
-# resolves an existing plan and deliver needs a dirty tree, so both exit for real reasons
-NO_RUN='guide deliver'
+# resolves an existing plan, deliver needs a dirty tree, and nightshift needs origin and a network
+NO_RUN='guide deliver nightshift'
 
 # the apostrophe is the whole probe: an unquoted expansion splits on it and the sidecar dies
 APOSTROPHE="don't split the readme"
