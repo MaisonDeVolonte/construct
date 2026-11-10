@@ -120,7 +120,7 @@ mkdir -p "$TMPROOT"
 # sort numerically; joining it to the path first sorts 121 above 31. the run fails on ERROR only
 FINDINGS=$(mktemp "$TMPROOT/$TMPTAG-findings.XXXXXX")
 # a failed run leaves scratch behind to read; a clean run sweeps every stale pair unless kept
-cleanup() { st=$?; if [ "$KEEP" -eq 0 ] && [ "$st" -eq 0 ]; then bash "${TMPROOT%/tmp}/plugins/operator/shared/clean-tmp.sh" "$TMPTAG"; fi; }
+cleanup() { st=$?; if [ "$KEEP" -eq 0 ] && [ "$st" -eq 0 ]; then bash "$SHARED/clean-tmp.sh" "$TMPTAG"; fi; }
 trap cleanup EXIT
 
 err()  { printf 'ERROR|%s|%s|%s|%s\n' "$1" "$2" "$3" "$4" >> "$FINDINGS"; }
