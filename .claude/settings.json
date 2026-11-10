@@ -10,6 +10,7 @@
       "allowedDomains": [
         "code.claude.com", "docs.claude.com", "zed.dev",
         "github.com", "api.github.com",
+        "airtable.com", "api.airtable.com",
         "registry.npmjs.org",
         "agentskills.io",
         "fonts.googleapis.com", "fonts.gstatic.com"
@@ -124,6 +125,23 @@
       "Bash(git config *credential.helper*)", "Bash(git config *sshCommand*)",
       "Bash(git config *core.fsmonitor*)",    "Bash(git config *filter.*)",
       "Bash(git remote set-url*)",
+
+      "Bash(*airtable.com*DELETE*)", "Bash(*DELETE*airtable.com*)","Bash(*airtable.com*PATCH*)",  "Bash(*PATCH*airtable.com*)",
+      "Bash(*airtable.com*PUT*)",    "Bash(*PUT*airtable.com*)",
+      "Bash(*airtable.com*ethod-*verride*)", "Bash(*ethod-*verride*airtable.com*)",
+      "Bash(*airtable.com*--upload-file*)",  "Bash(*--upload-file*airtable.com*)",
+      "Bash(*airtable.com* -T *)",           "Bash(* -T *airtable.com*)",
+      "Bash(*airtable.com*--config*)",       "Bash(*--config*airtable.com*)",
+      "Bash(*airtable.com* -K *)",           "Bash(* -K *airtable.com*)",
+      "Bash(*airtable.com*--variable*)",     "Bash(*--variable*airtable.com*)",
+      "Bash(*airtable.com*/sync/*)",
+      "Bash(*content.airtable.com*)",
+
+
+      "Bash(*AIRTABLE_PAT*)",
+      "Bash(*find-generic-password*)", "Bash(*find-internet-password*)", "Bash(*dump-keychain*)",
+
+      "mcp__airtable__*", "mcp__claude_ai_Airtable__*",
 
       "Bash(dropdb *)", "Bash(db:drop*)", "Bash(prisma migrate reset*)",
 
