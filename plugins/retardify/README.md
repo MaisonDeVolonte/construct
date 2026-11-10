@@ -13,12 +13,12 @@ TABLE OF CONTENTS
 ├─ Plugins & Skills
 ├─ /operator ────── upstream · setup · settings · permissions · scripts · credentials · context · hooks · logs · install
 ├─ /gitgud ──────── audit · issues · nightshift · backup · continue · deliver · prune · nuke · rerun · ship
-├─ /retardify ───── output · code · file · research · graph · plan · guide · quiz · review · todo
+├─ /retardify ───── output · code · file · docs · research · graph · plan · guide · quiz · review · todo
 ├─ /maintainer ──── validate-skills · test-skills · export-readme · push-release
 ├─ Hooks & Actions
 ├─ /sessionstart ── inject-readme · inject-log · inject-changes · inject-support
 ├─ /stop ────────── retardify-output · synthesize-log
-├─ /pretooluse ──── block-protected-paths · block-destructive-git · block-destructive-writes · block-untracked-exec · block-outside-moves
+├─ /pretooluse ──── block-protected-paths · block-destructive-git · block-destructive-airtable · block-destructive-writes · block-untracked-exec · block-outside-moves
 ├─ /posttooluse ─── eslint · retardify-code · retardify-file
 ├─ /taskcompleted ─ append-log
 ├─ Styles ───────── output style · subagent style
@@ -33,13 +33,14 @@ TABLE OF CONTENTS
 | [:upstream](#upstream)       | [:audit](#audit)           | [:output](#output)     | [validate-skills](#validate-skills)     | [sessionstart](#sessionstart)   |
 | [:setup](#setup)             | [:issues](#issues)         | [:code](#code)         | [test-skills](#test-skills)             | [stop](#stop)                   |
 | [:settings](#settings)       | [:nightshift](#nightshift) | [:file](#file)         | [export-readme](#export-readme)         | [pretooluse](#pretooluse)       |
-| [:permissions](#permissions) | [:backup](#backup)         | [:research](#research) | [push-release](#push-release)           | [posttooluse](#posttooluse)     |
-| [:scripts](#scripts)         | [:continue](#continue)     | [:graph](#graph)       |                                         | [taskcompleted](#taskcompleted) |
-| [:credentials](#credentials) | [:deliver](#deliver)       | [:plan](#plan)         |                                         |                                 |
-| [:context](#context)         | [:prune](#prune)           | [:guide](#guide)       |                                         |                                 |
-| [:hooks](#hooks)             | [:nuke](#nuke)             | [:quiz](#quiz)         |                                         |                                 |
-| [:logs](#logs)               | [:rerun](#rerun)           | [:review](#review)     |                                         |                                 |
-| [:install](#install)         | [:ship](#ship)             | [:todo](#todo)         |                                         |                                 |
+| [:permissions](#permissions) | [:backup](#backup)         | [:docs](#docs)         | [push-release](#push-release)           | [posttooluse](#posttooluse)     |
+| [:scripts](#scripts)         | [:continue](#continue)     | [:research](#research) |                                         | [taskcompleted](#taskcompleted) |
+| [:credentials](#credentials) | [:deliver](#deliver)       | [:graph](#graph)       |                                         |                                 |
+| [:context](#context)         | [:prune](#prune)           | [:plan](#plan)         |                                         |                                 |
+| [:hooks](#hooks)             | [:nuke](#nuke)             | [:guide](#guide)       |                                         |                                 |
+| [:logs](#logs)               | [:rerun](#rerun)           | [:quiz](#quiz)         |                                         |                                 |
+| [:install](#install)         | [:ship](#ship)             | [:review](#review)     |                                         |                                 |
+|                              |                            | [:todo](#todo)         |                                         |                                 |
 
 ## Issues
 > current known [upstream issues](https://github.com/anthropics/claude-code/issues) and the workarounds applied in this plugin suite (use `/operator:upstream` to refresh report)
@@ -1533,6 +1534,78 @@ export async function getFoo(): Promise<FooNode[]> { return []; }
 
 </details>
 
+#### Docs
+```
+/retardify:docs <path> [range]
+```
+**readmes that hold their shape:** the frame a reader navigates by, graded against one convention
+- catch a toc row naming no heading, an h2 with no row, or children out of step with the headings
+- catch a table whose rows disagree on pipe count or width, or a bullet nested past two levels
+- catch an anchor or a relative link resolving to nothing, and a `(see #N)` pointer with no note
+```yaml
+---
+name: docs
+license: MIT
+compatibility: requires bash, git
+description: readme shape linter via <path> [range]: title, toc, headings, tables, notes (saves audits to .construct/)
+argument-hint: "[--help] [--quick] [--strict] [--warn] <path> [range] [--test]"
+when_to_use: "editing a readme or markdown doc, or when asked to review docs, formatting, or a table of contents"
+paths: "**/README.md, **/readme.md, docs/**/*.md"
+metadata:
+  artifact: .construct/retardify/docs/
+---
+```
+**what it does:**
+- skill
+  - asks what to lint when invoked bare: a path, a path with a line range, or pasted text
+  - takes the ide's own forms: `@README.md`, a `file:///…#L47:55` link, or `readme.md 47:55`
+  - holds a readme to one frame: title and subtitle, a fenced toc, epigraphs, padded tables
+  - keeps the body short by pointing at a closing `## Notes` section, the way a wayfinder cites
+  - answers the checklist for what no script can judge: contradiction, drift, stale claims
+  - appends a deliberate run to the daily audit file, skipping that under `--quick`
+- sidecar
+  - grades one doc whole, then hides findings outside a given line range and counts them
+  - skips fenced content, so a toc tree or a yaml block never reads as prose
+  - resolves every `](#anchor)` against the heading slugs, and every relative link against the tree
+  - pairs every `(see #N)` pointer with a `- #N:` note under `## Notes`, both ways
+  - scans for credential-shaped strings, and exits 1 on any error or warning under `--strict`
+
+<details>
+<summary>example:</summary>
+
+````markdown
+# Widget: Stateful Execution Units
+**wraps arbitrary payloads into standard lifecycle hooks, with deterministic ticks**
+
+```
+TABLE OF CONTENTS
+├─ Features ─────── init · tick · dispose
+├─ Setup
+└─ Notes
+```
+
+## Features
+> the three hooks every payload is wrapped in
+
+| hook      | fires           | returns  |
+|-----------|-----------------|----------|
+| `init`    | once, on mount  | a handle |
+| `tick`    | every frame     | nothing  |
+| `dispose` | once, on unload | nothing  |
+
+- mutations funnel through an internal queue, so ticks stay deterministic (see #1)
+
+## Setup
+> one command, then the hooks are live
+
+- run `npm install widget`, then wrap a payload with `widget(payload)`
+
+## Notes
+- #1: the queue drains between ticks, so a mutation during a tick lands on the next one
+````
+
+</details>
+
 #### Research
 ```
 /retardify:research
@@ -2043,6 +2116,29 @@ description: denies force pushes, force branch deletes, non-ff merges and unsafe
 - force push, force branch delete, a merge without `--ff-only`, a switch that creates or discards
 - deny rules are prefix-anchored and miss trailing flags, which is the gap this action closes
 - costs one process spawn per Bash call, measured at roughly 60ms
+
+#### pretooluse/block-destructive-airtable
+```
+plugins/operator/hooks/pretooluse/block-destructive-airtable.sh
+```
+```yaml
+---
+name: block-destructive-airtable
+description: denies airtable requests that update or delete before bash runs them, so the agent can only read and create
+---
+```
+
+**reads and creates pass; updates and deletes go back to the user:** the whole string is checked
+- depends on no sibling plugin; one self-contained file plus `jq`
+- decides one thing: does a string naming airtable carry DELETE, PUT or PATCH, or a flag that hides the method
+- `-T` implies PUT; `-K`, `--variable`, `--expand-*`, a `$`-method and a method-override header hide it, so each one is denied
+- a method flag passes only as a plain GET, POST or HEAD, so a quote-split `-X D"ELETE"` is denied
+- inline code is read too: `.delete(`, `method: 'PATCH'` and `request('PUT'` are each denied
+- PATCH is denied too: a rename loses no data, but it breaks every script that reads fields by name
+- `/sync/` is the one destructive POST: the sync api replaces a synced table's rows
+- a host built from a variable passes unseen, and a script's own requests never reach this check
+- the pat's scopes are the real limit: no records write, and the rest api has no table or field delete
+- costs one process spawn per Bash call, plus one grep for strings that don't name airtable
 
 #### pretooluse/block-destructive-writes
 ```
