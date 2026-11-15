@@ -10,6 +10,7 @@
 # CHECKS
 # - STATIC checks read the files: parse, drift, verb symmetry, scope placement, hygiene, coverage
 # - `guard` is the check that watches this auditor, since an editable auditor can be made to pass
+# - `egress` fails unless `strictAllowlist` is true, since bypass mode approves a prompted host
 # - the LIVE probe exercises the hook, because a config can be perfect while the gate is dead
 # - it answers for the settings stack alone; `/operator:setup --audit` runs every lens together
 # - a tracked path reads as guarded at `ask`, since `deny` reaches the sandbox and blocks git itself
@@ -489,6 +490,33 @@ check_guard() {
 }
 
 # ==============
+# STATIC - egress
+#   without strictAllowlist an unlisted host only raises a prompt, and bypass mode answers prompts
+# ==============
+check_egress() {
+  local pair name path value strict=0 loose=0
+  for pair in "${SCOPES[@]}"; do
+    name=${pair%%:*}
+    path=${pair#*:}
+    if [ ! -f "$path" ] || ! jq empty "$path" >/dev/null 2>&1; then continue; fi
+    # tojson keeps a quoted "true" apart from the boolean, since only the boolean switches it on
+    value=$(jq -r '.sandbox.network.strictAllowlist | tojson' "$path")
+    if [ "$value" = null ]; then continue; fi
+    if [ "$value" = true ]; then
+      strict=$((strict + 1))
+      pass egress "$name" "strictAllowlist is true, so an unlisted host is refused"
+      continue
+    fi
+    # any scope switching it off is reported, so no merge order has to be assumed here
+    loose=$((loose + 1))
+    err egress "$name" "strictAllowlist is $value; an unlisted host is prompted, not refused"
+  done
+  if [ "$strict" -eq 0 ] && [ "$loose" -eq 0 ]; then
+    err egress stack "no scope sets strictAllowlist; allowedDomains only suppresses prompts"
+  fi
+}
+
+# ==============
 # LIVE - probes
 #   inspection cannot find a latent fault; only exercising the protection can
 # ==============
@@ -517,6 +545,7 @@ check_scope
 check_hygiene
 check_coverage
 check_guard
+check_egress
 # the probe stage reports its own elapsed seconds, since a run with no clock reads as a hung one
 STAGE_START=$SECONDS
 check_probes
@@ -529,7 +558,7 @@ PROBES_ELAPSED="run in $((SECONDS - STAGE_START))s"
 # ==============
 ARTIFACT_KIND="settings"
 ARTIFACT_SECTIONS=$'state\nfindings\nresolutions\ntelemetry'
-ARTIFACT_LABELS='Parse|Templates|Drift|Verbs|Scope|Hygiene|Coverage|Guard|Probe'
+ARTIFACT_LABELS='Parse|Templates|Drift|Verbs|Scope|Hygiene|Coverage|Guard|Egress|Probe'
 ARTIFACT_MAX_WIDTH=100
 
 # this sidecar reports "category|scope|detail", so location folds into the scope field. passing

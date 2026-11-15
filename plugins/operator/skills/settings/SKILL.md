@@ -47,6 +47,8 @@ echo "sidecar exit: $?"
     - a scope with no file at all is a setup gap, so name the flag that emits it rather than a fix
     - `guard` firing means the deny protecting this sidecar is absent; restore it before trusting a
       later clean run, since an editable auditor can be made to report clean
+    - `egress` firing means `allowedDomains` is not a boundary; bypass mode approves the prompt, so
+      name `sandbox.network.strictAllowlist: true` in the user scope as the resolution
     - answer the checklist the sidecar prints, since those rules are the ones no script can judge
 
 3. on an EMIT run, report the commands inline in the sidecar's own order, then STOP
@@ -107,6 +109,7 @@ one bullet per issue, leading with the label the sidecar printed
 | `hygiene` | duplicate rules, or a template that will not paste |
 | `coverage` | a rule with no why in the scope's `.md`, or a mirror claim that has diverged |
 | `guard` | nothing protects the policy directories, so this auditor is editable |
+| `egress` | `strictAllowlist` off or unset, so an unlisted host is prompted instead of refused |
 | `probe` | a boundary that did not refuse, naming what got through |
 | `resolution_shape` `resolution_parity` | an older entry whose resolutions do not match its findings |
 
