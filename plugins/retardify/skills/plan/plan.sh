@@ -47,6 +47,23 @@ else
   ARGS=$(printf '%s' "$ARGS" \
     | sed -e 's/--confirm//g' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
 
+  # an editor mention arrives as a link, `[@name.md](file:///abs/name.md)`, so it is unwrapped here
+  # a file url is percent-encoded, so `%20` is decoded back to a space
+  MENTIONED=0
+  MENTION='^\[[^]]*\]\((.*)\)$'
+  if [[ "$ARGS" =~ $MENTION ]]; then
+    MENTIONED=1
+    ARGS=${BASH_REMATCH[1]}
+    case "$ARGS" in file://*)
+      ARGS=${ARGS#file://}
+      ARGS=${ARGS//\\/\\\\}
+      ARGS=$(printf '%b' "${ARGS//%/\\x}");;
+    esac
+  # a typed mention is a bare `@name.md`; a goal that only opens on `@` is no file and stays prose
+  elif [ "${ARGS#@}" != "$ARGS" ] && [ -f "${ARGS#@}" ]; then
+    ARGS=${ARGS#@}
+  fi
+
   # a path is a source document rather than a goal, so the goal is read out of the file
   # any readable file qualifies, since a research brief is promoted into a plan the same way
   SPEC=none
@@ -59,6 +76,10 @@ else
     STEM=$(printf '%s' "$BASE" | sed -e 's/\.[A-Za-z0-9]\{1,\}$//' \
       -e 's/^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}-//' -e 's/^operation-//')
   fi
+
+  # a mention always names a file, so a missing one is refused even when its path holds a space
+  if [ "$SPEC" = none ] && [ "$MENTIONED" -eq 1 ]; then
+    echo "fatal: no such file: $ARGS" >&2; exit 1; fi
 
   # a goal is prose, so one word carrying a slash or an extension was meant to be a path
   # reading it as a goal would name the plan after the typo and then plan the wrong work
@@ -106,7 +127,11 @@ else
   if printf '%s' "$BASE" | grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2}-operation-[A-Za-z0-9-]+\.md$'; then
     TARGET="$ARTIFACTS/$BASE"
   fi
-  if [ -e "$TARGET" ]; then COLLISION=yes; else COLLISION=no; fi
+  # a plan-named source already in the artifact dir is its own target, so it collides with nothing
+  if [ -e "$TARGET" ] && ! [ "$TARGET" -ef "$SPEC" ]; then COLLISION=yes; else COLLISION=no; fi
+  # that same case rewrites the source, and .construct/ is gitignored, so no commit holds a copy
+  IN_PLACE=no
+  if [ -e "$TARGET" ] && [ "$TARGET" -ef "$SPEC" ]; then IN_PLACE=yes; fi
   EXISTING=$(find "$ARTIFACTS" -maxdepth 1 -type f -name '*.md' | wc -l | tr -d ' ')
 
   echo "=== /retardify:plan telemetry ==="
@@ -116,6 +141,7 @@ else
   echo "slug: $SLUG"
   echo "target: $TARGET"
   echo "collision: $COLLISION"
+  echo "in_place: $IN_PLACE"
   echo "existing_plans: $EXISTING"
   echo "template: $TEMPLATE"
   echo "validator: $VALIDATOR"
@@ -134,9 +160,9 @@ else
     echo "a plan already holds this slug; rename the goal or open the existing file"
   fi
 
-  # a path resolves a goal, a filename and a target that nobody typed, so the run stops to show them
-  # a wrong path would otherwise spend the whole write before anyone could read what it planned
-  if [ "$SPEC" != none ] && [ "$CONFIRMED" -eq 0 ]; then
+  # a path resolves a goal, a filename and a target nobody typed, so the run stops to show them
+  # an in-place rewrite stops even under --confirm, since no commit holds the copy it replaces
+  if [ "$SPEC" != none ] && { [ "$CONFIRMED" -eq 0 ] || [ "$IN_PLACE" = yes ]; }; then
     echo "--- confirm ---"
     echo "confirm: required"
   fi
