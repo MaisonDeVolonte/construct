@@ -34,10 +34,47 @@ else echo "no path given, so nothing ran; the hook lints every write, so apply t
 | `blank_run` | one blank line between blocks, never two |
 | `short_name` | no `e`, `idx`, `el`, `cb`; spell it out |
 | `long_name` | a name caps at 25 characters and 4 words |
+| `name_case` | a declared variable or function is camelCase; a constant may be UPPER_SNAKE |
+| `type_case` | a declared class, interface, enum or type is PascalCase |
+| `class_case` | a class in a quoted literal is `block__element--modifier` |
+| `track_case` | a `data-track` value is Train-Case |
 
-- `ternary`, `reduce` and `short_name` are js idioms, so they run on the js family only
-- the other three run on every graded language, since depth and naming travel everywhere
+- `ternary`, `reduce`, `short_name` and the four `_case` labels run on the js family only
+- the other three run on every graded language, since depth and name length travel everywhere
 - a comment or a full-line marker is skipped, so prose never trips a code rule
+
+## Naming
+> the shape of a name written inside the logic; `/retardify:file` owns the file's own name
+
+### Code
+| thing | rule | example | graded by |
+|---|---|---|---|
+| variable, function | camelCase | `dealStepRules` | `name_case` |
+| constant | UPPER_SNAKE | `MAX_NAME_CHARS` | `name_case` lets it pass |
+| component, class, type | PascalCase | `Sign`, `Requirement` | `type_case` |
+| wrapped component | WrappedPascalCase | `WrappedFavorite` | the reader |
+| hook | useCamelCase | `useMessagePolling` | the reader |
+| icon | camelCase, typeIcon | `documentIcon` | the reader |
+
+### Webflow
+| thing | rule | example | graded by |
+|---|---|---|---|
+| component folder | camelCase, filePath | `manage` | the reader |
+| component | PascalCase, ComponentPath | `manage/ManageTask` | the reader |
+| shared component | PascalCase, no prefix | `ui/File` | the reader |
+| slot | camelCase, componentSlot | `fileSlot`, `subnavSlot` | the reader |
+| attribute | camelCase, elementAttributes | `taskAttributes`, `submitAttributes` | the reader |
+| prop | camelCase, elementType | `headingText`, `supportLink` | the reader |
+| class | block__element--modifier | `manage__icon manage__icon--incomplete` | `class_case` |
+| unique tracked element | Train-Case, Page-Element-Type | `id="BuyerDealsSubnav-Active-Link"` | the reader |
+| repeated tracked element | Train-Case, Component-Element-Type | `data-track="File-Download-Link"` | `track_case` |
+
+- only a declaration is graded, so a snake_case key read off an api payload passes
+- a leading underscore passes `name_case`, since it marks a private or an unused name
+- a class holds one `__` and one `--` at most, so `dash__setting__text` reports
+- an id is left to the reader, since forms and svgs carry ids that are not tracked
+- a webflow name is set in the designer and copied by the export, so a rename happens there
+- the reader rows have no falsifiable shape, so answer them the way the checklist is answered
 
 ## First Principles
 > what no script can judge and what the sidecar prints instead
