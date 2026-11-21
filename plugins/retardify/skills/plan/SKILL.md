@@ -23,6 +23,7 @@ echo "sidecar exit: $?"
 - fail (`sidecar exit` > 0) → abort and report the raw terminal error inside a markdown code block
 - `collision: yes` → STOP and name the file already holding that slug; never overwrite a plan
 - `confirm: required` → the argument was a path; `## Confirm` below is the whole turn
+- `in_place: yes` → the plan rewrites its own source, which no commit holds; `## Confirm` says so
 - `spec: <path>` → read that file whole before step 1 and treat it as the brief
 - `spec_kind: graph` → it carried a `GOAL:` line, so the goal and the filename came from it
 - `spec_kind: brief` → any other file, so the goal was derived and the confirmation grades it
@@ -74,6 +75,8 @@ written for:
 - a brief with no heading falls back to its filename, stripped of the date and the extension
 - the plan inherits the source's basename when that reads `YYYY-MM-DD-operation-<title>.md` already
 - any other source names the plan from its own filename, since an inherited one fails `--check`
+- an editor mention, `[@name.md](file:///abs/name.md)` or a bare `@name.md`, is read as its path
+- a plan-named source already in the plan folder is its own target, so the plan replaces it in place
 - a path that resolves to nothing is refused, since a typo would otherwise plan the wrong work
 - every path stops on `confirm: required`, since the goal and the filename were derived not typed
 - the spec's `CONTEXT:` answers step 1, so the questions there are asked only about what it omits
@@ -225,6 +228,7 @@ suggested rules to set in order for agents to work reliably:
 SOURCE: <the `spec` path, then its `spec_kind`>
 GOAL: <the `goal` line, verbatim>
 TARGET: <the `target` path>
+IN PLACE: <the `in_place` value; on yes, add: the source is rewritten and git holds no copy>
 ```
 
 - show what was derived BEFORE asking, since the goal and the filename were never typed
@@ -233,6 +237,7 @@ TARGET: <the `target` path>
 - on a go, continue from step 1 with this telemetry, since the sidecar wrote nothing to redo
 - on a corrected goal, run the sidecar again with that goal as prose, so it names the file
 - `--confirm` on the invocation skips this section for anyone who already knows the answer
+- `in_place: yes` keeps this section even under `--confirm`, since the rewrite cannot be undone
 - an earlier confirmation never covers a later run
 
 ## Help
