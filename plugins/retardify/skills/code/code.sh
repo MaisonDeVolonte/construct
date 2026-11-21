@@ -8,8 +8,8 @@
 # - the doc carries the conventions and the audit shape; this file carries what a script judges
 # - the logic inside a source file, which is the one thing `/retardify:file` leaves alone
 # SCOPE
-# - six mechanics, each a falsifiable count: ternaries, reduce, blank runs, depth, names
-# - three are js idioms, so they run on the js family only; three run on every source file
+# - ten mechanics, each a falsifiable count: ternaries, reduce, blank runs, depth, names, casing
+# - seven are js idioms, so they run on the js family only; three run on every source file
 # - what a script cannot judge stays in the checklist, the same posture file.sh holds
 # RUN
 # - `code.sh <path>` grades one file; the posttooluse hook calls it the same way
@@ -45,7 +45,7 @@ MAX_INDENT_COLS=8
 # "a name caps at 25 characters and 4 words"
 MAX_NAME_CHARS=25
 
-# the js family, where a ternary, a `.reduce(` and a one-letter callback arg are all idioms
+# the js family, the only one where the ternary, reduce and casing checks below make sense
 JS_EXT="js jsx ts tsx mjs cjs"
 
 # every language this sidecar will grade at all; the rest carry none of these shapes
@@ -184,6 +184,71 @@ check_long_names() {
   done < <(code_lines)
 }
 
+# "a declared variable or function is camelCase; a constant may be UPPER_SNAKE"
+# only a declaration is graded; a snake_case key read off an api payload passes
+check_name_case() {
+  local lineno text name
+  local declared='(^|[^A-Za-z0-9_$])(const|let|var|function)[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)'
+  while IFS=$'\t' read -r lineno text; do
+    if [[ ! "$text" =~ $declared ]]; then continue; fi
+    name=${BASH_REMATCH[3]}
+    if [[ "$name" =~ ^[A-Z0-9_]+$ ]]; then continue; fi
+    if [[ "$name" =~ [^_]_ ]]; then
+      warn "$lineno" name_case "'${name:0:32}' is declared with an underscore; use camelCase"
+    fi
+  done < <(code_lines)
+}
+
+# "a declared class, interface, enum or type is PascalCase"
+# the keyword must open the statement; `type` is also an ordinary property name
+check_type_case() {
+  local lineno text name kind
+  local gap='[[:space:]]+'
+  local modifiers="(export$gap)?(default$gap)?(declare$gap)?(abstract$gap)?"
+  local keyword='(class|interface|enum|type)'
+  local declared="^[[:space:]]*$modifiers$keyword$gap([A-Za-z_\$][A-Za-z0-9_\$]*)"
+  while IFS=$'\t' read -r lineno text; do
+    if [[ ! "$text" =~ $declared ]]; then continue; fi
+    kind=${BASH_REMATCH[5]}
+    name=${BASH_REMATCH[6]}
+    if [[ ! "$name" =~ ^[A-Z][A-Za-z0-9]*$ ]]; then
+      warn "$lineno" type_case "$kind '${name:0:32}' is not PascalCase"
+    fi
+  done < <(code_lines)
+}
+
+# "a class is block__element--modifier, lowercase, with hyphens inside a word group"
+# only a quoted literal is graded; a class built inside braces has no fixed shape to read
+check_class_case() {
+  local lineno text literal token
+  local bem='^[a-z][a-z0-9]*(-[a-z0-9]+)*(__[a-z0-9]+(-[a-z0-9]+)*)?(--[a-z0-9]+(-[a-z0-9]+)*)?$'
+  while IFS=$'\t' read -r lineno text; do
+    case "$text" in *'className="'*|*'class="'*) ;; *) continue;; esac
+    literal=$(printf '%s' "$text" | grep -oE '(className|class)="[^"]*"' | head -n 1)
+    literal=${literal#*\"}
+    for token in ${literal%\"}; do
+      if [[ ! "$token" =~ $bem ]]; then
+        warn "$lineno" class_case "'${token:0:32}' is not block__element--modifier"
+        break
+      fi
+    done
+  done < <(code_lines)
+}
+
+# "a tracked element is Train-Case: Page-Element-Type or Component-Element-Type"
+# only `data-track` is graded, since an id also serves forms and svgs that are not tracked
+check_track_case() {
+  local lineno text value
+  local tracked="data-track['\"]?[[:space:]]*[=:][[:space:]]*['\"]([^'\"]*)['\"]"
+  while IFS=$'\t' read -r lineno text; do
+    if [[ ! "$text" =~ $tracked ]]; then continue; fi
+    value=${BASH_REMATCH[1]}
+    if [[ ! "$value" =~ ^[A-Z][A-Za-z0-9]*(-[A-Z][A-Za-z0-9]*)+$ ]]; then
+      warn "$lineno" track_case "'${value:0:32}' is not Train-Case, as in File-Download-Link"
+    fi
+  done < <(code_lines)
+}
+
 # --- run list (add new checks here) ---
 if [ "$GRADED" -eq 1 ]; then
   check_blank_runs
@@ -193,6 +258,10 @@ if [ "$GRADED" -eq 1 ]; then
     check_ternary
     check_reduce
     check_short_names
+    check_name_case
+    check_type_case
+    check_class_case
+    check_track_case
   fi
 fi
 
