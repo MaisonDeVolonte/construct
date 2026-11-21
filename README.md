@@ -1362,6 +1362,8 @@ disable-model-invocation: true
 - catch a second ternary chained onto one expression, where an if-statement reads plainer
 - catch nesting past 2 levels deep, where a guard or a helper should flatten it instead
 - catch a name past 25 characters or 4 words, or a callback named `e`, `idx`, `el`, or `cb`
+- catch a snake_case variable or function, and a class or type that is not PascalCase
+- catch a css class that is not `block__element--modifier`, or a `data-track` that is not Train-Case
 ```yaml
 ---
 name: code
@@ -1383,8 +1385,8 @@ metadata:
   - answers the checklist for what no script can judge: DRY, SoC, POLA, RDD, WTF, WET
   - appends a deliberate run to the daily audit file, skipping that when the hook fires it
 - sidecar
-  - grades one file across six mechanics: ternaries, `.reduce(`, blank runs, nesting, names
-  - runs the three js-only checks (ternary, reduce, short_name) on the js file family only
+  - grades one file across ten mechanics: ternaries, `.reduce(`, blank runs, nesting, names, casing
+  - runs the seven js-only checks on the js file family only: ternary, reduce, short_name, four `_case`
   - runs nesting, blank-run, and long-name checks on every graded language
   - strips full-line comments before scanning, so prose in a comment never trips a code rule
   - exits 1 on any error, or on any warning under `--strict`
@@ -1709,6 +1711,8 @@ metadata:
 - sidecar
   - derives the goal from a path's `GOAL:` line (a graph spec) or its first `# ` heading (a brief)
   - stops on `confirm: required` for any path input, since goal and filename were derived
+  - reads an editor mention, `[@name.md](file:///abs/name.md)` or a bare `@name.md`, as its path
+  - prints `in_place: yes` when a plan would rewrite its own source, and confirms even on `--confirm`
   - surfaces open checkboxes from other plans in the artifact dir as blocker candidates
   - `--check` verifies risk labels, stage numbering, `~~SKIPPED: <why>~~` syntax, note refs
   - `--check` verifies readiness rows sum to stage item counts and quote real permission rules
