@@ -74,7 +74,7 @@ the counts as hyphen bullets: what the tree is made of, and what each section me
 *example:*
 > - 78 tracked files across 3 plugins, carrying 19 skills and 6 hooks
 > - 19 skill docs, 0 missing a sidecar and 0 sidecars missing a doc
-> - 2 secrets.sh copies, all byte identical, against 2 calling plugins
+> - 3 secrets.sh copies, all byte identical, against 3 calling plugins
 
 ### findings
 one bullet per issue, leading with the label this doc assigns

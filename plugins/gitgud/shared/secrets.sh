@@ -9,10 +9,10 @@
 # - an unambiguous provider token is an ERROR; a merely credential-shaped string is a WARN
 # COPIES
 # - one per CALLING plugin, since an install copies a plugin's own directory and never a sibling
-# - operator and retardify both call `scan_secrets`; gitgud never did, so it carries no copy
-# - byte-identical by contract, hand-edited in both places, never generated from anywhere
+# - operator, retardify and gitgud each source it, so each carries a copy
+# - byte-identical by contract, hand-edited in all three places, never generated from anywhere
 # - `/gitgud:audit` md5s every copy it finds and is the ONLY thing comparing them
-# @see plugins/gitgud/skills/audit/audit.sh, plugins/operator/shared/secrets.sh, plugins/retardify/shared/secrets.sh
+# @see plugins/gitgud/skills/audit/audit.sh, plugins/operator/shared/secrets.sh, plugins/retardify/shared/secrets.sh, plugins/gitgud/shared/secrets.sh
 
 if [ "${BASH_SOURCE[0]}" = "$0" ]; then
   echo "fatal: source this file from a sidecar, do not run it" >&2; exit 1
@@ -20,7 +20,7 @@ fi
 
 # unambiguous credentials: a provider prefix, a private key block, or a url carrying its own
 # password — these stop the run, because a key that reaches a commit cannot be un-leaked
-SECRET_PATTERNS='AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|glpat-[A-Za-z0-9_-]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}|sk-[A-Za-z0-9]{20,}|[sr]k_(live|test)_[A-Za-z0-9]{20,}|AIza[0-9A-Za-z_-]{35}|ya29\.[A-Za-z0-9_-]{20,}|npm_[A-Za-z0-9]{36}|eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|[a-z][a-z0-9+.-]*://[^/[:space:]:@]+:[^/[:space:]@]+@'
+SECRET_PATTERNS='AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|glpat-[A-Za-z0-9_-]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}|sk-[A-Za-z0-9]{20,}|[sr]k_(live|test)_[A-Za-z0-9]{20,}|AIza[0-9A-Za-z_-]{35}|ya29\.[A-Za-z0-9_-]{20,}|GOCSPX-[A-Za-z0-9_-]{20,}|1//0[0-9A-Za-z_-]{20,}|npm_[A-Za-z0-9]{36}|eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|[a-z][a-z0-9+.-]*://[^/[:space:]:@]+:[^/[:space:]@]+@'
 
 # shapes that are a commit sha or a digest nine times out of ten here, and a secret the tenth,
 # so they only ever warn; a value opening with `$` or a backtick is a variable and never matches
